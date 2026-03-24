@@ -6,14 +6,14 @@ This guide walks you through getting Cognitive Companion running on your local n
 
 | Component | Purpose | Notes |
 |-----------|---------|-------|
-| **NVIDIA GPU** (10 GB+ VRAM) | Person-ID service + vLLM serving | RTX 3060 or better |
-| **Docker** + NVIDIA Container Toolkit | Container runtime | For person-ID service |
+| **NVIDIA GPU** (10 GB+ VRAM) | Person-ID service + vLLM + Ollama | RTX 3060 or better |
+| **Docker** + NVIDIA Container Toolkit | Container runtime | For all services |
 | **Home Assistant** | Sensor integration, audio playback, actions | REST API + long-lived token |
 | **MinIO** (or S3-compatible) | Media object storage | Pre-signed URL support required |
 | **vLLM** | Vision + translation model serving | Cosmos-Reason2-8B, TranslateGemma-12b |
 | **Ollama** | Logic reasoning model | gemma3:4b |
 | **Python 3.11+** | Backend runtime | 3.12 recommended |
-| **Node.js 18+** | Frontend build | For admin console |
+| **Node.js 18+** | Frontend build | For admin console, websocket audio interface |
 
 ### Optional Components
 

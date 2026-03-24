@@ -8,7 +8,7 @@ Cognitive Companion follows a layered architecture with clear separation between
  Edge Devices                         AI Pipeline                              Outputs
  ───────────                         ───────────                              ───────
 
- reCamera ──┐                    ┌─► Person ID Service ──┐
+ reCamera ──┐                    ┌─► Person ID Service   ──┐
             │    ┌────────────┐  │   (InsightFace/ArcFace) │
  reTerminal─┼──► │   Event    │──┤                         ├─► Rules Engine
             │    │ Aggregator │  │   ┌──────────────────┐  │   (context/deps/rate-limit)

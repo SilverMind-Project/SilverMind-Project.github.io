@@ -25,7 +25,7 @@ The v2 backend sends batched frames to the person-ID service:
 4. The service returns per-frame face detections with:
    - **Identity**: matched person name or "unknown"
    - **Confidence**: similarity score (0.0 to 1.0)
-   - **Bounding box**: face location in the frame (x, y, width, height)
+   - **Bounding box**: face location in the frame [x1, y1, x2, y2]
 
 ### Annotated Images
 
@@ -65,10 +65,10 @@ Cross-frame centroid tracking classifies movement direction:
 
 | Direction | Description |
 |-----------|-------------|
-| `left_to_right` | Moving across the frame from left to right |
-| `right_to_left` | Moving across the frame from right to left |
-| `towards_camera` | Face/body getting larger (approaching) |
-| `away_from_camera` | Face/body getting smaller (leaving) |
+| `left-to-right` | Moving across the frame from left to right |
+| `right-to-left` | Moving across the frame from right to left |
+| `towards-camera` | Face/body getting larger (approaching) |
+| `away-from-camera` | Face/body getting smaller (leaving) |
 | `stationary` | No significant movement between frames |
 
 **Use case:** Door-mounted cameras can infer entering vs. leaving a room based on movement direction relative to camera placement.
