@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="grad-primary" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4A90D9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7B61FF;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="grad-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7B61FF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#A78BFA;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="grad-warm" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F59E0B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F97316;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="grad-shield" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4A90D9;stop-opacity:0.12" />
+      <stop offset="100%" style="stop-color:#7B61FF;stop-opacity:0.06" />
+    </linearGradient>
+  </defs>
+
+  <!-- Outer shield shape: privacy and protection -->
+  <path d="M256 42 C256 42 410 80 410 80 C410 80 420 260 420 260 C420 360 340 430 256 470 C172 430 92 360 92 260 C92 260 102 80 102 80 Z"
+        fill="url(#grad-shield)" stroke="url(#grad-primary)" stroke-width="4" stroke-linejoin="round"/>
+
+  <!-- Stylized brain outline: left hemisphere -->
+  <path d="M248 140
+           C218 140 190 155 178 180
+           C164 210 168 240 178 260
+           C170 272 166 288 172 305
+           C180 330 200 345 220 350
+           C235 354 248 348 248 340
+           L248 140Z"
+        fill="none" stroke="url(#grad-primary)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Stylized brain outline: right hemisphere -->
+  <path d="M264 140
+           C294 140 322 155 334 180
+           C348 210 344 240 334 260
+           C342 272 346 288 340 305
+           C332 330 312 345 292 350
+           C277 354 264 348 264 340
+           L264 140Z"
+        fill="none" stroke="url(#grad-accent)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Neural connection nodes: left -->
+  <circle cx="192" cy="195" r="8" fill="url(#grad-primary)" opacity="0.9"/>
+  <circle cx="180" cy="245" r="6" fill="url(#grad-primary)" opacity="0.7"/>
+  <circle cx="190" cy="300" r="7" fill="url(#grad-primary)" opacity="0.8"/>
+  <circle cx="220" cy="170" r="5" fill="url(#grad-primary)" opacity="0.6"/>
+  <circle cx="210" cy="330" r="5" fill="url(#grad-primary)" opacity="0.6"/>
+
+  <!-- Neural connection nodes: right -->
+  <circle cx="320" cy="195" r="8" fill="url(#grad-accent)" opacity="0.9"/>
+  <circle cx="332" cy="245" r="6" fill="url(#grad-accent)" opacity="0.7"/>
+  <circle cx="322" cy="300" r="7" fill="url(#grad-accent)" opacity="0.8"/>
+  <circle cx="292" cy="170" r="5" fill="url(#grad-accent)" opacity="0.6"/>
+  <circle cx="302" cy="330" r="5" fill="url(#grad-accent)" opacity="0.6"/>
+
+  <!-- Neural connections across hemispheres (corpus callosum) -->
+  <line x1="220" y1="170" x2="292" y2="170" stroke="url(#grad-primary)" stroke-width="2" opacity="0.4"/>
+  <line x1="192" y1="195" x2="320" y2="195" stroke="url(#grad-primary)" stroke-width="2" opacity="0.35"/>
+  <line x1="180" y1="245" x2="332" y2="245" stroke="url(#grad-accent)" stroke-width="2" opacity="0.3"/>
+  <line x1="190" y1="300" x2="322" y2="300" stroke="url(#grad-accent)" stroke-width="2" opacity="0.35"/>
+  <line x1="210" y1="330" x2="302" y2="330" stroke="url(#grad-accent)" stroke-width="2" opacity="0.4"/>
+
+  <!-- Intra-hemisphere connections: left -->
+  <line x1="220" y1="170" x2="192" y2="195" stroke="url(#grad-primary)" stroke-width="1.5" opacity="0.3"/>
+  <line x1="192" y1="195" x2="180" y2="245" stroke="url(#grad-primary)" stroke-width="1.5" opacity="0.3"/>
+  <line x1="180" y1="245" x2="190" y2="300" stroke="url(#grad-primary)" stroke-width="1.5" opacity="0.3"/>
+  <line x1="190" y1="300" x2="210" y2="330" stroke="url(#grad-primary)" stroke-width="1.5" opacity="0.3"/>
+
+  <!-- Intra-hemisphere connections: right -->
+  <line x1="292" y1="170" x2="320" y2="195" stroke="url(#grad-accent)" stroke-width="1.5" opacity="0.3"/>
+  <line x1="320" y1="195" x2="332" y2="245" stroke="url(#grad-accent)" stroke-width="1.5" opacity="0.3"/>
+  <line x1="332" y1="245" x2="322" y2="300" stroke="url(#grad-accent)" stroke-width="1.5" opacity="0.3"/>
+  <line x1="322" y1="300" x2="302" y2="330" stroke="url(#grad-accent)" stroke-width="1.5" opacity="0.3"/>
+
+  <!-- Warm pulse at center: the "companion" heartbeat -->
+  <circle cx="256" cy="240" r="18" fill="url(#grad-warm)" opacity="0.2"/>
+  <circle cx="256" cy="240" r="10" fill="url(#grad-warm)" opacity="0.5"/>
+  <circle cx="256" cy="240" r="5" fill="#F59E0B" opacity="0.9"/>
+
+  <!-- Cupped hands beneath the brain: care and support -->
+  <path d="M158 360
+           C158 360 170 380 200 395
+           C230 410 248 412 256 414"
+        fill="none" stroke="url(#grad-primary)" stroke-width="5" stroke-linecap="round" opacity="0.7"/>
+  <path d="M354 360
+           C354 360 342 380 312 395
+           C282 410 264 412 256 414"
+        fill="none" stroke="url(#grad-accent)" stroke-width="5" stroke-linecap="round" opacity="0.7"/>
+
+  <!-- Subtle radiating arcs: awareness and sensing -->
+  <path d="M140 160 C125 200 125 280 140 320" fill="none" stroke="url(#grad-primary)" stroke-width="2.5" stroke-linecap="round" opacity="0.2"/>
+  <path d="M120 175 C102 215 102 270 120 310" fill="none" stroke="url(#grad-primary)" stroke-width="2" stroke-linecap="round" opacity="0.12"/>
+  <path d="M372 160 C387 200 387 280 372 320" fill="none" stroke="url(#grad-accent)" stroke-width="2.5" stroke-linecap="round" opacity="0.2"/>
+  <path d="M392 175 C410 215 410 270 392 310" fill="none" stroke="url(#grad-accent)" stroke-width="2" stroke-linecap="round" opacity="0.12"/>
+</svg>
