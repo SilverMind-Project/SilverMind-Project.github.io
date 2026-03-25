@@ -4,16 +4,7 @@ Cognitive Companion can be deployed via Docker Compose for single-machine setups
 
 ## Docker Compose
 
-The simplest way to run the full stack. A `docker-compose.yml` in the project root orchestrates all services.
-
-### Services
-
-| Service | Image | Port | Notes |
-|---------|-------|------|-------|
-| `cc-backend` | `cognitive-companion` | 8000 | FastAPI backend |
-| `cc-frontend` | `cognitive-companion/frontend` | 80 | Vue 3 SPA via nginx |
-| `person-id` | `person-identification-service` | 8100 | GPU face recognition |
-| `minio` | `minio/minio:latest` | 9000, 9001 | S3-compatible storage |
+Each repository ships its own `docker-compose.yml`, so services are independently deployable. External dependencies (vLLM, Ollama, MinIO, Home Assistant, TTS) are expected to be running separately.
 
 ### Quick Start
 
@@ -22,101 +13,101 @@ The simplest way to run the full stack. A `docker-compose.yml` in the project ro
 git clone https://github.com/SilverMind-Project/cognitive-companion.git
 git clone https://github.com/SilverMind-Project/person-identification-service.git
 
-# Create environment file
+# 1. Start the person identification service (GPU required)
+cd person-identification-service
 cp .env.example .env
-# Edit .env with your API keys and service URLs
-
-# Start everything
 docker compose up -d
 
-# Verify
+# 2. Start Cognitive Companion (backend + frontend)
+cd ../cognitive-companion
+cp .env.example .env
+# Edit .env with your API keys and service URLs
+docker compose up -d
+
+# 3. Verify
 curl http://localhost:8000/api/v1/health
 curl http://localhost:8100/health
 ```
 
+### Cognitive Companion (`cognitive-companion/docker-compose.yml`)
+
+| Service    | Container     | Port | Notes               |
+|------------|---------------|------|---------------------|
+| `backend`  | `cc-backend`  | 8000 | FastAPI backend     |
+| `frontend` | `cc-frontend` | 80   | Vue 3 SPA via nginx |
+
+The backend Dockerfile lives at `backend/Dockerfile` and uses the repository root as its build context (it needs `backend/`, `config/`, and `pyproject.toml`). The frontend Dockerfile lives at `frontend/Dockerfile`.
+
+### Person Identification Service (`person-identification-service/docker-compose.yml`)
+
+| Service     | Container   | Port | Notes                |
+|-------------|-------------|------|----------------------|
+| `person-id` | `person-id` | 8100 | GPU face recognition |
+
+Requires the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) for GPU access.
+
 ### Environment Variables
 
-The `.env` file configures all services:
+Each repository has its own `.env.example`. The Cognitive Companion `.env` configures all external service URLs:
 
 ```bash
-# LLM Endpoints (external to compose)
-VLLM_COSMOS_URL=http://host.docker.internal:8001/v1
-VLLM_TRANSLATE_URL=http://host.docker.internal:8002/v1
-OLLAMA_API_URL=http://host.docker.internal:11434
+# LLM Endpoints
+VISION_MODEL_URL=http://localhost:8001/v1
+TRANSLATE_MODEL_URL=http://localhost:8002/v1
+LOGIC_MODEL_URL=http://localhost:11434
 
 # Google Gemini (optional, for realtime voice)
 GEMINI_API_KEY=
 
-# TTS (external to compose)
-TTS_API_URL=http://host.docker.internal:6060/v1
+# TTS
+TTS_API_URL=http://localhost:6060/v1
 
 # Home Assistant
 HOME_ASSISTANT_URL=http://homeassistant.local:8123
 HOME_ASSISTANT_TOKEN=
 
-# MinIO credentials (sets root user for the MinIO container)
+# MinIO
+MINIO_ENDPOINT=http://localhost:9000
 MINIO_ACCESS_KEY=minioadmin
 MINIO_SECRET_KEY=minioadmin
+
+# Person Identification Service
+PERSON_ID_SERVICE_URL=http://localhost:8100
 
 # Telegram notifications
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_CAREGIVER_CHAT_ID=
-TELEGRAM_OPENCLAW_CHAT_ID=
 
-# API keys for the Cognitive Companion backend
+# API keys
 CC_ADMIN_API_KEY=change-me-admin-key
 CC_CAREGIVER_API_KEY=change-me-caregiver-key
 CC_MCP_API_KEY=change-me-mcp-key
-
-# GPU device index for person-ID service
-CUDA_DEVICE_ID=0
 ```
 
 ::: tip
-Services inside Docker Compose communicate by container name. The backend automatically connects to `person-id:8100` for face recognition and `minio:9000` for storage, so you don't need to configure these URLs.
+When running inside Docker, use `host.docker.internal` instead of `localhost` to reach services on the host machine. If external services are on different machines, use their LAN IP addresses.
 :::
 
 ### External Services
 
-The following services run **outside** Docker Compose and must be accessible from the host:
+The following services run **outside** Docker Compose and must be accessible from the backend container:
 
-| Service | Purpose | Default URL |
-|---------|---------|-------------|
-| **vLLM** (Cosmos-Reason2-8B) | Vision analysis | `http://host.docker.internal:8001/v1` |
-| **vLLM** (TranslateGemma-12b) | Translation | `http://host.docker.internal:8002/v1` |
-| **Ollama** (gemma3:4b) | Logic reasoning | `http://host.docker.internal:11434` |
-| **Home Assistant** | Sensor integration | `http://homeassistant.local:8123` |
-| **TTS service** | Text-to-speech | `http://host.docker.internal:6060/v1` |
-
-::: warning
-The `host.docker.internal` hostname resolves to the Docker host machine. If your external services are on different machines, use their LAN IP addresses instead.
-:::
+| Service                       | Purpose                             | Default URL                       |
+|-------------------------------|-------------------------------------|-----------------------------------|
+| **Person ID Service**         | Face recognition + motion detection | `http://localhost:8100`           |
+| **vLLM** (Cosmos-Reason2-8B)  | Vision analysis                     | `http://localhost:8001/v1`        |
+| **vLLM** (TranslateGemma-12b) | Translation                         | `http://localhost:8002/v1`        |
+| **Ollama** (gemma3:4b)        | Logic reasoning                     | `http://localhost:11434`          |
+| **MinIO**                     | S3-compatible object storage        | `http://localhost:9000`           |
+| **Home Assistant**            | Sensor integration                  | `http://homeassistant.local:8123` |
+| **TTS service**               | Text-to-speech                      | `http://localhost:6060/v1`        |
 
 ### Persistent Volumes
 
-Three named volumes persist data across container restarts:
-
-| Volume | Container Path | Contents |
-|--------|---------------|----------|
-| `cc-backend-data` | `/app/data` | SQLite database, media cache |
-| `person-id-data` | `/app/data` | Face embeddings, enrollment DB, guest images |
-| `minio-data` | `/data` | S3 object storage |
-
-### GPU Access
-
-The `person-id` service requires GPU access for face detection and recognition. Docker Compose uses the NVIDIA Container Toolkit:
-
-```yaml
-deploy:
-  resources:
-    reservations:
-      devices:
-        - driver: nvidia
-          count: 1
-          capabilities: [gpu]
-```
-
-Ensure the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) is installed on the host.
+| Volume           | Compose File                  | Container Path | Contents                                     |
+|------------------|-------------------------------|----------------|----------------------------------------------|
+| `backend-data`   | cognitive-companion           | `/app/data`    | SQLite database, media cache                 |
+| `person-id-data` | person-identification-service | `/app/data`    | Face embeddings, enrollment DB, guest images |
 
 ### Frontend Image
 

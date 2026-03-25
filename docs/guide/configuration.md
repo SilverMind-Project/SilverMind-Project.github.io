@@ -10,9 +10,9 @@ Variables are interpolated into YAML config files using `${ENV_VAR}` syntax. Def
 
 | Variable | Description |
 |----------|-------------|
-| `VLLM_COSMOS_URL` | vLLM endpoint for Cosmos Reason2 (vision analysis) |
-| `VLLM_TRANSLATE_URL` | vLLM endpoint for TranslateGemma (translation) |
-| `OLLAMA_API_URL` | Ollama endpoint (logic reasoning) |
+| `VISION_MODEL_URL` | Vision model endpoint — Cosmos Reason2 (OpenAI-compatible) |
+| `TRANSLATE_MODEL_URL` | Translation model endpoint — TranslateGemma (OpenAI-compatible) |
+| `LOGIC_MODEL_URL` | Logic/reasoning model endpoint — Gemma3 (OpenAI-compatible) |
 | `HOME_ASSISTANT_URL` | Home Assistant base URL |
 | `HOME_ASSISTANT_TOKEN` | HA long-lived access token |
 | `MINIO_ENDPOINT` | MinIO / S3-compatible endpoint |
@@ -73,21 +73,21 @@ llm:
   vision:
     provider: vllm
     model: nvidia/Cosmos-Reason2-8B
-    base_url: ${VLLM_COSMOS_URL}
+    base_url: ${VISION_MODEL_URL}
     max_tokens: 2048
     temperature: 0.3
 
   logic:
     provider: ollama
     model: gemma3:4b
-    base_url: ${OLLAMA_API_URL}
+    base_url: ${LOGIC_MODEL_URL}
     max_tokens: 1024
     temperature: 0.3
 
   translation:
     provider: vllm
     model: google/TranslateGemma-12b
-    base_url: ${VLLM_TRANSLATE_URL}
+    base_url: ${TRANSLATE_MODEL_URL}
     max_tokens: 1024
     temperature: 0.1
 

@@ -35,9 +35,9 @@ Edit `.env` with your service URLs and API keys:
 
 ```bash
 # LLM Providers
-VLLM_COSMOS_URL=http://localhost:8001/v1
-VLLM_TRANSLATE_URL=http://localhost:8002/v1
-OLLAMA_API_URL=http://localhost:11434
+VISION_MODEL_URL=http://localhost:8001/v1
+TRANSLATE_MODEL_URL=http://localhost:8002/v1
+LOGIC_MODEL_URL=http://localhost:11434
 
 # Home Assistant
 HOME_ASSISTANT_URL=http://homeassistant.local:8123
