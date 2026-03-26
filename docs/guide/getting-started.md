@@ -13,6 +13,7 @@ This guide walks you through getting Cognitive Companion running on your local n
 | **vLLM** | Vision + translation model serving | Cosmos-Reason2-8B, TranslateGemma-12b |
 | **Ollama** | Logic reasoning model | gemma3:4b |
 | **Python 3.11+** | Backend runtime | 3.12 recommended |
+| **[uv](https://docs.astral.sh/uv/)** | Python package manager | For local development |
 | **Node.js 18+** | Frontend build | For admin console, websocket audio interface |
 
 ### Optional Components
@@ -105,12 +106,12 @@ docker run -p 8000:8000 \
   --env-file .env \
   cognitive-companion
 
-# Or for local development
-pip install -e ".[gemini]"
-uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+# Or for local development (requires uv: https://docs.astral.sh/uv/)
+cd backend && uv sync --extra gemini && cd ..
+uv run --directory backend uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-The `[gemini]` extra installs the `google-genai` package for voice companion support. Omit it if you don't need real-time voice.
+The `gemini` extra installs the `google-genai` package for voice companion support. Omit it if you don't need real-time voice.
 
 **Start the Frontend:**
 

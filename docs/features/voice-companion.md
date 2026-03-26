@@ -91,7 +91,8 @@ The Companion View (`frontend/src/views/CompanionView.vue`) provides:
 The Gemini Live integration requires the `google-genai` package, which is an optional dependency:
 
 ```bash
-pip install -e ".[gemini]"
+cd backend
+uv sync --extra gemini
 ```
 
 The import is intentionally lazy in `backend/integrations/llm/gemini_live.py`. The system starts without Gemini if the package isn't installed. This allows deployments that don't need voice to skip the dependency entirely.

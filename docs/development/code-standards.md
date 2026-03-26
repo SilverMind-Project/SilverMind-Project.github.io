@@ -6,7 +6,8 @@ This document outlines the coding standards and conventions used in Cognitive Co
 
 ### Style
 
-- **Linter/Formatter**: ruff with `E`, `F`, `I`, `W` rules
+- **Linter/Formatter**: ruff with `E`, `F`, `I`, `W`, `UP`, `B`, `SIM`, `RUF`, `PIE`, `PT`, `C4`, `T20` rules
+- **Type checker**: mypy with `enable_error_code = ["import"]` (catches broken imports)
 - **Line length**: 100 characters
 - **Target**: Python 3.11+
 - **Async**: Use `async`/`await` for all I/O operations
@@ -173,7 +174,7 @@ onUnmounted(() => {
 - **Run migrations.** Delete `data/cognitive_companion.db` and restart instead.
 - **Use `print()`.** Use `structlog` via `get_logger()`.
 - **Instantiate services in routers.** Access them from `request.app.state`.
-- **Add dependencies without updating `pyproject.toml`** (backend) or `package.json` (frontend).
+- **Add dependencies without updating `pyproject.toml` and running `uv lock`** (backend) or `package.json` (frontend).
 - **Skip permission checks.** All new endpoints need entries in `config/auth.yaml`.
 - **Catch `AuthenticationError` or `PermissionDeniedError` in routers.** Let global handlers deal with them.
 - **Store secrets in config files.** Use `${ENV_VAR}` interpolation.

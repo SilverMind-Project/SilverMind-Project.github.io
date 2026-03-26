@@ -8,12 +8,22 @@ The person identification system runs as a [companion microservice](https://gith
 
 ### Enrollment
 
-Provide 5-10 reference photos per person via the person-ID service API. No model fine-tuning is needed because ArcFace generalizes from pretrained weights. For best results:
+Upload 5-10 reference photos per person through the admin UI (**Members & Enrollment** page) or via the API. No model fine-tuning is needed because ArcFace generalizes from pretrained weights.
+
+**Enrolling from the Admin UI:**
+
+1. Go to **Members & Enrollment** in the admin console
+2. Click the face-recognition icon next to a member
+3. Upload reference photos (drag-and-drop or file picker)
+4. The backend proxies the images to the person-ID service, which extracts face embeddings
+
+**Best practices for reference photos:**
 
 - Use photos with varied lighting conditions
 - Include different angles (frontal, 3/4 profile)
 - Ensure the face is clearly visible and unobstructed
 - Avoid group photos; use one person per reference image
+- Photos from deployment cameras give the best domain match
 
 ### Identification Pipeline
 
@@ -115,14 +125,30 @@ This allows HA automations and dashboards to display person locations and use th
 
 ## API Endpoints
 
+### Member Management
+
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/persons` | List all household members |
 | `POST` | `/persons` | Register a new member |
-| `GET` | `/persons/locations` | Current location of all tracked members |
 | `GET` | `/persons/{id}` | Get member details |
 | `PATCH` | `/persons/{id}` | Update a member |
 | `DELETE` | `/persons/{id}` | Remove a member and their data |
+
+### Face Enrollment
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/persons/enrolled` | List face enrollment status from person-ID service |
+| `POST` | `/persons/{id}/enroll` | Upload reference photos to enroll a face (multipart) |
+| `GET` | `/persons/{id}/enrollment` | Get enrollment details (embedding count, created date) |
+| `DELETE` | `/persons/{id}/enrollment` | Remove face enrollment data |
+
+### Location Tracking
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/persons/locations` | Current location of all tracked members |
 | `GET` | `/persons/{id}/location` | Current location of a specific member |
 | `GET` | `/persons/{id}/history` | Location timeline (`?hours=24`) |
 | `GET` | `/persons/{id}/sightings` | Recent camera sightings (`?limit=20`) |

@@ -2,33 +2,19 @@
 
 Proposed features and integration pathways for future development. We welcome community input. If you're interested in working on any of these, [open an issue](https://github.com/SilverMind-Project/cognitive-companion/issues) to discuss your approach.
 
-## Home Assistant Webhook Triggers
+## ~~Home Assistant Webhook Triggers~~ :white_check_mark:
 
-**Status:** Proposed
+**Status:** Implemented
 
-**Problem:** Home Assistant automations can't trigger Cognitive Companion pipelines. Communication is one-way: CC polls HA, never the reverse.
+Rules can now be triggered via `POST /api/v1/webhooks/{rule_id}` with an `X-Webhook-Secret` header. Secrets are generated per-rule via `POST /api/v1/webhooks/{rule_id}/generate-secret` and validated with HMAC constant-time comparison. The JSON request body becomes `pipeline_data["trigger_input"]` for downstream steps.
 
-**Design:** Add per-rule `webhook_id` and `webhook_secret` fields. A new `POST /api/v1/webhook/{webhook_id}?secret=...` endpoint would accept a JSON body that becomes `pipeline_data["trigger_input"]`. Webhook endpoints bypass API key auth in favor of per-rule webhook secrets.
+See [API Reference: Webhooks](/api/reference#webhooks) for details.
 
-**Use cases:**
-- HA automation detects a door opening → triggers a camera analysis pipeline
-- HA detects bedtime routine started → triggers a medication reminder pipeline
-- HA detects unusual energy usage → triggers an investigation pipeline
+## ~~Enhanced Pipeline Triggers with Input Parameters~~ :white_check_mark:
 
-**Impact:** Enables bidirectional HA integration, turning CC into a first-class HA automation target.
+**Status:** Implemented
 
-## Enhanced Pipeline Triggers with Input Parameters
-
-**Status:** Proposed
-
-**Problem:** The `trigger_rule` MCP tool and manual execute endpoint accept no input parameters. All context must come from sensor events or pipeline steps.
-
-**Design:** Add `input_params: dict` to `TriggerContext`. Modify `POST /rules/{id}/execute` and the MCP `trigger_rule` tool to accept an `input_params` JSON body. Parameters become available in `pipeline_data["trigger_input"]` for downstream steps.
-
-**Use cases:**
-- External AI agent triggers a reminder pipeline with a custom message
-- HA webhook passes sensor data as pipeline input
-- Manual triggers with pre-filled parameters for testing
+`TriggerContext` now includes a `webhook_payload` field. Webhook payloads and manual trigger parameters are available in `pipeline_data["trigger_input"]` for downstream steps to reference.
 
 ## Gemini Live Tool Calling
 

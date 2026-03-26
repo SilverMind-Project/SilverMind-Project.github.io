@@ -5,6 +5,7 @@ This guide covers setting up a development environment for contributing to Cogni
 ## Prerequisites
 
 - **Python 3.11+** (3.12 recommended)
+- **[uv](https://docs.astral.sh/uv/)** (Python package manager)
 - **Node.js 18+** with npm
 - **Git**
 - **NVIDIA GPU** with 10 GB+ VRAM (for running models locally)
@@ -19,18 +20,20 @@ cd cognitive-companion
 
 ## Backend Setup
 
+### Install uv
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
 ### Install Dependencies
 
 ```bash
-# Create a virtual environment
-python -m venv .venv
-source .venv/bin/activate
-
-# Install with all optional dependencies
-pip install -e ".[dev,gemini]"
+cd backend
+uv sync --extra dev --extra gemini
 ```
 
-The `[dev]` extra includes `ruff`, `pytest`, and `pytest-asyncio`. The `[gemini]` extra adds the `google-genai` package for voice companion support.
+This creates a `.venv` automatically and installs all dependencies from the lockfile (`uv.lock`). The `dev` extra includes `ruff`, `mypy`, `pytest`, and `pytest-asyncio`. The `gemini` extra adds the `google-genai` package for voice companion support.
 
 ### Configure Environment
 
@@ -48,24 +51,36 @@ At minimum, you need:
 ### Run the Backend
 
 ```bash
-uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+cd ..  # back to project root
+uv run --directory backend uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 The `--reload` flag enables hot-reloading on file changes. The SQLite database is auto-created at `data/cognitive_companion.db` on first startup.
 
-### Lint and Format
+### Lint, Type Check, and Format
 
 ```bash
-ruff check backend/             # Lint
-ruff format backend/            # Format
+cd backend
+
+# All-in-one check (ruff + ruff format + mypy)
+./scripts/lint.sh
+
+# Auto-fix ruff issues
+./scripts/lint.sh --fix
+
+# Or run individually
+uv run ruff check .             # Lint
+uv run ruff format .            # Format
+cd .. && backend/.venv/bin/mypy backend/ --config-file backend/pyproject.toml  # Type check
 ```
 
-Ruff is configured in `pyproject.toml` with rules `E`, `F`, `I`, `W` and a 100-character line length.
+Ruff is configured in `pyproject.toml` with rules `E`, `F`, `I`, `W`, `UP`, `B`, `SIM`, `RUF`, `PIE`, `PT`, `C4`, `T20` and a 100-character line length. mypy is configured with `enable_error_code = ["import"]` to catch broken imports at type-check time.
 
 ### Run Tests
 
 ```bash
-pytest
+cd backend
+uv run pytest
 ```
 
 Tests use `pytest-asyncio` for async test support. Place test files in `tests/` mirroring the `backend/` directory structure.
@@ -132,7 +147,8 @@ cognitive-companion/
 │   └── stores/                 # Pinia state management
 ├── config/                     # YAML configuration files
 ├── data/                       # Runtime data (SQLite DB, media cache)
-└── pyproject.toml              # Python project metadata
+├── backend/pyproject.toml      # Python project metadata
+└── backend/uv.lock             # Locked dependency versions
 ```
 
 ## Key Files to Read First

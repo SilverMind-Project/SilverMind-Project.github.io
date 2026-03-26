@@ -1,6 +1,6 @@
 # Multi-Channel Notifications
 
-Cognitive Companion routes alerts across five notification channels, with automatic escalation and repeat policies based on alert severity.
+Cognitive Companion routes alerts across notification channels via a plugin system, with automatic escalation and repeat policies based on alert severity. Each channel is a self-contained plugin in `backend/channels/builtin/` that is auto-discovered at startup via `ChannelRegistry`. See [Extending the Pipeline](/development/extending-pipeline#adding-a-notification-channel) for how to add custom channels.
 
 ## Channels
 

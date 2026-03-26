@@ -54,6 +54,7 @@ Before submitting a PR, verify:
 - [ ] Services are accessed via `request.app.state`, not instantiated in routers
 - [ ] No secrets are hardcoded; use `${ENV_VAR}` interpolation
 - [ ] `ruff check` and `ruff format` pass
+- [ ] `mypy` type check passes (run `./scripts/lint.sh` to check all at once)
 - [ ] Frontend builds without errors
 
 ### Commit Messages

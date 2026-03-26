@@ -50,11 +50,12 @@ Rooms represent physical spaces in the household (kitchen, bedroom, hallway). Ea
 | `name` | string | Rule name |
 | `description` | string | Human-readable description |
 | `enabled` | boolean | Whether the rule is active |
-| `trigger_type` | string | `sensor_event`, `cron`, or `manual` |
+| `trigger_type` | string | `sensor_event`, `cron`, `manual`, or `webhook` |
 | `primary_sensor_id` | string | Sensor that triggers this rule |
 | `schedule_cron` | string | Cron expression (for `cron` trigger type) |
 | `cool_off_minutes` | integer | Minimum minutes between triggers |
 | `max_daily_triggers` | integer | Maximum triggers per day |
+| `webhook_config` | object | Webhook settings: `{secret, created_at}` (for `webhook` trigger type) |
 
 ### Pipeline Steps
 
@@ -116,6 +117,25 @@ Rooms represent physical spaces in the household (kitchen, bedroom, hallway). Ea
 | `completed` | All steps finished successfully |
 | `failed` | A step failed and pipeline halted |
 | `cancelled` | Manually cancelled |
+
+## Pipeline Metadata
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/pipeline/step-types` | List all registered step types with metadata and config schemas |
+| `GET` | `/pipeline/channel-types` | List all registered notification channel types |
+| `GET` | `/pipeline/filter-types` | List all registered context filter types |
+
+These endpoints return metadata from the plugin registries (StepRegistry, ChannelRegistry, FilterRegistry). The frontend uses `/pipeline/step-types` to dynamically populate the step palette and config editor.
+
+## Webhooks
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/webhooks/{rule_id}` | Trigger a rule's pipeline via webhook |
+| `POST` | `/webhooks/{rule_id}/generate-secret` | Generate or regenerate a webhook secret for a rule |
+
+Webhook requests require an `X-Webhook-Secret` header matching the rule's configured secret (validated via HMAC constant-time comparison). The JSON request body becomes `pipeline_data["trigger_input"]` in the triggered pipeline.
 
 ## Activities
 

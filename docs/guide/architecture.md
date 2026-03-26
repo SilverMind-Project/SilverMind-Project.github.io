@@ -57,16 +57,17 @@ The `RulesEngine` evaluates each event batch against all enabled rules. A rule m
 
 ### 4. Pipeline Execution
 
-Each matched rule triggers its own composable pipeline via the `PipelineExecutor`. Steps execute in the configured order, sharing a `pipeline_data` dictionary that accumulates results:
+Each matched rule triggers its own composable pipeline via the `PipelineExecutor`. Step handlers are self-contained plugins in `backend/steps/builtin/`, each inheriting from `StepHandler` and auto-discovered via `StepRegistry` at startup. Steps execute in the configured order, sharing a `pipeline_data` dictionary that accumulates results:
 
 ```python
 @dataclass
 class TriggerContext:
-    trigger_type: str       # "sensor_event", "cron", "manual"
+    trigger_type: str       # "sensor_event", "cron", "manual", "webhook"
     sensor_id: str | None
     room_name: str | None
     media_paths: list[str]
     media_type: str | None
+    webhook_payload: dict | None  # Payload from webhook triggers
 
 @dataclass
 class StepResult:
@@ -77,7 +78,7 @@ class StepResult:
     wait_until: datetime | None = None         # For wait/resume
 ```
 
-See [Composable Pipelines](/features/pipeline) for the full step type reference.
+The same plugin pattern applies to notification channels (`ChannelRegistry`) and context filters (`FilterRegistry`). See [Composable Pipelines](/features/pipeline) for the full step type reference and [Extending the Pipeline](/development/extending-pipeline) for how to add new plugins.
 
 ### 5. Output Dispatch
 
@@ -91,16 +92,17 @@ The `NotificationDispatcher` routes alerts to channels based on the alert level 
 
 ## Service Architecture
 
-Services are instantiated in the FastAPI lifespan function and attached to `app.state`. Routers access them via dependency injection:
+Services are instantiated in the FastAPI lifespan function and attached to `app.state`. The `PipelineExecutor` receives a `ServiceContainer` that bundles all shared services (LLM providers, HA client, DB session factory, etc.) and passes it to step plugins during execution. Routers access services via `app.state`:
 
 ```python
 # In backend/main.py (lifespan):
-app.state.pipeline_executor = PipelineExecutor(
+services = ServiceContainer(
     db_session_factory=get_session,
     person_id_client=person_id_client,
     notification_dispatcher=notification_dispatcher,
     # ... other dependencies
 )
+app.state.pipeline_executor = PipelineExecutor(services)
 
 # In a router:
 pipeline_executor = request.app.state.pipeline_executor

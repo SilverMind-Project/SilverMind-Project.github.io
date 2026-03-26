@@ -2,6 +2,8 @@
 
 The pipeline system is the core of Cognitive Companion. Each rule defines its own ordered sequence of pipeline steps executed by the `PipelineExecutor`. Rather than a fixed linear chain, administrators configure exactly which steps run and in what order, including conditional branching and wait/resume for multi-stage workflows.
 
+Step handlers are self-contained plugins, each in its own file under `backend/steps/builtin/`, auto-discovered at startup via `StepRegistry`. The frontend loads available step types dynamically from the `GET /api/v1/pipeline/step-types` endpoint, so new plugins appear automatically in the step palette and config editor. See [Extending the Pipeline](/development/extending-pipeline) for how to add custom step types.
+
 ## How Pipelines Work
 
 When a rule is triggered, the executor:
@@ -27,12 +29,15 @@ Every step receives the full `pipeline_data` dictionary and a `TriggerContext` w
 ```python
 @dataclass
 class TriggerContext:
-    trigger_type: str       # "sensor_event", "cron", "manual"
+    trigger_type: str       # "sensor_event", "cron", "manual", "webhook"
     sensor_id: str | None
     room_name: str | None
     media_paths: list[str]
     media_type: str | None
+    webhook_payload: dict | None  # Payload from webhook triggers
 ```
+
+For webhook triggers, the `webhook_payload` is also available in `pipeline_data["trigger_input"]` so downstream steps can reference it.
 
 ## Pipeline Step Types
 
