@@ -37,6 +37,7 @@ Edge devices send data to the backend via REST endpoints:
 - **reCamera** devices POST image frames to `/api/v1/device/recamera` using device key authentication
 - **Home Assistant** sensors are polled at a configurable interval (default: 30 seconds)
 - **reTerminal** devices report button presses to `/api/v1/device/reterminal`
+- **Occupancy duration events** are generated internally by the `SensorPollingService` when a presence sensor has been continuously occupied for at least the threshold configured in a matching rule (`occupancy_duration` trigger type)
 
 ### 2. Event Aggregation
 

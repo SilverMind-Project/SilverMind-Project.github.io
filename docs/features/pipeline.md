@@ -29,15 +29,16 @@ Every step receives the full `pipeline_data` dictionary and a `TriggerContext` w
 ```python
 @dataclass
 class TriggerContext:
-    trigger_type: str       # "sensor_event", "cron", "manual", "webhook"
+    trigger_type: str              # "sensor_event", "cron", "manual", "webhook", "occupancy_duration"
     sensor_id: str | None
     room_name: str | None
     media_paths: list[str]
     media_type: str | None
-    webhook_payload: dict | None  # Payload from webhook triggers
+    webhook_payload: dict | None   # Payload from webhook triggers
+    occupancy_duration_minutes: float | None  # Set for occupancy_duration triggers
 ```
 
-For webhook triggers, the `webhook_payload` is also available in `pipeline_data["trigger_input"]` so downstream steps can reference it.
+For webhook triggers, `webhook_payload` is also available in `pipeline_data["trigger_input"]`. For `occupancy_duration` triggers, `occupancy_duration_minutes` reflects how long the sensor has been continuously occupied at the moment the rule fired.
 
 ## Pipeline Step Types
 
@@ -305,6 +306,24 @@ person_identification → vision_analysis → logic_reasoning → condition
   ├── (true: emergency) → notification [emergency level] → ha_action
   └── (false: routine)  → notification [info level]
 ```
+
+### Occupancy Safety Alert
+
+Triggered by the `occupancy_duration` trigger type when a presence sensor has been on for longer than the configured threshold. The pipeline below sends a multilingual voice prompt asking if the person needs help:
+
+```text
+translation → notification [alert_level: warning, channels: [websocket, telegram, realtime_voice]]
+```
+
+**Rule configuration:**
+
+- `trigger_type`: `occupancy_duration`
+- `primary_sensor_id`: the presence sensor to watch (e.g. `bathroom_sensor_01`)
+- `occupancy_config`: `{"min_minutes": 40}`
+- `cool_off_minutes`: `30` — prevents re-firing until acknowledged or resolved
+- Context filters: add `time_range`, `person_presence`, or `room` filters as needed
+
+The `translation` step localises the message before the `notification` step dispatches it. The `realtime_voice` channel initiates an interactive voice check-in via Gemini Live; the `websocket` and `telegram` channels alert the admin console and caregiver simultaneously.
 
 ## Workflow Execution
 

@@ -48,6 +48,21 @@ tts:
 
 **How it works:** The TTS integration sends text to the TTS service's `/v1/audio/speech` endpoint, receives audio, and plays it through HA media player entities. For direct HA voice pipeline integration, the Wyoming sidecar bridges the OpenAI-compatible API to the Wyoming protocol.
 
+### Realtime Voice (`realtime_voice`)
+
+Interactive voice check-ins via Google Gemini Live. Unlike TTS (a one-way announcement), this channel initiates a two-way conversation — the AI asks the person a question and waits for a spoken response.
+
+**How it works:** The channel queues a prompt on the WebSocket backend task queue. When an active Gemini Live session picks it up, the AI speaks the prompt and processes the person's reply. Any response is logged against the originating alert.
+
+**Use cases:**
+
+- Occupancy safety alerts: *"You've been in the bathroom a while — do you need any help?"*
+- Medication reminders: *"It's time for your afternoon medication — have you taken it yet?"*
+
+**Configuration:** Add `realtime_voice` to the channel list for an alert level in `notifications.yaml`, or override per-rule in the `notification` pipeline step's `channels` field.
+
+> **Note:** This channel requires an active Gemini Live WebSocket connection (i.e., the companion UI must be open). If no session is active, the message is silently dropped. Pair it with `websocket` or `telegram` to ensure delivery when the voice UI is not in use.
+
 ### Home Assistant Announcements
 
 Leverages HA's `tts.speak` or `media_player.play_media` services to announce notifications through smart speakers, tablets, or other media devices in specific rooms.

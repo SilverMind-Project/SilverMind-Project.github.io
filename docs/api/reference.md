@@ -50,12 +50,13 @@ Rooms represent physical spaces in the household (kitchen, bedroom, hallway). Ea
 | `name` | string | Rule name |
 | `description` | string | Human-readable description |
 | `enabled` | boolean | Whether the rule is active |
-| `trigger_type` | string | `sensor_event`, `cron`, `manual`, or `webhook` |
-| `primary_sensor_id` | string | Sensor that triggers this rule |
+| `trigger_type` | string | `sensor_event`, `cron`, `manual`, `webhook`, or `occupancy_duration` |
+| `primary_sensor_id` | string | Sensor that triggers this rule (required for `cron` and `occupancy_duration`) |
 | `schedule_cron` | string | Cron expression (for `cron` trigger type) |
 | `cool_off_minutes` | integer | Minimum minutes between triggers |
 | `max_daily_triggers` | integer | Maximum triggers per day |
 | `webhook_config` | object | Webhook settings: `{secret, created_at}` (for `webhook` trigger type) |
+| `occupancy_config` | object | Occupancy threshold: `{min_minutes: int}` (for `occupancy_duration` trigger type) |
 
 ### Pipeline Steps
 

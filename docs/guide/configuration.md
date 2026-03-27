@@ -52,7 +52,7 @@ interval = settings.get("homeassistant.poll_interval_seconds", 30)
 | `database` | SQLite database URL |
 | `llm` | Vision, logic, translation, and realtime LLM provider configs |
 | `tts` | TTS voice and speed settings |
-| `homeassistant` | HA URL, token, polling interval, bathroom time limit |
+| `homeassistant` | HA URL, token, polling interval |
 | `minio` | Object storage credentials and presigned URL expiry |
 | `event_aggregator` | Batch size, window, cooldown, media retention |
 | `conversation` | History TTL and max turns per session |
