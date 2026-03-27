@@ -54,6 +54,14 @@ Interactive voice check-ins via Google Gemini Live. Unlike TTS (a one-way announ
 
 **How it works:** The channel queues a prompt on the WebSocket backend task queue. When an active Gemini Live session picks it up, the AI speaks the prompt and processes the person's reply. Any response is logged against the originating alert.
 
+**Transcript delineation:** Orchestrator-initiated prompts are tagged as internal turns and are **not** shown in the senior's conversation transcript. The senior only sees the agent's spoken response, keeping the UI clean. Three actors are tracked in the conversation log:
+
+| Actor | Source tag | Visible in transcript? |
+| --------------- | --------------- | -------------------------------- |
+| Senior (user) | `user` | Yes, right-aligned bubble |
+| Gemini agent | `assistant` | Yes, left-aligned bubble |
+| Orchestrator | `orchestrator` | No, internal only |
+
 **Use cases:**
 
 - Occupancy safety alerts: *"You've been in the bathroom a while — do you need any help?"*
@@ -121,7 +129,7 @@ The notification step reads the message from upstream pipeline data (typically f
 
 ### Channel Override
 
-By default, a notification step uses the channel list from `notifications.yaml` for the given alert level. The `channels` config field overrides this, allowing per-rule customization.
+By default, a notification step uses the channel list from `notifications.yaml` for the given alert level. The `channels` config field overrides this, allowing per-rule customization. When `channels` is specified in the step config, it **completely replaces** the default channel list for that dispatch; the defaults are not merged.
 
 ### Alert Management
 

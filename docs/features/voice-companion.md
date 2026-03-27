@@ -30,6 +30,16 @@ Browser Speaker   ← WebSocket ← Backend Audio Handler ← Gemini Live API
 - Sessions are isolated per connection, so multiple clients can have independent conversations
 - The WebSocket connection manager (`backend/websocket/connection_manager.py`) tracks active connections and handles cleanup
 
+### Transcript Actor Delineation
+
+The voice session tracks three distinct actors in the conversation:
+
+- **User (senior):** Speech from the person using the companion. Shown as right-aligned bubbles in the transcript.
+- **Assistant (Gemini agent):** The AI's spoken responses. Shown as left-aligned bubbles.
+- **Orchestrator (system):** Prompts injected by the Cognitive Companion rule engine (e.g., medication reminders, safety check-ins via the `realtime_voice` notification channel). These are **never shown** in the frontend transcript. The senior only hears and sees the agent's response, not the system instruction that triggered it.
+
+This separation ensures the senior has a natural conversation experience without seeing internal automation. The full conversation log, including orchestrator turns, is persisted for caregiver review.
+
 ### System Instruction
 
 The Gemini model is configured with a system instruction tailored for senior care:
@@ -63,7 +73,7 @@ conversation:
 ### Key Settings
 
 | Setting | Default | Description |
-|---------|---------|-------------|
+| ------- | ------- | ----------- |
 | `websocket.max_connections` | 5 | Maximum concurrent WebSocket connections |
 | `websocket.lazy_connect` | true | Only connect to Gemini when audio starts |
 | `conversation.history_ttl_minutes` | 30 | How long to keep conversation history |

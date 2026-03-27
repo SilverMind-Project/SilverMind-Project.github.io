@@ -130,10 +130,11 @@ Dispatches an alert to configured notification channels based on alert level. Th
 
 **Config fields:**
 - `alert_level`: `emergency`, `warning`, `info`, or `reminder`
-- `channels`: optional override of which channels to use
+- `channels`: optional override of which channels to use (completely replaces the defaults from `notifications.yaml` when specified)
+- `message_template`: optional Python format string with `{message}`, `{room}`, and any `pipeline_data` key
 - `eink_targets`: optional list of sensor IDs for targeted e-ink display rendering
 
-**Output keys:** `notification_sent` (boolean), `notification_channels` (list of channels used)
+**Output keys:** `notification_dispatched` (boolean), `notification_channels` (dict of channel → success)
 
 #### `ha_action`
 

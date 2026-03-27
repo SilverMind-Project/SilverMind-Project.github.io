@@ -145,6 +145,22 @@ class YourFilter(ContextFilter):
 
 The filter is auto-discovered and used by `RulesEngine._matches_context()` when a rule has a context with `context_type="your_filter"`. Add form support in `frontend/src/views/admin/RuleDetailView.vue` for the filter's config fields.
 
+### Context Filter Negation
+
+Every context filter supports negation via the `negate` flag on `RuleContext`. When `negate` is `True`, the filter result is inverted. For example, a room filter with `negate=True` means "NOT in this room". This is handled generically by the rules engine; individual filter implementations don't need to be aware of it.
+
+```json
+{
+  "context_type": "room",
+  "config_json": { "room_name": "Kitchen" },
+  "negate": true
+}
+```
+
+The above means: "fire this rule when the event is NOT in the Kitchen."
+
+Composition rules remain the same: within a `context_type` group, contexts are ORed; across groups, they are ANDed. Negation is applied per-context before the OR grouping.
+
 ## Adding an LLM Provider
 
 1. Implement the `LLMProvider` interface from `backend/integrations/llm/base.py`
