@@ -135,7 +135,7 @@ docker run -p 80:80 cognitive-companion-ui
 2. Set your admin API key in the settings
 3. **Create rooms.** Define the physical spaces in your home (kitchen, bedroom, etc.)
 4. **Register sensors.** Add cameras and presence sensors, assigning each to a room
-5. **Enroll household members.** Upload reference photos to the person-ID service (5-10 per person), then register them in the admin console under **Persons**
+5. **Enroll household members.** Go to **Members & Enrollment**, register each person, then click the face-recognition icon to upload 5-10 reference photos per person
 6. **Create rules.** Use the visual pipeline builder to assemble step sequences
 
 ### Your First Rule

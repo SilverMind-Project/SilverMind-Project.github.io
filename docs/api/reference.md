@@ -168,14 +168,32 @@ Event logs contain the full `pipeline_data_json` from each rule execution, provi
 
 ## Persons
 
+### Member Management
+
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/persons` | List all household members |
+| `GET` | `/persons` | List all household members (includes enrollment status) |
 | `POST` | `/persons` | Register a new member |
-| `GET` | `/persons/locations` | Current location of all tracked members |
 | `GET` | `/persons/{id}` | Get member details |
 | `PATCH` | `/persons/{id}` | Update a member |
 | `DELETE` | `/persons/{id}` | Remove a member and their data |
+
+### Face Enrollment
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/persons/enrolled` | List face enrollment status from person-ID service |
+| `POST` | `/persons/{id}/enroll` | Upload reference photos to enroll a face (multipart) |
+| `GET` | `/persons/{id}/enrollment` | Get enrollment details (embedding count, created date) |
+| `DELETE` | `/persons/{id}/enrollment` | Remove face enrollment data |
+
+The enrollment endpoints proxy requests to the [person-identification-service](https://github.com/SilverMind-Project/person-identification-service). Upload 5-10 reference photos per person through the admin UI (**Members & Enrollment** page) or via the API.
+
+### Location Tracking
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/persons/locations` | Current location of all tracked members |
 | `GET` | `/persons/{id}/location` | Current location of a specific member |
 | `GET` | `/persons/{id}/history` | Location timeline (`?hours=24`) |
 | `GET` | `/persons/{id}/sightings` | Recent camera sightings (`?limit=20`) |
