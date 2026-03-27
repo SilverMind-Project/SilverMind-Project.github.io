@@ -37,7 +37,7 @@ See [E-Ink Display Pipeline](/features/eink-display) for full details.
 
 ### Text-to-Speech (TTS)
 
-Audio announcements through Home Assistant media players. Uses Azure Neural voices with configurable speed.
+Audio announcements through Home Assistant media players. The [TTS service](https://github.com/SilverMind-Project/tts-service) provides multi-engine speech synthesis with an OpenAI-compatible API, and integrates with Home Assistant via the Wyoming protocol through a [wyoming_openai](https://github.com/roryeckel/wyoming_openai) sidecar.
 
 **Configuration:**
 ```yaml
@@ -46,7 +46,7 @@ tts:
   speed: 0.85
 ```
 
-**How it works:** The TTS integration sends text to the TTS service endpoint, receives audio, and plays it through HA media player entities.
+**How it works:** The TTS integration sends text to the TTS service's `/v1/audio/speech` endpoint, receives audio, and plays it through HA media player entities. For direct HA voice pipeline integration, the Wyoming sidecar bridges the OpenAI-compatible API to the Wyoming protocol.
 
 ### Home Assistant Announcements
 

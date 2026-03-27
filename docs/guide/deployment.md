@@ -59,8 +59,8 @@ LOGIC_MODEL_URL=http://localhost:11434
 # Google Gemini (optional, for realtime voice)
 GEMINI_API_KEY=
 
-# TTS
-TTS_API_URL=http://localhost:6060/v1
+# TTS Service
+TTS_API_URL=http://localhost:8200/v1
 
 # Home Assistant
 HOME_ASSISTANT_URL=http://homeassistant.local:8123
@@ -100,7 +100,7 @@ The following services run **outside** Docker Compose and must be accessible fro
 | **Ollama** (gemma3:4b)        | Logic reasoning                     | `http://localhost:11434`          |
 | **MinIO**                     | S3-compatible object storage        | `http://localhost:9000`           |
 | **Home Assistant**            | Sensor integration                  | `http://homeassistant.local:8123` |
-| **TTS service**               | Text-to-speech                      | `http://localhost:6060/v1`        |
+| **TTS service**               | Text-to-speech                      | `http://localhost:8200/v1`        |
 
 ### Persistent Volumes
 

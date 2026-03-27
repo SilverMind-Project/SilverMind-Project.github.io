@@ -166,3 +166,50 @@ The `activity_detection` pipeline step records detected activities for tracked p
 Activities are recorded as `PersonActivity` records and can be used as context filters in downstream rules. For example, a lunch reminder rule can check whether an `eating` activity was recently recorded before sending a reminder.
 
 Query activities via `GET /api/v1/activities?person_id=...&activity_type=...`.
+
+::: tip Person Tracking vs Activity Tracking
+These two systems are independent. **Person tracking** identifies *who* is *where* using face recognition cameras and presence sensors. **Activity tracking** identifies *what* a person is doing using vision and logic LLMs. A rule can use both as separate context filters: for example, "only trigger when grandma is home in the kitchen AND no eating activity was recorded in the last 30 minutes."
+:::
+
+## Context Filters for Rules
+
+Person tracking and activity data are available as rule context filters, allowing rules to fire only when specific presence or activity conditions are met.
+
+### Person Presence Filter
+
+The `person_presence` filter checks whether a person is home, away, or in a specific room.
+
+| Config Field | Type | Description |
+| ------------ | ---- | ----------- |
+| `person_id` | string (required) | The household member to check |
+| `status` | string | `home`, `away`, or `unknown` (default: `home`) |
+| `room_name` | string | Optional room name; only applies when status is `home` |
+
+**Examples:**
+
+- **Person is home (any room):** `person_id: "grandma"`, `status: "home"`
+- **Person is in a specific room:** `person_id: "grandma"`, `status: "home"`, `room_name: "Kitchen"`
+- **Person is away:** `person_id: "grandma"`, `status: "away"`
+
+The filter checks the `PersonLocationState` table, which is continuously updated by camera detections and HA sensor correlation. Locations older than 30 minutes are considered stale and treated as away.
+
+### Person Activity Filter
+
+The `person_activity` filter checks whether a person performed a specific activity within a time window.
+
+| Config Field | Type | Description |
+| ------------ | ---- | ----------- |
+| `person_id` | string (required) | The household member to check |
+| `activity_type` | string (required) | Activity to look for (e.g. `eating`, `medication`) |
+| `within_minutes` | number | Time window to search (default: 30) |
+
+### Multi-Camera Room Mapping
+
+Each camera sensor is associated with a room. When a face is detected on any camera, the person's location is updated to that camera's room. This enables room-level presence tracking across the house:
+
+1. Place face-level cameras in each room for identification
+2. Configure each camera sensor with the correct room assignment
+3. The `PersonTrackingService` fuses all camera detections into a single location state per person
+4. Cameras that cannot identify a person (top-down, rear-facing) can still be used for vision analysis; rules should reference the person's last known location from other cameras via the `person_presence` context filter
+
+For doorway cameras that capture motion direction, the `include_motion` flag on the `person_identification` step provides `left-to-right`, `right-to-left`, `towards-camera`, and `away-from-camera` labels that downstream logic steps can use to infer room transitions.

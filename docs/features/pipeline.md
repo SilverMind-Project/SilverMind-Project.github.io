@@ -59,7 +59,8 @@ Sends media frames to the person identification service for face recognition. Re
 Sends media frames with a prompt to the vision LLM (Cosmos Reason2) for scene description and analysis.
 
 **Config fields:**
-- `prompt`: the analysis prompt sent to the vision model
+
+- `prompt`: the analysis prompt sent to the vision model (supports [prompt templates](#prompt-templates))
 - `max_tokens`: maximum response length
 
 **Output keys:** `vision_response` (the model's textual analysis)
@@ -82,7 +83,8 @@ Record activities from pipeline data to the PersonActivity table. This is a pure
 Evaluates upstream analysis with the logic LLM (Gemma3) to decide whether action is warranted. Typically receives the vision analysis output and determines if a notification should be sent.
 
 **Config fields:**
-- `prompt`: the reasoning prompt (can reference upstream data via template variables)
+
+- `prompt`: the reasoning prompt (supports [prompt templates](#prompt-templates))
 - `max_tokens`: maximum response length
 - `response_format`: `"default"`, `"activity_detection"`, or `"custom"` (default `"default"`)
 - `response_schema`: custom instruction string when `response_format` is `"custom"`
@@ -148,8 +150,9 @@ Calls a Home Assistant service. Can turn on lights, lock doors, activate scenes,
 Translates text to a target language using TranslateGemma.
 
 **Config fields:**
+
 - `target_language`: language code (e.g., `ta` for Tamil)
-- `source_field`: which pipeline_data key to translate (defaults to notification message)
+- `source_text`: text to translate (supports [prompt templates](#prompt-templates)). Leave empty to auto-detect from `logic_response.user_notification` or `vision_response`.
 
 **Output keys:** `translation` (the translated text)
 
@@ -213,6 +216,58 @@ exists(logic_response.notification_message)
 
 # Branch based on alert level
 logic_response.alert_level == "emergency"
+```
+
+## Prompt Templates {#prompt-templates}
+
+LLM step prompts (`vision_analysis`, `logic_reasoning`, `translation`) support `{{variable}}` template syntax. At execution time, placeholders are replaced with values from `pipeline_data` and trigger context before the prompt is sent to the model.
+
+### Syntax
+
+```text
+{{key}}              -- top-level pipeline_data key
+{{key.subkey}}       -- nested dict access
+{{key.0.name}}       -- list index + nested access
+{{room_name}}        -- trigger context value
+{{trigger.sensor_id}} -- explicit trigger namespace
+```
+
+Unresolvable placeholders are left as-is so the LLM still sees the intent.
+
+### Available Variables
+
+Any key in `pipeline_data` is available. Common variables:
+
+| Variable | Source | Example Value |
+| -------- | ------ | ------------- |
+| `vision_response` | vision_analysis step | `"A person is standing at the stove"` |
+| `person_detections.0.name` | person_identification step | `"grandma"` |
+| `person_detections.0.confidence` | person_identification step | `0.92` |
+| `logic_response.user_notification` | logic_reasoning step | `"Stove left on"` |
+| `room_name` | trigger context | `"Kitchen"` |
+| `sensor_id` | trigger context | `"kitchen_cam_01"` |
+
+### Template Examples
+
+**Vision prompt:**
+
+```text
+Look at the person in the {{room_name}}. Are they using the stove safely?
+```
+
+**Logic reasoning prompt:**
+
+```text
+{{vision_response}}
+
+The person identified is {{person_detections.0.name}}.
+Determine if they need a reminder about stove safety.
+```
+
+**Translation source text:**
+
+```text
+{{logic_response.user_notification}}
 ```
 
 ## Example Pipeline Configurations
