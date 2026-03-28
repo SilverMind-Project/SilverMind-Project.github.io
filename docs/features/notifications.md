@@ -15,6 +15,7 @@ Real-time push notifications to connected admin console clients. Every alert, re
 Bot-based notifications to caregiver Telegram chats. Supports multiple recipients with different alert level filters.
 
 **Configuration:**
+
 ```yaml
 channels:
   telegram:
@@ -37,16 +38,40 @@ See [E-Ink Display Pipeline](/features/eink-display) for full details.
 
 ### Text-to-Speech (TTS)
 
-Audio announcements through Home Assistant media players. The [TTS service](https://github.com/SilverMind-Project/tts-service) provides multi-engine speech synthesis with an OpenAI-compatible API, and integrates with Home Assistant via the Wyoming protocol through a [wyoming_openai](https://github.com/roryeckel/wyoming_openai) sidecar.
+Audio announcements played through Home Assistant media players. The [TTS service](https://github.com/SilverMind-Project/tts-service) provides multi-engine speech synthesis with an OpenAI-compatible API.
 
-**Configuration:**
+**Configuration (`config/settings.yaml`):**
+
 ```yaml
 tts:
-  voice: en-IN-NeerjaExpressiveNeural
-  speed: 0.85
+  url: "${TTS_API_URL}"
+  default_model: svara
+  default_voice: speaker_0
+  default_speed: 0.85
 ```
 
-**How it works:** The TTS integration sends text to the TTS service's `/v1/audio/speech` endpoint, receives audio, and plays it through HA media player entities. For direct HA voice pipeline integration, the Wyoming sidecar bridges the OpenAI-compatible API to the Wyoming protocol.
+**How it works:**
+
+1. The `TTSChannel` calls `TTSClient.generate_and_upload()` to synthesize MP3 audio and upload it to MinIO.
+2. The resulting presigned URL is passed to `HomeAssistantClient.play_audio()`, which calls `media_player.play_media` on the target entity.
+3. The target media player is set per-rule via the `ha_media_player` field in the notification step's config. If not set, it falls back to `media_player.living_room_speaker`.
+
+**Selecting the media player in the pipeline builder:**
+
+When `tts` is included in a notification step's channel list, the pipeline step config dialog shows a **TTS Media Player** autocomplete populated from `GET /api/v1/ha/media-players` (all `media_player.*` entities in HA). Select the device for this rule, or type an entity ID directly.
+
+```json
+{
+  "step_type": "notification",
+  "config_json": {
+    "alert_level": "reminder",
+    "channels": ["tts"],
+    "ha_media_player": "media_player.kitchen_display"
+  }
+}
+```
+
+**Fallback behavior:** If MinIO or Home Assistant is not configured, the channel generates audio locally and returns `True` without playback. If the TTS service is not configured, the channel logs a warning and returns `False`.
 
 ### Realtime Voice (`realtime_voice`)
 
@@ -78,7 +103,7 @@ Leverages HA's `tts.speak` or `media_player.play_media` services to announce not
 ## Alert Levels
 
 | Level | Severity | Use Case |
-|-------|----------|----------|
+| ------- | ---------- | ---------- |
 | `emergency` | Critical, requires immediate attention | Person hasn't been seen for hours, fall detected |
 | `warning` | Important, should be reviewed soon | Unusual behavior, extended bathroom occupancy |
 | `info` | Informational, no action needed | Activity summary, system status |
@@ -89,7 +114,7 @@ Leverages HA's `tts.speak` or `media_player.play_media` services to announce not
 Alert level → channel routing is configured in `config/notifications.yaml`:
 
 | Level | Default Channels | Escalation |
-|-------|-----------------|------------|
+| ------- | ----------------- | ---------- |
 | `emergency` | WebSocket, Telegram, eInk, TTS, HA | Every 5 min, 3x repeat |
 | `warning` | WebSocket, Telegram, eInk | Every 10 min |
 | `info` | WebSocket only | None |
@@ -136,7 +161,7 @@ By default, a notification step uses the channel list from `notifications.yaml` 
 Alerts are persisted in the database and can be managed via the admin console or API:
 
 | Method | Path | Description |
-|--------|------|-------------|
+| ------ | ---- | ----------- |
 | `GET` | `/alerts` | List alerts (filter by `resolved`, `room_name`, `alert_type`) |
 | `GET` | `/alerts/{id}` | Get a single alert |
 | `POST` | `/alerts/{id}/action` | Dismiss or request assistance |

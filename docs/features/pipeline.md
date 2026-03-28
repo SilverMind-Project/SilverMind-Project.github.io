@@ -49,6 +49,7 @@ For webhook triggers, `webhook_payload` is also available in `pipeline_data["tri
 Sends media frames to the person identification service for face recognition. Returns detected identities with confidence scores and bounding boxes. Records sightings and updates person location state.
 
 **Config fields:**
+
 - `include_annotated_image`: return frames with bounding boxes and name labels drawn over faces
 - `confidence_threshold`: minimum confidence to accept an identification (default from settings)
 - `target_persons`: optional comma-separated list of person IDs to filter for
@@ -68,14 +69,16 @@ Sends media frames with a prompt to the vision LLM (Cosmos Reason2) for scene de
 
 #### `activity_detection`
 
-Record activities from pipeline data to the PersonActivity table. This is a pure setter step — pair with a preceding `logic_reasoning` step (with `response_format: activity_detection`) for LLM-based activity analysis.
+Record a single activity to the PersonActivity table. All fields support [prompt templates](#prompt-templates), so values can be fixed strings or resolved from any upstream step output or trigger context. Use multiple steps in sequence to record multiple activities.
 
 **Config fields:**
-- `source_key`: pipeline data key to read from (default `"logic_response"`)
-- `activities_path`: key within source containing activity list (default `"activities"`)
-- `default_confidence`: fallback confidence (default `0.8`)
 
-**Output keys:** `detected_activities` (list)
+- `activity_type` (required): activity to record. Supports templates (e.g. `{{logic_response.activity_type}}` or a literal like `"bathroom_occupancy"`)
+- `person_id` (optional): person to attribute the activity to. Supports templates (e.g. `{{person_detections.0.person_id}}`). Leave empty to record as unknown person.
+- `room_name` (optional): room where the activity occurred. Supports templates (e.g. `{{room_name}}`). Defaults to the trigger room when empty.
+- `confidence`: confidence score (0-1). Accepts a fixed number or `{{template}}` syntax (e.g. `{{logic_response.confidence}}`). Defaults to `0.8`.
+
+**Output keys:** `detected_activities` (list with one entry)
 
 ### Reasoning
 
@@ -97,6 +100,7 @@ Evaluates upstream analysis with the logic LLM (Gemma3) to decide whether action
 Evaluates a boolean expression against `pipeline_data` to control execution flow. Can branch to different steps based on the result.
 
 **Config fields:**
+
 - `expression`: the condition expression to evaluate
 - Uses `next_step_on_true` / `next_step_on_false` fields on the `PipelineStep` model for branching
 
@@ -109,16 +113,18 @@ See [Condition Expressions](#condition-expressions) below.
 Query the PersonActivity database to verify whether household members completed (or did not complete) specific activities within a time window. No LLM calls — this is a deterministic database query step.
 
 **Config fields:**
-- `conditions`: list of objects, each with:
-  - `person_id` (str): the person to check
-  - `activity_type` (str): the activity type to look for
+
+- `conditions`: list of condition objects, each with:
+  - `activity_type` (str, required): the activity type to look for
+  - `person_id` (str, optional): person to check; supports [prompt templates](#prompt-templates) (e.g. `{{person_detections.0.person_id}}`). Leave empty to match any person.
+  - `room_name` (str, optional): room to filter by; supports templates (e.g. `{{room_name}}`). Leave empty to match any room.
   - `completed` (bool, default `true`): whether the activity should have been completed
   - `within_minutes` (float): relative time window from now
   - `window_start` / `window_end` (ISO-8601 UTC): fixed time window (alternative to `within_minutes`)
   - `min_confidence` (float, default `0.5`): minimum confidence threshold for matching records
 - `match_mode`: `"all"` or `"any"` (default `"all"`)
-- `re_notify_if_failed`: bool (default `false`) — re-trigger notification on verification failure
-- `re_notify_delay_minutes`: int (default `5`) — delay before re-notification
+- `re_notify_if_failed`: bool (default `false`), re-trigger notification on verification failure
+- `re_notify_delay_minutes`: int (default `5`), delay before re-notification
 
 **Output keys:** `verification.verified` (bool), `verification.match_mode`, `verification.matched_conditions`, `verification.unmatched_conditions`
 
@@ -129,6 +135,7 @@ Query the PersonActivity database to verify whether household members completed 
 Dispatches an alert to configured notification channels based on alert level. The `NotificationDispatcher` routes the message to WebSocket, Telegram, e-ink, TTS, and/or Home Assistant based on the level mappings in `notifications.yaml`.
 
 **Config fields:**
+
 - `alert_level`: `emergency`, `warning`, `info`, or `reminder`
 - `channels`: optional override of which channels to use (completely replaces the defaults from `notifications.yaml` when specified)
 - `message_template`: optional Python format string with `{message}`, `{room}`, and any `pipeline_data` key
@@ -141,6 +148,7 @@ Dispatches an alert to configured notification channels based on alert level. Th
 Calls a Home Assistant service. Can turn on lights, lock doors, activate scenes, trigger HA automations, or any other HA service call.
 
 **Config fields:**
+
 - `service`: the HA service to call (e.g., `light.turn_on`, `lock.lock`)
 - `entity_id`: the target entity
 - `service_data`: additional data to pass to the service
@@ -165,6 +173,7 @@ Translates text to a target language using TranslateGemma.
 Pauses pipeline execution for a configured duration. The execution state is persisted to the database and the scheduler resumes it automatically via an APScheduler `DateTrigger`.
 
 **Config fields:**
+
 - `duration_minutes`: how long to wait before resuming
 
 **Output keys:** none (the step simply pauses execution)
@@ -202,10 +211,10 @@ not exists(translation) or contains(vision_response, "empty")
 
 ### Built-in Functions
 
-| Function | Description |
-|----------|-------------|
-| `exists(path)` | Returns true if the path exists in pipeline data |
-| `contains(path, value)` | Returns true if the value at path contains the given substring |
+| Function                   | Description                                                    |
+| -------------------------- | -------------------------------------------------------------- |
+| `exists(path)`             | Returns true if the path exists in pipeline data               |
+| `contains(path, value)`    | Returns true if the value at path contains the given substring |
 
 ### Examples
 
@@ -222,7 +231,7 @@ logic_response.alert_level == "emergency"
 
 ## Prompt Templates {#prompt-templates}
 
-LLM step prompts (`vision_analysis`, `logic_reasoning`, `translation`) support `{{variable}}` template syntax. At execution time, placeholders are replaced with values from `pipeline_data` and trigger context before the prompt is sent to the model.
+Several step config fields support `{{variable}}` template syntax: prompts in `vision_analysis`, `logic_reasoning`, and `translation`; the `person_id`, `activity_type`, and `room_name` fields in `activity_detection` (direct mode); and the `person_id` and `room_name` fields in `verification` conditions. At execution time, placeholders are replaced with values from `pipeline_data` and trigger context.
 
 ### Syntax
 
@@ -284,10 +293,10 @@ person_identification → vision_analysis → logic_reasoning → translation �
 
 ### Lunch Reminder
 
-Analyze the scene, detect activities via LLM, record them, wait, then verify against the database and remind:
+Identify who is in the room, record a lunch activity attributed to them, wait, then verify against the database and remind if they haven't eaten:
 
 ```text
-vision_analysis → logic_reasoning (response_format: activity_detection) → activity_detection → wait (30 min) → verification → notification
+person_identification → activity_detection (activity_type: "lunch", person_id: {{person_detections.0.person_id}}) → wait (30 min) → verification → notification
 ```
 
 ### Light Monitor
@@ -331,7 +340,7 @@ The `translation` step localises the message before the `notification` step disp
 When a rule's pipeline is triggered, a `WorkflowExecution` record tracks the full lifecycle:
 
 | Status | Meaning |
-|--------|---------|
+| ------ | ------- |
 | `running` | Pipeline is actively executing steps |
 | `waiting` | Paused at a `wait` step, will resume at `resume_at` time |
 | `completed` | All steps finished successfully |

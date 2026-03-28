@@ -107,12 +107,55 @@ SQLite with SQLAlchemy 2.0 ORM. Tables are auto-created from model definitions o
 
 **For schema changes:** Delete `data/cognitive_companion.db` and restart the backend. There are no migrations. The schema is defined entirely by the ORM models.
 
+## Person Identification Service
+
+The person-ID service is a separate repository. Clone and run it alongside the main backend:
+
+```bash
+git clone https://github.com/SilverMind-Project/person-identification-service.git
+cd person-identification-service
+
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies (GPU build by default)
+uv sync
+
+# CPU-only for development without a GPU
+uv sync --extra cpu
+
+# Run
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8100 --reload
+```
+
+Configuration is in `config/settings.yaml`. Override individual values via environment variables (e.g. `CUDA_DEVICE_ID=-1` for CPU fallback). See the service README for the full list.
+
+### Code Quality
+
+```bash
+cd person-identification-service
+
+uv run ruff check .            # Lint
+uv run ruff format .           # Format
+uv run mypy app/               # Type check
+uv run pytest                  # Tests
+```
+
+### Docker (GPU)
+
+```bash
+docker compose up -d
+curl http://localhost:8100/health
+```
+
+Requires NVIDIA Container Toolkit. See the person-ID service README for Kubernetes manifests.
+
 ## External Services
 
 For local development, you need these services running:
 
 | Service | Default URL | Purpose |
-|---------|-------------|---------|
+| --- | --- | --- |
 | vLLM (Cosmos) | `http://localhost:8001/v1` | Vision analysis |
 | vLLM (Translate) | `http://localhost:8002/v1` | Language translation |
 | Ollama | `http://localhost:11434` | Logic reasoning |

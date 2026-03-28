@@ -47,7 +47,7 @@ When `include_annotated_image` is enabled in a pipeline step's config, the perso
 
 ### Confidence Thresholds
 
-The default confidence threshold is configured in `settings.yaml` under `person_id.confidence_threshold`. Detections below this threshold are reported as "unknown". You can override the threshold per-step in the pipeline config.
+The recognition threshold is configured in the person-ID service's `config/settings.yaml` under `recognition.threshold` (default `0.4`). Detections below this threshold are reported as "unknown". Override it at deployment time with the `RECOGNITION_THRESHOLD` environment variable.
 
 ### Guest Image Saving
 
@@ -74,7 +74,7 @@ The flag defaults to `false` and can be enabled per-request on both the single (
 Cross-frame centroid tracking classifies movement direction:
 
 | Direction | Description |
-|-----------|-------------|
+| --- | --- |
 | `left-to-right` | Moving across the frame from left to right |
 | `right-to-left` | Moving across the frame from right to left |
 | `towards-camera` | Face/body getting larger (approaching) |
@@ -128,7 +128,7 @@ This allows HA automations and dashboards to display person locations and use th
 ### Member Management
 
 | Method | Path | Description |
-|--------|------|-------------|
+| --- | --- | --- |
 | `GET` | `/persons` | List all household members |
 | `POST` | `/persons` | Register a new member |
 | `GET` | `/persons/{id}` | Get member details |
@@ -138,7 +138,7 @@ This allows HA automations and dashboards to display person locations and use th
 ### Face Enrollment
 
 | Method | Path | Description |
-|--------|------|-------------|
+| --- | --- | --- |
 | `GET` | `/persons/enrolled` | List face enrollment status from person-ID service |
 | `POST` | `/persons/{id}/enroll` | Upload reference photos to enroll a face (multipart) |
 | `GET` | `/persons/{id}/enrollment` | Get enrollment details (embedding count, created date) |
@@ -147,7 +147,7 @@ This allows HA automations and dashboards to display person locations and use th
 ### Location Tracking
 
 | Method | Path | Description |
-|--------|------|-------------|
+| --- | --- | --- |
 | `GET` | `/persons/locations` | Current location of all tracked members |
 | `GET` | `/persons/{id}/location` | Current location of a specific member |
 | `GET` | `/persons/{id}/history` | Location timeline (`?hours=24`) |
@@ -158,7 +158,7 @@ This allows HA automations and dashboards to display person locations and use th
 The `activity_detection` pipeline step records detected activities for tracked persons:
 
 | Activity Type | Description |
-|--------------|-------------|
+| --- | --- |
 | `eating` | Person detected eating a meal |
 | `sleeping` | Person detected sleeping or resting |
 | `medication` | Person detected taking medication |
