@@ -73,10 +73,14 @@ Record a single activity to the PersonActivity table. All fields support [prompt
 
 **Config fields:**
 
+::: v-pre
+
 - `activity_type` (required): activity to record. Supports templates (e.g. `{{logic_response.activity_type}}` or a literal like `"bathroom_occupancy"`)
 - `person_id` (optional): person to attribute the activity to. Supports templates (e.g. `{{person_detections.0.person_id}}`). Leave empty to record as unknown person.
 - `room_name` (optional): room where the activity occurred. Supports templates (e.g. `{{room_name}}`). Defaults to the trigger room when empty.
 - `confidence`: confidence score (0-1). Accepts a fixed number or `{{template}}` syntax (e.g. `{{logic_response.confidence}}`). Defaults to `0.8`.
+
+:::
 
 **Output keys:** `detected_activities` (list with one entry)
 
@@ -114,6 +118,8 @@ Query the PersonActivity database to verify whether household members completed 
 
 **Config fields:**
 
+::: v-pre
+
 - `conditions`: list of condition objects, each with:
   - `activity_type` (str, required): the activity type to look for
   - `person_id` (str, optional): person to check; supports [prompt templates](#prompt-templates) (e.g. `{{person_detections.0.person_id}}`). Leave empty to match any person.
@@ -125,6 +131,8 @@ Query the PersonActivity database to verify whether household members completed 
 - `match_mode`: `"all"` or `"any"` (default `"all"`)
 - `re_notify_if_failed`: bool (default `false`), re-trigger notification on verification failure
 - `re_notify_delay_minutes`: int (default `5`), delay before re-notification
+
+:::
 
 **Output keys:** `verification.verified` (bool), `verification.match_mode`, `verification.matched_conditions`, `verification.unmatched_conditions`
 
@@ -231,7 +239,9 @@ logic_response.alert_level == "emergency"
 
 ## Prompt Templates {#prompt-templates}
 
+::: v-pre
 Several step config fields support `{{variable}}` template syntax: prompts in `vision_analysis`, `logic_reasoning`, and `translation`; the `person_id`, `activity_type`, and `room_name` fields in `activity_detection` (direct mode); and the `person_id` and `room_name` fields in `verification` conditions. At execution time, placeholders are replaced with values from `pipeline_data` and trigger context.
+:::
 
 ### Syntax
 
