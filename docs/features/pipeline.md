@@ -58,14 +58,19 @@ Sends media frames to the person identification service for face recognition. Re
 
 #### `vision_analysis`
 
-Sends media frames with a prompt to the vision LLM (Cosmos Reason2) for scene description and analysis.
+Sends media frames with a prompt to the vision LLM (Cosmos Reason2) for scene description and analysis. Supports acquiring additional images across the home for temporal or multi-angle context.
 
 **Config fields:**
 
 - `prompt`: the analysis prompt sent to the vision model (supports [prompt templates](#prompt-templates))
-- `max_tokens`: maximum response length
+- `image_source`: `"trigger"` (default), `"additional"`, or `"both"`. Controls which images to send to the model.
+- `max_images`: max total images to send to the vision model (default `5`).
+- `additional_sensor_ids` / `additional_room_names`: optionally pull recent images from extra cameras or rooms.
+- `image_time_filter`: optional object with `since_minutes`, `time_start`, `time_end` to filter additional images temporally.
+- `response_format`: `"default"` (text) or `"custom"` (JSON). Controls whether the vision model should output free text or structured JSON.
+- `response_schema` / `response_json_schema`: text instruction and JSON Schema to enforce structured output via guided decoding when `response_format` is `custom`.
 
-**Output keys:** `vision_response` (the model's textual analysis)
+**Output keys:** `vision_response` (the model's response, which will be a parsed JSON dictionary if structured output is chosen, otherwise a textual analysis)
 
 #### `activity_detection`
 
@@ -93,11 +98,12 @@ Evaluates upstream analysis with the logic LLM (Gemma3) to decide whether action
 **Config fields:**
 
 - `prompt`: the reasoning prompt (supports [prompt templates](#prompt-templates))
-- `max_tokens`: maximum response length
+- `include_context`: list of `pipeline_data` keys to optionally include in the context
 - `response_format`: `"default"`, `"activity_detection"`, or `"custom"` (default `"default"`)
-- `response_schema`: custom instruction string when `response_format` is `"custom"`
+- `response_schema`: custom instruction string appended to the prompt when `response_format` is `"custom"`
+- `response_json_schema`: JSON Schema string to strictly enforce output structure via guided decoding.
 
-**Output keys:** `logic_response` (the model's response, typically structured with `is_notification_needed`, `notification_message`, `alert_level`)
+**Output keys:** `logic_response` (the structured model response as a parsed dictionary. Schema depends on `response_format`; typically includes `is_notification_needed`, `user_notification`, `alert_level`, etc.)
 
 #### `condition`
 
@@ -146,8 +152,10 @@ Dispatches an alert to configured notification channels based on alert level. Th
 
 - `alert_level`: `emergency`, `warning`, `info`, or `reminder`
 - `channels`: optional override of which channels to use (completely replaces the defaults from `notifications.yaml` when specified)
-- `message_template`: optional Python format string with `{message}`, `{room}`, and any `pipeline_data` key
+- `message_template`: standard Python format string with `{message}`, `{room}`, and any `pipeline_data` key representing the default broadcast text.
+- `telegram_template` / `eink_template` / `tts_template`: channel-specific template overrides allowing you to format messages optimally for a specific medium (e.g. HTML for Telegram, short text for e-ink, natural language for TTS). Falls back to `message_template`.
 - `eink_targets`: optional list of sensor IDs for targeted e-ink display rendering
+- `ha_media_player`: optional HA media_player entity ID for targeted TTS playback
 
 **Output keys:** `notification_dispatched` (boolean), `notification_channels` (dict of channel → success)
 
@@ -165,12 +173,14 @@ Calls a Home Assistant service. Can turn on lights, lock doors, activate scenes,
 
 #### `translation`
 
-Translates text to a target language using TranslateGemma.
+Translates text to a target language using TranslateGemma. Can automatically retry requests if the model outputs known gibberish.
 
 **Config fields:**
 
 - `target_language`: language code (e.g., `ta` for Tamil)
 - `source_text`: text to translate (supports [prompt templates](#prompt-templates)). Leave empty to auto-detect from `logic_response.user_notification` or `vision_response`.
+- `special_instructions`: optional instructions prepended to the prompt to enforce translation style (e.g., informal Tanglish).
+- `hallucination_marker`: an optional string that, if found in the model's output, forces the step to automatically retry the request using Tenacity.
 
 **Output keys:** `translation` (the translated text)
 

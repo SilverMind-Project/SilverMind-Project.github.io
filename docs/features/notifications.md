@@ -12,13 +12,15 @@ Real-time push notifications to connected admin console clients. Every alert, re
 
 ### Telegram
 
-Bot-based notifications to caregiver Telegram chats. Supports multiple recipients with different alert level filters.
+Bot-based notifications to caregiver Telegram chats via the standard Bot API. Supports multiple recipients with different alert level filters.
 
 **Configuration:**
 
 ```yaml
 channels:
   telegram:
+    bot_token: "${TELEGRAM_BOT_TOKEN}"
+    max_image_side: 1920  # Optional downscaling to fit photo limits
     targets:
       - name: Caregiver
         chat_id: ${TELEGRAM_CAREGIVER_CHAT_ID}
@@ -28,7 +30,19 @@ channels:
         alert_levels: [emergency]
 ```
 
-**Capabilities:** Text messages with optional annotated images (from `person_identification` steps with `include_annotated_image` enabled).
+**Capabilities:** HTML-formatted text messages. If an image is provided, the channel internally fetches the image from MinIO, optionally downscales it, and sends it as a photo enclosure.
+
+## Message Templates
+
+When a `notification` pipeline step broadcasts an alert, you can customize the formatting natively across all outputs. You define a base `message_template` parameter using Python template syntax mapping to `pipeline_data` (`{message} in {room} at {vision_response}`).
+
+Channel-level template overrides optionally specialize formatting for that specific medium:
+
+- `telegram_template`: Ideal for including safe HTML wrappers.
+- `eink_template`: Ideal for reducing text footprint for the smaller e-ink display size.
+- `tts_template`: Enhances readability with a more natural conversational flow for the spoken text-to-speech announcement.
+
+Individual template overrides smoothly fall back to the generic `message_template` when omitted.
 
 ### E-Ink Display
 
