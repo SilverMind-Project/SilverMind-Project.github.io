@@ -98,7 +98,7 @@ llm:
 
   realtime:
     provider: gemini
-    model: gemini-2.5-flash
+    model: gemini-3.1-flash-live-preview
     api_key: ${GEMINI_API_KEY}
 ```
 

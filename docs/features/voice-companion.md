@@ -56,7 +56,7 @@ This instruction is configured in `settings.yaml` under `llm.realtime`.
 llm:
   realtime:
     provider: gemini
-    model: gemini-2.5-flash
+    model: gemini-3.1-flash-live-preview
     api_key: ${GEMINI_API_KEY}
     system_instruction: "You are a compassionate companion..."
 
