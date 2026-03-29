@@ -10,9 +10,9 @@ Variables are interpolated into YAML config files using `${ENV_VAR}` syntax. Def
 
 | Variable | Description |
 |----------|-------------|
-| `VISION_MODEL_URL` | Vision model endpoint — Cosmos Reason2 (OpenAI-compatible) |
-| `TRANSLATE_MODEL_URL` | Translation model endpoint — TranslateGemma (OpenAI-compatible) |
-| `LOGIC_MODEL_URL` | Logic/reasoning model endpoint — Gemma3 (OpenAI-compatible) |
+| `VISION_MODEL_URL` | Vision model endpoint  -  Cosmos Reason2 (OpenAI-compatible) |
+| `TRANSLATE_MODEL_URL` | Translation model endpoint  -  TranslateGemma (OpenAI-compatible) |
+| `LOGIC_MODEL_URL` | Logic/reasoning model endpoint  -  Gemma3 (OpenAI-compatible) |
 | `HOME_ASSISTANT_URL` | Home Assistant base URL |
 | `HOME_ASSISTANT_TOKEN` | HA long-lived access token |
 | `MINIO_ENDPOINT` | MinIO / S3-compatible endpoint |

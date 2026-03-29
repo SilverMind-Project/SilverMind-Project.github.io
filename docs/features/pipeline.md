@@ -114,7 +114,7 @@ See [Condition Expressions](#condition-expressions) below.
 
 #### `verification`
 
-Query the PersonActivity database to verify whether household members completed (or did not complete) specific activities within a time window. No LLM calls — this is a deterministic database query step.
+Query the PersonActivity database to verify whether household members completed (or did not complete) specific activities within a time window. No LLM calls  -  this is a deterministic database query step.
 
 **Config fields:**
 
@@ -340,7 +340,7 @@ translation → notification [alert_level: warning, channels: [websocket, telegr
 - `trigger_type`: `occupancy_duration`
 - `primary_sensor_id`: the presence sensor to watch (e.g. `bathroom_sensor_01`)
 - `occupancy_config`: `{"min_minutes": 40}`
-- `cool_off_minutes`: `30` — prevents re-firing until acknowledged or resolved
+- `cool_off_minutes`: `30`  -  prevents re-firing until acknowledged or resolved
 - Context filters: add `time_range`, `person_presence`, or `room` filters as needed
 
 The `translation` step localises the message before the `notification` step dispatches it. The `realtime_voice` channel initiates an interactive voice check-in via Gemini Live; the `websocket` and `telegram` channels alert the admin console and caregiver simultaneously.

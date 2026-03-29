@@ -4,7 +4,7 @@ Guide for AI coding agents working on the Cognitive Companion documentation site
 
 ## Project Overview
 
-This is a VitePress documentation site for the Cognitive Companion project — a privacy-first, on-premise AI system for senior care. The site is deployed to GitHub Pages via GitHub Actions.
+This is a VitePress documentation site for the Cognitive Companion project  -  a privacy-first, on-premise AI system for senior care. The site is deployed to GitHub Pages via GitHub Actions.
 
 **Framework**: VitePress 1.x (Vue 3-based static site generator)
 **Content**: Markdown files in `docs/`
@@ -112,7 +112,7 @@ nav: [
 - **Concrete over abstract**: use code examples, configuration snippets, and architecture diagrams
 - **Action-oriented**: tell the reader what to do, not just what exists
 - **No marketing language**: state capabilities factually
-- **No em-dashes (—)**: use colons, periods, semicolons, or commas instead. Restructure sentences where needed. Em-dashes read as AI-generated; professional technical writing from companies like Apple and Google avoids them.
+- **No em-dashes ( - )**: use colons, periods, semicolons, or commas instead. Restructure sentences where needed. Em-dashes read as AI-generated; professional technical writing from companies like Apple and Google avoids them.
 
 ### Structure
 
@@ -192,4 +192,4 @@ No manual deployment is needed.
 - **Add images without purpose**: diagrams should clarify, not decorate
 - **Use relative file paths to the codebase** in user-facing content: use GitHub URLs with the `SilverMind-Project` organization name
 - **Modify the GitHub Actions workflow** without testing locally first
-- **Use em-dashes (—)** anywhere in documentation: use colons, periods, semicolons, commas, or restructure the sentence. For `**Bold** — desc` patterns, use `**Bold**: desc` or `**Bold.** Desc` instead
+- **Use em-dashes ( - )** anywhere in documentation: use colons, periods, semicolons, commas, or restructure the sentence. For `**Bold**  -  desc` patterns, use `**Bold**: desc` or `**Bold.** Desc` instead

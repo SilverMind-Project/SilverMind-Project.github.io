@@ -75,7 +75,7 @@ When `tts` is included in a notification step's channel list, the pipeline step 
 
 ### Realtime Voice (`realtime_voice`)
 
-Interactive voice check-ins via Google Gemini Live. Unlike TTS (a one-way announcement), this channel initiates a two-way conversation — the AI asks the person a question and waits for a spoken response.
+Interactive voice check-ins via Google Gemini Live. Unlike TTS (a one-way announcement), this channel initiates a two-way conversation  -  the AI asks the person a question and waits for a spoken response.
 
 **How it works:** The channel queues a prompt on the WebSocket backend task queue. When an active Gemini Live session picks it up, the AI speaks the prompt and processes the person's reply. Any response is logged against the originating alert.
 
@@ -89,8 +89,8 @@ Interactive voice check-ins via Google Gemini Live. Unlike TTS (a one-way announ
 
 **Use cases:**
 
-- Occupancy safety alerts: *"You've been in the bathroom a while — do you need any help?"*
-- Medication reminders: *"It's time for your afternoon medication — have you taken it yet?"*
+- Occupancy safety alerts: *"You've been in the bathroom a while  -  do you need any help?"*
+- Medication reminders: *"It's time for your afternoon medication  -  have you taken it yet?"*
 
 **Configuration:** Add `realtime_voice` to the channel list for an alert level in `notifications.yaml`, or override per-rule in the `notification` pipeline step's `channels` field.
 

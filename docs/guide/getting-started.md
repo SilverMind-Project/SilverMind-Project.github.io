@@ -146,7 +146,7 @@ A basic camera monitoring rule might look like:
 person_identification → vision_analysis → logic_reasoning → translation → notification
 ```
 
-1. Go to **Rules** → **New Rule**, enter a name, and click **Create** — you'll land on the rule detail page
+1. Go to **Rules** → **New Rule**, enter a name, and click **Create**  -  you'll land on the rule detail page
 2. On the **Settings** tab, set the trigger type to `sensor_event` and bind it to a camera sensor
 3. Switch to the **Pipeline** tab and add steps from the palette in order:
    - **Person Identification**: identify who is in the frame
