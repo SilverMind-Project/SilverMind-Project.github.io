@@ -55,7 +55,7 @@ Cognitive Companion takes a different path:
 3. The **Rules Engine** matches events against rules using context filters, dependencies, and rate limits
 4. Each matching rule's **composable pipeline** executes independently via the `PipelineExecutor`
 5. Pipeline steps can identify people, analyze scenes, reason about context, branch conditionally, wait and resume, and dispatch notifications
-6. **Outputs** flow to any combination of channels: WebSocket push, Telegram, e-ink displays, TTS speakers, and Home Assistant services
+6. **Outputs** flow to any combination of channels: WebSocket push, Telegram, e-ink displays, TTS speakers, realtime voice prompts, Home Assistant services, and outbound webhooks
 
 ## Key Capabilities
 
@@ -67,8 +67,8 @@ Cognitive Companion takes a different path:
 | **Motion direction** | Classify movement direction at doorways (left/right, towards/away) |
 | **Voice companion** | Real-time conversations via Google Gemini Live with WebSocket audio |
 | **E-ink displays** | Per-device notification images with template editor and automatic expiry |
-| **Multi-channel alerts** | WebSocket, Telegram, e-ink, TTS, HA announcements with escalation policies |
-| **MCP tool server** | 16 tools for AI agent integration via Model Context Protocol |
+| **Multi-channel alerts** | WebSocket, Telegram, e-ink, TTS, realtime voice, Home Assistant, and outbound webhook delivery with escalation policies |
+| **MCP tool server** | 16 read-only tools plus rule triggering for AI agent integration via Model Context Protocol |
 | **RBAC authentication** | API keys, device keys, and fnmatch permission patterns |
 | **Tamil language support** | Translation and voice interaction in Tamil |
 

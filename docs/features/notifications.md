@@ -1,6 +1,6 @@
 # Multi-Channel Notifications
 
-Cognitive Companion routes alerts across notification channels via a plugin system, with automatic escalation and repeat policies based on alert severity. Each channel is a self-contained plugin in `backend/channels/builtin/` that is auto-discovered at startup via `ChannelRegistry`. See [Extending the Pipeline](/development/extending-pipeline#adding-a-notification-channel) for how to add custom channels.
+Cognitive Companion routes alerts across notification channels via a plugin system, with escalation and repeat policies driven by alert severity. Each channel is a self-contained plugin in `backend/channels/builtin/` and is auto-discovered at startup via `ChannelRegistry`. Built-in channels currently include `websocket`, `telegram`, `eink`, `tts`, `realtime_voice`, `homeassistant`, and `webhook`. See [Extending the Pipeline](/development/extending-pipeline#adding-a-notification-channel) for how to add custom channels.
 
 ## Channels
 
@@ -17,20 +17,39 @@ Bot-based notifications to caregiver Telegram chats via the standard Bot API. Su
 **Configuration:**
 
 ```yaml
-channels:
-  telegram:
-    bot_token: "${TELEGRAM_BOT_TOKEN}"
-    max_image_side: 1920  # Optional downscaling to fit photo limits
-    targets:
-      - name: Caregiver
-        chat_id: ${TELEGRAM_CAREGIVER_CHAT_ID}
-        alert_levels: [emergency, warning]
-      - name: Remote Monitor
-        chat_id: ${TELEGRAM_REMOTE_CHAT_ID}
-        alert_levels: [emergency]
+telegram:
+  bot_token: "${TELEGRAM_BOT_TOKEN}"
+  max_image_side: 1920
+  targets:
+    - name: Caregiver
+      chat_id: ${TELEGRAM_CAREGIVER_CHAT_ID}
+      alert_levels: [emergency, warning, info]
+    - name: OpenClaw Agent
+      chat_id: ${TELEGRAM_OPENCLAW_CHAT_ID}
+      alert_levels: [emergency, warning]
 ```
 
 **Capabilities:** HTML-formatted text messages. If an image is provided, the channel internally fetches the image from MinIO, optionally downscales it, and sends it as a photo enclosure.
+
+### Outbound Webhook
+
+Dispatches an HTTP `POST` request to an external system such as Home Assistant automations, n8n, or a custom webhook receiver.
+
+**Configuration:**
+
+```yaml
+webhook:
+  url: "${WEBHOOK_DEFAULT_URL}"
+  timeout_seconds: 10
+  headers:
+    Authorization: "Bearer ${WEBHOOK_AUTH_TOKEN}"
+```
+
+**Payload behavior:**
+
+- If the `notification` step's `webhook_template` renders valid JSON, that JSON is sent as the request body.
+- Otherwise the channel sends a fallback JSON object with `message`, `alert_level`, `room`, and `image_url`.
+- A step-level `webhook_url` overrides the default `webhook.url` value from `notifications.yaml`.
 
 ## Message Templates
 
@@ -41,6 +60,7 @@ Channel-level template overrides optionally specialize formatting for that speci
 - `telegram_template`: Ideal for including safe HTML wrappers.
 - `eink_template`: Ideal for reducing text footprint for the smaller e-ink display size.
 - `tts_template`: Enhances readability with a more natural conversational flow for the spoken text-to-speech announcement.
+- `webhook_template`: Lets you shape the outbound webhook JSON body directly.
 
 Individual template overrides smoothly fall back to the generic `message_template` when omitted.
 
@@ -89,7 +109,7 @@ When `tts` is included in a notification step's channel list, the pipeline step 
 
 ### Realtime Voice (`realtime_voice`)
 
-Interactive voice check-ins via Google Gemini Live. Unlike TTS (a one-way announcement), this channel initiates a two-way conversation  -  the AI asks the person a question and waits for a spoken response.
+Interactive voice check-ins via Google Gemini Live. Unlike TTS, which is a one-way announcement, this channel initiates a two-way conversation where the AI asks the person a question and waits for a spoken response.
 
 **How it works:** The channel queues a prompt on the WebSocket backend task queue. When an active Gemini Live session picks it up, the AI speaks the prompt and processes the person's reply. Any response is logged against the originating alert.
 
@@ -103,16 +123,16 @@ Interactive voice check-ins via Google Gemini Live. Unlike TTS (a one-way announ
 
 **Use cases:**
 
-- Occupancy safety alerts: *"You've been in the bathroom a while  -  do you need any help?"*
-- Medication reminders: *"It's time for your afternoon medication  -  have you taken it yet?"*
+- Occupancy safety alerts: *"You've been in the bathroom a while, do you need any help?"*
+- Medication reminders: *"It's time for your afternoon medication, have you taken it yet?"*
 
-**Configuration:** Add `realtime_voice` to the channel list for an alert level in `notifications.yaml`, or override per-rule in the `notification` pipeline step's `channels` field.
+**Configuration:** `realtime_voice` is included in the default `warning` routing in `notifications.yaml`. You can also add or remove it per rule through the `notification` step's `channels` field.
 
 > **Note:** This channel requires an active Gemini Live WebSocket connection (i.e., the companion UI must be open). If no session is active, the message is silently dropped. Pair it with `websocket` or `telegram` to ensure delivery when the voice UI is not in use.
 
 ### Home Assistant Announcements
 
-Leverages HA's `tts.speak` or `media_player.play_media` services to announce notifications through smart speakers, tablets, or other media devices in specific rooms.
+Leverages HA services to announce notifications through smart speakers, tablets, or other media devices in specific rooms. In channel lists and rule overrides, this channel is named `homeassistant`.
 
 ## Alert Levels
 
@@ -125,26 +145,27 @@ Leverages HA's `tts.speak` or `media_player.play_media` services to announce not
 
 ## Routing
 
-Alert level → channel routing is configured in `config/notifications.yaml`:
+Alert level to channel routing is configured in `config/notifications.yaml`:
 
 | Level | Default Channels | Escalation |
 | ------- | ----------------- | ---------- |
-| `emergency` | WebSocket, Telegram, eInk, TTS, HA | Every 5 min, 3x repeat |
-| `warning` | WebSocket, Telegram, eInk | Every 10 min |
+| `emergency` | WebSocket, Telegram, eInk, TTS, Home Assistant | Every 5 min, 3x repeat |
+| `warning` | WebSocket, Telegram, eInk, Realtime Voice | Every 10 min |
 | `info` | WebSocket only | None |
 | `reminder` | WebSocket, TTS, eInk | None |
 
+The outbound `webhook` channel is available but not enabled in the default level mappings. Add it to `notification_defaults.<level>.channels` or opt into it on a per-rule basis.
+
 ## Escalation
 
-For critical alerts, the system automatically re-sends notifications if they aren't acknowledged:
+For critical alerts, the system automatically re-sends notifications if they are not acknowledged:
 
 ```yaml
-alert_levels:
+notification_defaults:
   emergency:
-    channels: [websocket, telegram, eink, tts, ha]
-    escalation:
-      interval_minutes: 5
-      repeat_count: 3
+    channels: [websocket, telegram, eink, tts, homeassistant]
+    escalation_minutes: 5
+    repeat_count: 3
 ```
 
 This means an unacknowledged emergency alert will be re-sent 3 times at 5-minute intervals before the escalation stops.
@@ -158,8 +179,9 @@ Notifications are triggered by `notification` pipeline steps:
   "step_type": "notification",
   "config_json": {
     "alert_level": "warning",
-    "channels": ["websocket", "telegram", "eink"],
-    "eink_targets": ["hallway_display"]
+    "channels": ["websocket", "telegram", "webhook"],
+    "webhook_url": "https://example.internal/hooks/cognitive-companion",
+    "webhook_template": "{\"message\": \"{message}\", \"room\": \"{room}\", \"severity\": \"warning\"}"
   }
 }
 ```
@@ -169,6 +191,10 @@ The notification step reads the message from upstream pipeline data (typically f
 ### Channel Override
 
 By default, a notification step uses the channel list from `notifications.yaml` for the given alert level. The `channels` config field overrides this, allowing per-rule customization. When `channels` is specified in the step config, it **completely replaces** the default channel list for that dispatch; the defaults are not merged.
+
+### Cool-Off Triggering
+
+The `notification` step also exposes `trigger_cooloff`, which defaults to `true`. When enabled, a successful notification marks the workflow's event log as `completed`, causing the rule's `cool_off_minutes` window to apply. Disable it for informational fan-out paths that should not suppress the next trigger.
 
 ### Alert Management
 

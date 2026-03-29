@@ -46,7 +46,7 @@ features:
 
   - icon: 📡
     title: Multi-Channel Notifications
-    details: Route alerts by severity across WebSocket, Telegram, e-ink displays, TTS announcements, and Home Assistant. Supports escalation and repeat policies.
+    details: Route alerts by severity across WebSocket, Telegram, e-ink displays, TTS, realtime voice, Home Assistant, and outbound webhooks. Supports escalation and repeat policies.
     link: /features/notifications
     linkText: Learn more
 

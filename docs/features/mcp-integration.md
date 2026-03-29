@@ -1,6 +1,6 @@
 # MCP Integration
 
-Cognitive Companion includes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server that exposes read-only tools for AI agent integration. Agents can discover system state, query sensor data, check person locations, and trigger rule executions, all without requiring a public endpoint.
+Cognitive Companion includes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server that exposes read-only tools for AI agent integration. Agents can discover system state, query sensor data, inspect enrollment and e-ink status, check person locations, and trigger rule executions, all without requiring a public endpoint.
 
 ## What is MCP?
 
@@ -26,11 +26,13 @@ Cognitive Companion's MCP server allows external AI agents (Claude, GPT, custom 
 | `get_rules` | Configured automation rules | None |
 | `get_conversation_history` | Recent conversation turns | `limit` |
 | `get_person_locations` | Current location of all tracked members | None |
+| `get_enrolled_persons` | Household members known to the system, for enrollment-aware agent flows | None |
 | `get_person_sightings` | Camera sighting history for a person | `person_id`, `limit` |
 | `get_person_activities` | Recent detected activities | `person_id`, `activity_type` |
 | `get_workflow_executions` | Recent pipeline workflow executions | `rule_id`, `status`, `limit` |
 | `get_rule_pipeline` | Pipeline step definitions for a rule | `rule_id` |
 | `trigger_rule` | Manually trigger a rule's pipeline | `rule_id` |
+| `get_eink_display_status` | Active e-ink image state for one or all devices | `sensor_id` (optional) |
 
 ## Authentication
 
@@ -106,9 +108,10 @@ Any agent framework that supports MCP tool calling can integrate with Cognitive 
 An AI agent monitoring the household might:
 
 1. Call `get_person_locations` to check where everyone is
-2. Call `get_person_activities` to check if lunch has been eaten
-3. If lunch hasn't been detected, call `trigger_rule` on the lunch reminder rule
-4. Call `get_alerts` to check for any unresolved emergencies
+2. Call `get_enrolled_persons` to see which household members are available for face-aware flows
+3. Call `get_person_activities` to check if lunch has been eaten
+4. If lunch has not been detected, call `trigger_rule` on the lunch reminder rule
+5. Call `get_alerts` to check for any unresolved emergencies
 
 ## Network Considerations
 

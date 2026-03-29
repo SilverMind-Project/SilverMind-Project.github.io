@@ -40,6 +40,34 @@ class TriggerContext:
 
 For webhook triggers, `webhook_payload` is also available in `pipeline_data["trigger_input"]`. For `occupancy_duration` triggers, `occupancy_duration_minutes` reflects how long the sensor has been continuously occupied at the moment the rule fired.
 
+The executor also injects a localized `system` object into `pipeline_data` using `app.timezone` from `settings.yaml`:
+
+```json
+{
+  "system": {
+    "local_time": "08:42 AM",
+    "local_date": "2026-03-29",
+    "local_day_of_week": "Sunday",
+    "timezone": "America/New_York"
+  }
+}
+```
+
+This makes local wall-clock values available to prompts and notification templates without requiring each step to compute them independently.
+
+## Cool-Off Behavior
+
+Rule cool-off is driven by `EventLog.status == "completed"`. A workflow that runs successfully but does not perform a terminal action is now recorded as `ignored`, so analytical or verification-only passes do not consume the rule's cool-off window.
+
+Built-in steps that can explicitly mark a run as cool-off-worthy:
+
+- `notification`: `trigger_cooloff` defaults to `true`
+- `ha_action`: `trigger_cooloff` defaults to `true`
+- `activity_detection`: `trigger_cooloff` defaults to `true`
+- `condition`: `trigger_cooloff` defaults to `false`, and only applies when the expression evaluates to `true`
+
+These steps add `_cooloff_triggered` to `pipeline_data`, and the executor uses that flag when finalizing the related event log.
+
 ## Pipeline Step Types
 
 ### Perception
@@ -84,10 +112,11 @@ Record a single activity to the PersonActivity table. All fields support [prompt
 - `person_id` (optional): person to attribute the activity to. Supports templates (e.g. `{{person_detections.0.person_id}}`). Leave empty to record as unknown person.
 - `room_name` (optional): room where the activity occurred. Supports templates (e.g. `{{room_name}}`). Defaults to the trigger room when empty.
 - `confidence`: confidence score (0-1). Accepts a fixed number or `{{template}}` syntax (e.g. `{{logic_response.confidence}}`). Defaults to `0.8`.
+- `trigger_cooloff`: whether a successful activity record should count toward the rule cool-off window. Defaults to `true`.
 
 :::
 
-**Output keys:** `detected_activities` (list with one entry)
+**Output keys:** `detected_activities` (list with one entry), optional `_cooloff_triggered`
 
 ### Reasoning
 
@@ -112,15 +141,16 @@ Evaluates a boolean expression against `pipeline_data` to control execution flow
 **Config fields:**
 
 - `expression`: the condition expression to evaluate
+- `trigger_cooloff`: whether a `true` result should mark the run as cool-off-worthy. Defaults to `false`.
 - Uses `next_step_on_true` / `next_step_on_false` fields on the `PipelineStep` model for branching
 
-**Output keys:** `condition_result` (boolean)
+**Output keys:** `condition.expression`, `condition.result`, `condition.branch`, optional `_cooloff_triggered`
 
 See [Condition Expressions](#condition-expressions) below.
 
 #### `verification`
 
-Query the PersonActivity database to verify whether household members completed (or did not complete) specific activities within a time window. No LLM calls  -  this is a deterministic database query step.
+Query the PersonActivity database to verify whether household members completed, or did not complete, specific activities within a time window. No LLM calls are involved.
 
 **Config fields:**
 
@@ -132,7 +162,7 @@ Query the PersonActivity database to verify whether household members completed 
   - `room_name` (str, optional): room to filter by; supports templates (e.g. `{{room_name}}`). Leave empty to match any room.
   - `completed` (bool, default `true`): whether the activity should have been completed
   - `within_minutes` (float): relative time window from now
-  - `window_start` / `window_end` (ISO-8601 UTC): fixed time window (alternative to `within_minutes`)
+  - `window_start` / `window_end` (ISO-8601 timestamp): fixed wall-clock window (alternative to `within_minutes`). The stored time is re-anchored to today's date in `app.timezone` before querying.
   - `min_confidence` (float, default `0.5`): minimum confidence threshold for matching records
 - `match_mode`: `"all"` or `"any"` (default `"all"`)
 - `re_notify_if_failed`: bool (default `false`), re-trigger notification on verification failure
@@ -146,18 +176,20 @@ Query the PersonActivity database to verify whether household members completed 
 
 #### `notification`
 
-Dispatches an alert to configured notification channels based on alert level. The `NotificationDispatcher` routes the message to WebSocket, Telegram, e-ink, TTS, and/or Home Assistant based on the level mappings in `notifications.yaml`.
+Dispatches an alert to configured notification channels based on alert level. The `NotificationDispatcher` can route to WebSocket, Telegram, e-ink, TTS, `realtime_voice`, `homeassistant`, and outbound `webhook` channels.
 
 **Config fields:**
 
 - `alert_level`: `emergency`, `warning`, `info`, or `reminder`
 - `channels`: optional override of which channels to use (completely replaces the defaults from `notifications.yaml` when specified)
 - `message_template`: standard Python format string with `{message}`, `{room}`, and any `pipeline_data` key representing the default broadcast text.
-- `telegram_template` / `eink_template` / `tts_template`: channel-specific template overrides allowing you to format messages optimally for a specific medium (e.g. HTML for Telegram, short text for e-ink, natural language for TTS). Falls back to `message_template`.
+- `telegram_template` / `eink_template` / `tts_template` / `webhook_template`: channel-specific template overrides allowing you to format messages optimally for a specific medium. `webhook_template` should render a JSON string when you want to control the outbound payload body directly.
 - `eink_targets`: optional list of sensor IDs for targeted e-ink display rendering
 - `ha_media_player`: optional HA media_player entity ID for targeted TTS playback
+- `webhook_url`: optional per-step override for the outbound webhook destination
+- `trigger_cooloff`: whether a successful notification dispatch should count toward the rule cool-off window. Defaults to `true`.
 
-**Output keys:** `notification_dispatched` (boolean), `notification_channels` (dict of channel → success)
+**Output keys:** `notification_dispatched` (boolean), `notification_channels` (dict of channel -> success), optional `_cooloff_triggered`
 
 #### `ha_action`
 
@@ -165,11 +197,13 @@ Calls a Home Assistant service. Can turn on lights, lock doors, activate scenes,
 
 **Config fields:**
 
-- `service`: the HA service to call (e.g., `light.turn_on`, `lock.lock`)
+- `domain`: Home Assistant domain to call (e.g. `light`, `lock`, `script`)
+- `service`: Home Assistant service name within that domain (e.g. `turn_on`, `lock`)
 - `entity_id`: the target entity
-- `service_data`: additional data to pass to the service
+- `data`: additional JSON payload to pass to the service
+- `trigger_cooloff`: whether a successful Home Assistant action should count toward the rule cool-off window. Defaults to `true`.
 
-**Output keys:** `ha_action_result` (success/failure status)
+**Output keys:** `ha_action.domain`, `ha_action.service`, `ha_action.entity_id`, `ha_action.success`, optional `_cooloff_triggered`
 
 #### `translation`
 
@@ -192,7 +226,7 @@ Pauses pipeline execution for a configured duration. The execution state is pers
 
 **Config fields:**
 
-- `duration_minutes`: how long to wait before resuming
+- `minutes`: how long to wait before resuming
 
 **Output keys:** none (the step simply pauses execution)
 
@@ -261,6 +295,7 @@ Several step config fields support `{{variable}}` template syntax: prompts in `v
 {{key.0.name}}       -- list index + nested access
 {{room_name}}        -- trigger context value
 {{trigger.sensor_id}} -- explicit trigger namespace
+{{system.local_time}} -- localized executor-injected system value
 ```
 
 Unresolvable placeholders are left as-is so the LLM still sees the intent.
@@ -275,6 +310,9 @@ Any key in `pipeline_data` is available. Common variables:
 | `person_detections.0.name` | person_identification step | `"grandma"` |
 | `person_detections.0.confidence` | person_identification step | `0.92` |
 | `logic_response.user_notification` | logic_reasoning step | `"Stove left on"` |
+| `system.local_time` | executor-injected system context | `"08:42 AM"` |
+| `system.local_day_of_week` | executor-injected system context | `"Sunday"` |
+| `trigger_input.reason` | webhook trigger payload | `"medication_missed"` |
 | `room_name` | trigger context | `"Kitchen"` |
 | `sensor_id` | trigger context | `"kitchen_cam_01"` |
 
@@ -293,6 +331,12 @@ Look at the person in the {{room_name}}. Are they using the stove safely?
 
 The person identified is {{person_detections.0.name}}.
 Determine if they need a reminder about stove safety.
+```
+
+**Notification template:**
+
+```text
+Reminder for {{person_detections.0.name}} at {{system.local_time}} in the {{room_name}}.
 ```
 
 **Translation source text:**
@@ -350,7 +394,7 @@ translation → notification [alert_level: warning, channels: [websocket, telegr
 - `trigger_type`: `occupancy_duration`
 - `primary_sensor_id`: the presence sensor to watch (e.g. `bathroom_sensor_01`)
 - `occupancy_config`: `{"min_minutes": 40}`
-- `cool_off_minutes`: `30`  -  prevents re-firing until acknowledged or resolved
+- `cool_off_minutes`: `30`, which prevents re-firing until a cool-off-triggering execution ages out
 - Context filters: add `time_range`, `person_presence`, or `room` filters as needed
 
 The `translation` step localises the message before the `notification` step dispatches it. The `realtime_voice` channel initiates an interactive voice check-in via Gemini Live; the `websocket` and `telegram` channels alert the admin console and caregiver simultaneously.
@@ -368,3 +412,5 @@ When a rule's pipeline is triggered, a `WorkflowExecution` record tracks the ful
 | `cancelled` | Manually cancelled via the API or admin UI |
 
 All intermediate results are persisted in `pipeline_data_json` on both the `WorkflowExecution` and the `EventLog` for debugging and auditability. You can inspect the full pipeline data at any point via the admin console's **Workflows** view.
+
+Separately, the related `EventLog` is finalized as either `completed` or `ignored`. Only `completed` events participate in rule cool-off checks.

@@ -29,6 +29,9 @@ Variables are interpolated into YAML config files using `${ENV_VAR}` syntax. Def
 | `TTS_API_URL` | Text-to-speech service endpoint |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token |
 | `TELEGRAM_CAREGIVER_CHAT_ID` | Caregiver Telegram chat ID |
+| `TELEGRAM_OPENCLAW_CHAT_ID` | Optional second Telegram target |
+| `WEBHOOK_DEFAULT_URL` | Default outbound webhook destination |
+| `WEBHOOK_AUTH_TOKEN` | Bearer token for outbound webhook auth headers |
 | `CC_CAREGIVER_API_KEY` | Caregiver API key (read-only + alerts) |
 | `CC_MCP_API_KEY` | MCP/AI agent API key (read-only) |
 
@@ -63,6 +66,8 @@ interval = settings.get("homeassistant.poll_interval_seconds", 30)
 | `rag` | Optional RAG index configuration |
 | `image` | eInk template and font paths |
 | `logging` | Log level |
+
+The `app.timezone` setting affects more than UI display. It is also used to populate `pipeline_data.system.local_time`, `pipeline_data.system.local_date`, `pipeline_data.system.local_day_of_week`, and to interpret `verification` step fixed time windows against the local day.
 
 ### LLM Configuration {#llm}
 
@@ -189,28 +194,34 @@ Keys are resolved from (in priority order):
 Maps alert levels to notification channels with escalation policies.
 
 ```yaml
-channels:
-  telegram:
-    targets:
-      - name: Caregiver
-        chat_id: ${TELEGRAM_CAREGIVER_CHAT_ID}
-        alert_levels: [emergency, warning]
+telegram:
+  bot_token: "${TELEGRAM_BOT_TOKEN}"
+  max_image_side: 1920
+  targets:
+    - name: Caregiver
+      chat_id: ${TELEGRAM_CAREGIVER_CHAT_ID}
+      alert_levels: [emergency, warning, info]
 
-  eink:
-    default_template: alert
-    expiry_minutes: 30
+webhook:
+  url: "${WEBHOOK_DEFAULT_URL}"
+  timeout_seconds: 10
+  headers:
+    Authorization: "Bearer ${WEBHOOK_AUTH_TOKEN}"
 
-alert_levels:
+eink:
+  default_targets: []
+  default_template: alert
+  default_expiry_minutes: 30
+
+notification_defaults:
   emergency:
-    channels: [websocket, telegram, eink, tts, ha]
-    escalation:
-      interval_minutes: 5
-      repeat_count: 3
+    channels: [websocket, telegram, eink, tts, homeassistant]
+    escalation_minutes: 5
+    repeat_count: 3
 
   warning:
-    channels: [websocket, telegram, eink]
-    escalation:
-      interval_minutes: 10
+    channels: [websocket, telegram, eink, realtime_voice]
+    escalation_minutes: 10
 
   info:
     channels: [websocket]
@@ -221,7 +232,9 @@ alert_levels:
 
 | Level | Default Channels | Escalation |
 |-------|-----------------|------------|
-| `emergency` | WebSocket, Telegram, eInk, TTS, HA | Every 5 min, 3x repeat |
-| `warning` | WebSocket, Telegram, eInk | Every 10 min |
+| `emergency` | WebSocket, Telegram, eInk, TTS, Home Assistant | Every 5 min, 3x repeat |
+| `warning` | WebSocket, Telegram, eInk, Realtime Voice | Every 10 min |
 | `info` | WebSocket only | None |
 | `reminder` | WebSocket, TTS, eInk | None |
+
+The `webhook` channel is configured globally here but is opt-in by default. Add `webhook` to a level's `channels` list, or set it per `notification` step through the pipeline builder. A step-level `webhook_url` overrides `webhook.url`.
