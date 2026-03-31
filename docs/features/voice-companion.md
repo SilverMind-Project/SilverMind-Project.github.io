@@ -12,23 +12,38 @@ Browser Microphone → WebSocket → Backend Audio Handler → Gemini Live API
 Browser Speaker   ← WebSocket ← Backend Audio Handler ← Gemini Live API
 ```
 
+The WebSocket connection also carries push notifications (alerts, reminders, medication prompts) from the rule engine to the frontend. These are delivered regardless of whether the user has started a voice session.
+
 ## How It Works
+
+### WebSocket Lifecycle
+
+The frontend connects to `/ws/audio` immediately on page load. This keeps the channel open for push notifications (alerts, reminders) without touching Gemini Live. A Gemini session is opened only when the first audio chunk, text message, or orchestrator prompt arrives. After each session ends naturally (e.g. due to provider-side inactivity), the backend waits for the next burst of activity before reconnecting. No keepalive messages are sent.
+
+```text
+Page load       → WebSocket connects   → push notifications delivered
+User taps mic   → audio flows          → Gemini session opens lazily
+User stops      → Gemini session ends  → WebSocket stays open for notifications
+User taps mic   → audio flows          → new Gemini session opens
+```
 
 ### Audio Pipeline
 
-1. The frontend captures audio from the browser's microphone
-2. Audio chunks are sent over a WebSocket connection to the backend
-3. The `AudioHandler` in `backend/websocket/audio_handler.py` manages the Gemini Live session
-4. Audio is streamed to Gemini's Live API, which processes speech in real-time
-5. Gemini's audio responses stream back through the same WebSocket to the browser
-6. The frontend plays the audio through the browser's speakers
+1. The frontend captures microphone audio through a high-pass filter (cutoff: 150 Hz) that removes fan and AC hum before the signal reaches the VAD or the backend.
+2. A 2.5-second ambient calibration pass adjusts the VAD threshold to the filtered noise floor after the mic opens.
+3. Audio chunks are sent over the WebSocket only while the user has tapped the mic button (recording mode).
+4. The `AudioHandler` in `backend/websocket/audio_handler.py` manages the Gemini Live session.
+5. Audio is streamed to Gemini's Live API, which processes speech in real-time.
+6. Gemini's audio responses stream back through the same WebSocket to the browser.
+7. The frontend plays the audio through the browser's speakers.
 
 ### Session Management
 
-- Each WebSocket connection creates a new Gemini Live session
-- The `ConversationManager` maintains conversation history with configurable TTL and max turns
-- Sessions are isolated per connection, so multiple clients can have independent conversations
-- The WebSocket connection manager (`backend/websocket/connection_manager.py`) tracks active connections and handles cleanup
+- Each WebSocket connection creates one conversation session in the database.
+- The `ConversationManager` maintains conversation history with configurable TTL and max turns.
+- Sessions are isolated per connection, so multiple clients can have independent conversations.
+- The WebSocket connection manager (`backend/websocket/connection_manager.py`) tracks active connections and handles broadcast delivery.
+- Gemini Live sessions open and close as needed within the lifetime of the WebSocket connection. Conversation history is injected into each new Gemini session as context.
 
 ### Transcript Actor Delineation
 
@@ -62,8 +77,6 @@ llm:
 
 websocket:
   max_connections: 5
-  audio_backend: gemini
-  lazy_connect: true
 
 conversation:
   history_ttl_minutes: 30
@@ -75,26 +88,30 @@ conversation:
 | Setting | Default | Description |
 | ------- | ------- | ----------- |
 | `websocket.max_connections` | 5 | Maximum concurrent WebSocket connections |
-| `websocket.lazy_connect` | true | Only connect to Gemini when audio starts |
 | `conversation.history_ttl_minutes` | 30 | How long to keep conversation history |
 | `conversation.max_turns` | 50 | Maximum turns before history is trimmed |
+
+## Background Noise Filtering
+
+The frontend applies a 150 Hz high-pass BiquadFilter before any audio reaches the VAD or the backend. Low-frequency hum from fans, air conditioning, and HVAC (typically 50-120 Hz) is removed at the signal level, not just masked by threshold tuning. After the filter, a 2.5-second calibration window samples the remaining ambient noise to set a per-session VAD threshold, so the system adapts to each room's acoustic conditions.
 
 ## Tamil Language Support
 
 The system supports Tamil language interaction:
 
-- The **TranslateGemma** model handles Tamil translation in pipeline steps
-- Voice TTS uses Azure Neural voices (default: `en-IN-NeerjaExpressiveNeural`)
-- The Gemini system instruction can be customized to respond in Tamil
+- The **TranslateGemma** model handles Tamil translation in pipeline steps.
+- Voice TTS uses Azure Neural voices (default: `en-IN-NeerjaExpressiveNeural`).
+- The Gemini system instruction can be customized to respond in Tamil.
 
 ## Frontend Interface
 
 The Companion View (`frontend/src/views/CompanionView.vue`) provides:
 
-- **Push-to-talk** or **continuous listening** modes
-- **Visual audio level indicator** showing when the system is listening/speaking
-- **Conversation transcript** display
-- **Connection status** indicator
+- **Push-to-talk** mode with visual audio level indicator.
+- **Status pill** showing the current state: Ready, Listening, You're speaking, or System is responding. The pill shows "You're speaking" only after the user has tapped the mic button, never from background noise during standby.
+- **Conversation transcript** display.
+- **Connection status** indicator.
+- **Alert overlay** for emergency, warning, reminder, and info notifications delivered from the rule engine via WebSocket, visible regardless of audio session state.
 
 ## Optional: Gemini Dependency
 
@@ -105,4 +122,4 @@ cd backend
 uv sync --extra gemini
 ```
 
-The import is intentionally lazy in `backend/integrations/llm/gemini_live.py`. The system starts without Gemini if the package isn't installed. This allows deployments that don't need voice to skip the dependency entirely.
+The import is intentionally lazy in `backend/integrations/llm/gemini_live.py`. The system starts without Gemini if the package isn't installed. This allows deployments that don't need voice to skip the dependency entirely. When Gemini is not configured, the WebSocket connection stays open and continues to deliver push notifications.

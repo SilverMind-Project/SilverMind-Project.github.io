@@ -57,10 +57,14 @@ When a `notification` pipeline step broadcasts an alert, you can customize the f
 
 Channel-level template overrides optionally specialize formatting for that specific medium:
 
-- `telegram_template`: Ideal for including safe HTML wrappers.
-- `eink_template`: Ideal for reducing text footprint for the smaller e-ink display size.
-- `tts_template`: Enhances readability with a more natural conversational flow for the spoken text-to-speech announcement.
-- `webhook_template`: Lets you shape the outbound webhook JSON body directly.
+| Template field | Channel | Notes |
+| -------------------------- | ------------------ | -------------------------------------------- |
+| `telegram_template` | `telegram` | HTML-formatted text; safe tags only. |
+| `eink_template` | `eink` | Short plain text; fits the small display. |
+| `tts_template` | `tts` | Spoken announcement; natural-language phrasing. |
+| `websocket_template` | `websocket` | Text shown in the companion UI overlay. |
+| `realtime_voice_template` | `realtime_voice` | Conversational prompt spoken by Gemini Live. |
+| `webhook_template` | `webhook` | JSON body template for the outbound POST. |
 
 Individual template overrides smoothly fall back to the generic `message_template` when omitted.
 
