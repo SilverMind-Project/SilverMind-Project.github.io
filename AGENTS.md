@@ -113,6 +113,7 @@ nav: [
 - **Action-oriented**: tell the reader what to do, not just what exists
 - **No marketing language**: state capabilities factually
 - **No em-dashes ( - )**: use colons, periods, semicolons, or commas instead. Restructure sentences where needed. Em-dashes read as AI-generated; professional technical writing from companies like Apple and Google avoids them.
+- **Verify tech stack details against `../cognitive-companion/AGENTS.md`** before updating reference tables. The docs site AGENTS.md is authoritative for site structure only; the codebase AGENTS.md is authoritative for all technical facts.
 
 ### Structure
 

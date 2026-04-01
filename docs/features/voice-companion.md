@@ -113,6 +113,48 @@ The Companion View (`frontend/src/views/CompanionView.vue`) provides:
 - **Connection status** indicator.
 - **Alert overlay** for emergency, warning, reminder, and info notifications delivered from the rule engine via WebSocket, visible regardless of audio session state.
 
+## Tool Calling
+
+The voice companion supports function calling via Gemini Live. A configurable subset of MCP tools is exposed as Gemini function declarations, allowing the companion to answer factual queries using real system data.
+
+### Tool Call Flow
+
+1. When a Gemini Live session opens, the `GeminiToolAdapter` converts MCP tool schemas into Gemini `FunctionDeclaration` objects and includes them in the session config.
+2. When the senior asks something like "what's the weather?" or "where is everyone?", Gemini recognizes that a tool call is needed.
+3. Audio generation pauses while the backend executes the tool (synchronous function calling).
+4. The tool result is sent back to Gemini, which incorporates it into a natural spoken response.
+5. The senior hears the answer as part of the conversation; raw tool data is never displayed.
+
+### Available Voice Tools
+
+The tool subset is configured in `settings.yaml` under `mcp.gemini_tools`:
+
+```yaml
+mcp:
+  gemini_tools:
+    - "get_rooms"
+    - "get_room_occupancy"
+    - "get_person_locations"
+    - "get_alerts"
+    - "get_weather"
+    - "get_local_datetime"
+    - "get_person_activities"
+    - "get_enrolled_persons"
+```
+
+Only read-only tools are included by default. Destructive tools like `trigger_rule` are excluded to prevent unintended actions during voice conversations.
+
+### Example Queries
+
+- "What time is it?" calls `get_local_datetime`
+- "What's the weather like?" calls `get_weather`
+- "Where is grandma?" calls `get_person_locations`
+- "Are there any alerts?" calls `get_alerts`
+
+### Conversation Logging
+
+Tool calls are persisted in the conversation database as `system` turns with the tool name, arguments, and result stored in the `metadata_json` field. This provides a full audit trail for caregiver review.
+
 ## Optional: Gemini Dependency
 
 The Gemini Live integration requires the `google-genai` package, which is an optional dependency:

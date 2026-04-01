@@ -85,7 +85,7 @@ Cognitive Companion takes a different path:
 | Voice | Google Gemini 2.5 Flash (Live API) |
 | Face Recognition | InsightFace buffalo_l with ArcFace embeddings |
 | Object Storage | MinIO (S3-compatible) |
-| Logging | structlog (structured JSON logging) |
+| Logging | Python stdlib logging with key=value context |
 
 ## Next Steps
 

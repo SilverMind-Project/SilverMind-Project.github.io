@@ -42,14 +42,19 @@ from google import genai  # Lazy import: google-genai is an optional dependency
 
 ### Logging
 
-Use structlog via `get_logger()`. Never use `print()`:
+Use `get_logger()` from `backend.core.logging`. Never use `print()`. The logger
+wraps Python's stdlib `logging` module and accepts keyword context arguments
+that are appended to the log line as `key=value` pairs:
 
 ```python
 from backend.core.logging import get_logger
 logger = get_logger(__name__)
 
 logger.info("event_processed", sensor_id=sid, rule=rule.name)
+# → "event_processed sensor_id=cam1 rule=Motion Alert"
+
 logger.error("pipeline_step_failed", step_type=step.step_type, error=str(e))
+logger.exception("flush_db_error", sensor_id=sensor_id)  # includes traceback
 ```
 
 ### Error Handling
@@ -172,7 +177,7 @@ onUnmounted(() => {
 ## Do NOT
 
 - **Run migrations.** Delete `data/cognitive_companion.db` and restart instead.
-- **Use `print()`.** Use `structlog` via `get_logger()`.
+- **Use `print()`.** Use `get_logger()` from `backend.core.logging`.
 - **Instantiate services in routers.** Access them from `request.app.state`.
 - **Add dependencies without updating `pyproject.toml` and running `uv lock`** (backend) or `package.json` (frontend).
 - **Skip permission checks.** All new endpoints need entries in `config/auth.yaml`.

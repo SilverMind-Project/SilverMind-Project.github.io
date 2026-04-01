@@ -1,6 +1,6 @@
 # MCP Integration
 
-Cognitive Companion includes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server that exposes read-only tools for AI agent integration. Agents can discover system state, query sensor data, inspect enrollment and e-ink status, check person locations, and trigger rule executions, all without requiring a public endpoint.
+Cognitive Companion includes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, that exposes tools for AI agent integration. Agents can discover system state, query sensor data, inspect enrollment and e-ink status, check person locations, and trigger rule executions. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
 
 ## What is MCP?
 
@@ -12,31 +12,52 @@ The Model Context Protocol is an open standard for connecting AI models to exter
 
 Cognitive Companion's MCP server allows external AI agents (Claude, GPT, custom agents) to interact with the senior care system as part of their tool-calling workflows.
 
+## Architecture
+
+The MCP server is implemented using the official `mcp` Python SDK's `FastMCP` class. Tools are defined as decorated async functions with type hints that auto-generate JSON schemas. The server is mounted as an ASGI sub-application on FastAPI at `/mcp`, serving the standard MCP protocol via streamable HTTP transport.
+
+```text
+MCP Clients (Claude Desktop, custom agents)
+    │
+    ▼
+POST /mcp (streamable HTTP, JSON-RPC)
+    │
+    ├── MCPAuthMiddleware (validates X-API-Key)
+    │
+    └── FastMCP Server
+        ├── tools/list     → discover available tools
+        └── tools/call     → execute a tool by name
+```
+
+A `GeminiToolAdapter` reads the same tool definitions and converts them to Gemini `FunctionDeclaration` format, so the voice companion can call tools during conversations without duplicating implementations.
+
 ## Available Tools
 
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `get_rooms` | List all configured rooms | None |
-| `get_sensors` | List sensors | `room_id`, `sensor_type` (optional filters) |
-| `get_room_occupancy` | Current occupancy from presence sensors | None |
-| `get_recent_images` | Recent camera images for a sensor | `sensor_id`, `limit` |
-| `get_light_level` | Illuminance from a HA sensor | `sensor_id` |
-| `get_alerts` | Recent emergency alerts | `limit`, `resolved` (optional) |
-| `get_event_logs` | Rule execution event logs | `rule_name`, `status`, `limit` |
-| `get_rules` | Configured automation rules | None |
-| `get_conversation_history` | Recent conversation turns | `limit` |
-| `get_person_locations` | Current location of all tracked members | None |
-| `get_enrolled_persons` | Household members known to the system, for enrollment-aware agent flows | None |
-| `get_person_sightings` | Camera sighting history for a person | `person_id`, `limit` |
-| `get_person_activities` | Recent detected activities | `person_id`, `activity_type` |
-| `get_workflow_executions` | Recent pipeline workflow executions | `rule_id`, `status`, `limit` |
-| `get_rule_pipeline` | Pipeline step definitions for a rule | `rule_id` |
-| `trigger_rule` | Manually trigger a rule's pipeline | `rule_id` |
-| `get_eink_display_status` | Active e-ink image state for one or all devices | `sensor_id` (optional) |
+| Tool                       | Description                                                  | Parameters                                    |
+|----------------------------|--------------------------------------------------------------|-----------------------------------------------|
+| `get_rooms`                | List all configured rooms                                    | None                                          |
+| `get_sensors`              | List sensors                                                 | `room_name`, `sensor_type` (optional filters) |
+| `get_room_occupancy`       | Current occupancy from presence sensors                      | `room_name` (optional)                        |
+| `get_recent_images`        | Recent camera images for a sensor                            | `sensor_id`, `limit`                          |
+| `get_light_level`          | Illuminance from a HA sensor                                 | `entity_id`                                   |
+| `get_alerts`               | Recent emergency alerts                                      | `resolved`, `room_name`, `limit` (optional)   |
+| `get_event_logs`           | Rule execution event logs                                    | `rule_name`, `status`, `limit` (optional)     |
+| `get_rules`                | Configured automation rules                                  | `enabled_only` (default true)                 |
+| `get_conversation_history` | Recent conversation turns                                    | `session_id`, `limit` (optional)              |
+| `get_person_locations`     | Current location of all tracked members                      | None                                          |
+| `get_enrolled_persons`     | Household members with face enrollment data                  | None                                          |
+| `get_person_sightings`     | Camera sighting history for a person                         | `person_id`, `limit`                          |
+| `get_person_activities`    | Recent detected activities (eating, sleeping, etc.)          | `person_id`, `activity_type`, `minutes`       |
+| `get_workflow_executions`  | Recent pipeline workflow executions                          | `rule_name`, `status`, `limit` (optional)     |
+| `get_rule_pipeline`        | Pipeline step definitions for a rule                         | `rule_id`                                     |
+| `trigger_rule`             | Manually trigger a rule's pipeline execution                 | `rule_id`                                     |
+| `get_eink_display_status`  | Active e-ink image state for one or all displays             | `sensor_id` (optional)                        |
+| `get_local_datetime`       | Current local date and time for the household's timezone     | None                                          |
+| `get_weather`              | Current weather from Home Assistant                          | None                                          |
 
 ## Authentication
 
-MCP tools require authentication via the MCP API key. The key is configured in `config/auth.yaml`:
+MCP tools require authentication via the API key. The key is configured in `config/auth.yaml`:
 
 ```yaml
 api_keys:
@@ -46,25 +67,25 @@ api_keys:
       - mcp_readonly
 ```
 
-The `mcp_readonly` permission grants:
-- Read access to all `/api/v1/*` endpoints
-- Execute access to MCP tools
-- Ability to trigger rule executions
+The `mcp_readonly` permission grants access to the `/mcp` endpoint. Pass the key via the `X-API-Key` header or `Authorization: Bearer <key>` header.
 
-## API Endpoints
+## Endpoint
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/mcp/tools` | List available tools with their schemas |
-| `POST` | `/api/v1/mcp/tools/{name}` | Execute a tool by name |
+The MCP server is available at a single endpoint:
+
+| Method | Path   | Description                                      |
+|--------|--------|--------------------------------------------------|
+| `POST` | `/mcp` | MCP protocol endpoint (streamable HTTP, JSON-RPC) |
 
 ### Tool Discovery
 
 ```bash
-curl -H "X-API-Key: $CC_MCP_API_KEY" http://localhost:8000/api/v1/mcp/tools
+curl -X POST \
+  -H "X-API-Key: $CC_MCP_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"tools/list","id":1}' \
+  http://localhost:8000/mcp
 ```
-
-Returns a list of tool definitions with names, descriptions, and parameter schemas.
 
 ### Tool Execution
 
@@ -72,8 +93,8 @@ Returns a list of tool definitions with names, descriptions, and parameter schem
 curl -X POST \
   -H "X-API-Key: $CC_MCP_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"person_id": "grandma"}' \
-  http://localhost:8000/api/v1/mcp/tools/get_person_sightings
+  -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"get_person_sightings","arguments":{"person_id":"grandma"}},"id":2}' \
+  http://localhost:8000/mcp
 ```
 
 ## Integration Patterns
@@ -86,7 +107,7 @@ Configure Claude Desktop's MCP settings to point to your Cognitive Companion ins
 {
   "mcpServers": {
     "cognitive-companion": {
-      "url": "http://your-cc-host:8000/api/v1/mcp",
+      "url": "http://your-cc-host:8000/mcp",
       "headers": {
         "X-API-Key": "your_mcp_key"
       }
@@ -97,21 +118,38 @@ Configure Claude Desktop's MCP settings to point to your Cognitive Companion ins
 
 ### With Custom Agents
 
-Any agent framework that supports MCP tool calling can integrate with Cognitive Companion. The agent:
-
-1. Discovers tools via `GET /api/v1/mcp/tools`
-2. Calls tools via `POST /api/v1/mcp/tools/{name}`
-3. Receives structured JSON responses
+Any agent framework that supports the MCP protocol can integrate with Cognitive Companion by pointing to the `/mcp` endpoint. The standard JSON-RPC interface handles tool discovery and execution.
 
 ### Example Agent Workflow
 
 An AI agent monitoring the household might:
 
 1. Call `get_person_locations` to check where everyone is
-2. Call `get_enrolled_persons` to see which household members are available for face-aware flows
+2. Call `get_enrolled_persons` to see which household members are tracked
 3. Call `get_person_activities` to check if lunch has been eaten
 4. If lunch has not been detected, call `trigger_rule` on the lunch reminder rule
 5. Call `get_alerts` to check for any unresolved emergencies
+
+## Voice Companion Integration
+
+A configurable subset of MCP tools is also available to the Gemini Live voice companion via function calling. When the senior asks a question like "what's the weather?" or "where is everyone?", Gemini pauses audio generation, calls the appropriate tool, and incorporates the result into its spoken response. Tool results are never displayed raw to the user; they always flow through Gemini's natural language audio response.
+
+The voice-enabled tool subset is configured in `settings.yaml`:
+
+```yaml
+mcp:
+  gemini_tools:
+    - "get_rooms"
+    - "get_room_occupancy"
+    - "get_person_locations"
+    - "get_alerts"
+    - "get_weather"
+    - "get_local_datetime"
+    - "get_person_activities"
+    - "get_enrolled_persons"
+```
+
+Destructive tools like `trigger_rule` are excluded from the voice subset by default.
 
 ## Network Considerations
 
@@ -122,4 +160,8 @@ The MCP server runs on the same backend instance, so no additional deployment is
 
 ## Adding New Tools
 
-See the [development guide](/development/extending-pipeline) for instructions on adding new MCP tools to the registry.
+1. Add a `@_register` decorated async function in `backend/mcp/server.py`. Type hints on parameters auto-generate JSON schemas.
+2. Add the tool name to `config/settings.yaml` under `mcp.tools`.
+3. If the tool should be available in voice conversations, also add it to `mcp.gemini_tools`.
+
+See the [development guide](/development/extending-pipeline) for more details.
