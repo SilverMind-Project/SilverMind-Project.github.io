@@ -88,6 +88,10 @@ Sends media frames to the person identification service for face recognition. Re
 
 Sends media frames with a prompt to the vision LLM (Cosmos Reason2) for scene description and analysis. Supports acquiring additional images across the home for temporal or multi-angle context.
 
+::: tip Prefer `llm_call` for new pipelines
+The `llm_call` step (see [Reasoning](#reasoning)) is a superset of `vision_analysis`. It supports the same image-source options plus model selection, sensor-ordered image assembly for inter-frame analysis, and a configurable output key.
+:::
+
 **Config fields:**
 
 - `prompt`: the analysis prompt sent to the vision model (supports [prompt templates](#prompt-templates))
@@ -120,9 +124,106 @@ Record a single activity to the PersonActivity table. All fields support [prompt
 
 ### Reasoning
 
+#### `llm_call`
+
+The unified LLM step. Replaces `vision_analysis`, `logic_reasoning`, and `translation` with a single model-agnostic interface. The model is selected per step from the named registry in `settings.yaml`, so each step in a pipeline can use a different model without deploying multiple provider types.
+
+**Config fields:**
+
+- `model_id` (required): ID of a model entry from `llm.models` in `settings.yaml`.
+- `prompt`: prompt text (supports [prompt templates](#prompt-templates)).
+- `special_instructions`: text prepended to the prompt before template rendering. Useful for translation style guides or system-level constraints.
+- `include_context`: list of `pipeline_data` keys to include as context above the prompt. If empty, `person_detections` and `vision_response` are auto-included when present.
+- `image_source`: `"none"` (default), `"trigger"`, `"additional"`, or `"both"`. Image attachment is silently skipped when the selected model does not have the `vision` capability.
+- `max_images`: hard cap on total images sent to the model (default `5`).
+- `additional_sensor_ids`: camera sensor IDs to pull images from. When `sort_by_sensor_then_time` is enabled, the order of this list determines the grouping order.
+- `additional_room_names`: pull images from all cameras in these rooms (unordered; for ordered multi-sensor analysis, use `additional_sensor_ids` instead).
+- `images_per_sensor`: maximum images per sensor when sensor-ordered grouping is active (default `3`).
+- `sort_by_sensor_then_time`: when `true`, images are grouped by sensor in `additional_sensor_ids` order, then sorted oldest-first within each group. This produces a temporally coherent sequence across sensors, enabling inter-frame analysis by vision reasoning models such as Cosmos Reason2.
+- `image_time_filter`: optional object with `since_minutes`, `time_start`, `time_end` to restrict which images are fetched.
+- `response_format`: `"text"` (default), `"json_schema"`, or `"json_free"`. Controls whether the output is stored as a plain string or parsed as JSON.
+- `response_schema`: natural-language description of the expected JSON format, appended to the prompt.
+- `response_json_schema`: JSON Schema string. When `response_format` is `"json_schema"` and the model has `guided_decoding: true` in settings, the schema is sent as `guided_json` to the server (vLLM). For other servers, it is injected as a prompt instruction.
+- `output_key`: the `pipeline_data` key where the result is stored (default `"llm_response"`). Set to `"logic_response"`, `"vision_response"`, or `"translation"` for compatibility with downstream steps that reference those keys.
+- `hallucination_marker`: if this string is found in the response, the call is retried up to the model's `max_retries` setting (Tenacity). Useful for translation models with known failure modes.
+
+**Output keys:** `pipeline_data[output_key]` (string when `response_format` is `"text"`, parsed dict when `"json_schema"` or `"json_free"`). When `output_key` is `"logic_response"` and the response contains `is_notification_needed: false`, `notification_suppressed: true` is also written.
+
+::: details Example: vision reasoning with sensor-ordered frames
+
+```yaml
+step_type: llm_call
+config:
+  model_id: cosmos_reason2
+  prompt: "Analyze the sequence of frames from each camera. Has the person left the stove unattended?"
+  image_source: both
+  additional_sensor_ids: [kitchen_cam_1, kitchen_cam_2]
+  sort_by_sensor_then_time: true
+  images_per_sensor: 4
+  max_images: 10
+  response_format: json_schema
+  response_json_schema: |
+    {
+      "type": "object",
+      "properties": {
+        "stove_unattended": {"type": "boolean"},
+        "reasoning": {"type": "string"},
+        "confidence": {"type": "number"}
+      },
+      "required": ["stove_unattended", "reasoning"]
+    }
+  output_key: vision_response
+```
+
+:::
+
+::: details Example: reasoning and notification decision
+
+```yaml
+step_type: llm_call
+config:
+  model_id: gemma4_26b
+  prompt: "Based on the analysis, should the caregiver be alerted?"
+  include_context: [vision_response, person_detections]
+  response_format: json_schema
+  response_json_schema: |
+    {
+      "type": "object",
+      "properties": {
+        "is_notification_needed": {"type": "boolean"},
+        "user_notification": {"type": "string"},
+        "alert_level": {"type": "string", "enum": ["emergency","warning","info","reminder"]},
+        "reasoning": {"type": "string"}
+      },
+      "required": ["is_notification_needed", "user_notification", "reasoning"]
+    }
+  output_key: logic_response
+```
+
+:::
+
+::: details Example: translation with retry
+
+```yaml
+step_type: llm_call
+config:
+  model_id: gemma4_26b
+  special_instructions: "Translate using informal Tamil as spoken in Chennai (Tanglish):"
+  prompt: "Translate the following to Tamil:\n\n{{logic_response.user_notification}}"
+  response_format: text
+  output_key: translation
+  hallucination_marker: "சென்னை"
+```
+
+:::
+
 #### `logic_reasoning`
 
-Evaluates upstream analysis with the logic LLM (Gemma3) to decide whether action is warranted. Typically receives the vision analysis output and determines if a notification should be sent.
+Evaluates upstream analysis with the logic LLM to decide whether action is warranted.
+
+::: tip Prefer `llm_call` for new pipelines
+`logic_reasoning` is hardwired to the global `llm.logic` provider. The `llm_call` step gives you per-step model selection, a configurable output key, and the same JSON schema enforcement.
+:::
 
 **Config fields:**
 
@@ -207,7 +308,11 @@ Calls a Home Assistant service. Can turn on lights, lock doors, activate scenes,
 
 #### `translation`
 
-Translates text to a target language using TranslateGemma. Can automatically retry requests if the model outputs known gibberish.
+Translates text to a target language. Can automatically retry requests if the model outputs known gibberish.
+
+::: tip Prefer `llm_call` for new pipelines
+`translation` is hardwired to the global `llm.translation` provider and its TranslateGemma-specific prompt format. The `llm_call` step lets you use any capable model (including Gemma 4) with a natural-language prompt and the same hallucination retry.
+:::
 
 **Config fields:**
 
@@ -284,7 +389,7 @@ logic_response.alert_level == "emergency"
 ## Prompt Templates {#prompt-templates}
 
 ::: v-pre
-Several step config fields support `{{variable}}` template syntax: prompts in `vision_analysis`, `logic_reasoning`, and `translation`; the `person_id`, `activity_type`, and `room_name` fields in `activity_detection` (direct mode); and the `person_id` and `room_name` fields in `verification` conditions. At execution time, placeholders are replaced with values from `pipeline_data` and trigger context.
+Several step config fields support `{{variable}}` template syntax: the `prompt` and `special_instructions` fields in `llm_call`, `vision_analysis`, `logic_reasoning`, and `translation`; the `person_id`, `activity_type`, and `room_name` fields in `activity_detection`; and the `person_id` and `room_name` fields in `verification` conditions. At execution time, placeholders are replaced with values from `pipeline_data` and trigger context.
 :::
 
 ### Syntax
@@ -349,11 +454,16 @@ Reminder for {{person_detections.0.name}} at {{system.local_time}} in the {{room
 
 ### Camera Monitoring
 
-The classic detect-analyze-notify chain:
+The classic detect-analyze-notify chain using the unified `llm_call` step:
 
 ```text
-person_identification → vision_analysis → logic_reasoning → translation → notification
+person_identification → llm_call (vision, output_key: vision_response)
+  → llm_call (reasoning, output_key: logic_response)
+  → llm_call (translation, output_key: translation)
+  → notification
 ```
+
+Each `llm_call` step selects its own `model_id`, so vision reasoning can use Cosmos Reason2 while logic and translation use Gemma 4 on the same GPU node.
 
 ### Lunch Reminder
 
@@ -368,7 +478,7 @@ person_identification → activity_detection (activity_type: "lunch", person_id:
 Analyze, decide, notify caregiver, wait for response, then act:
 
 ```text
-vision_analysis → logic_reasoning → notification → wait (5 min) → verification → ha_action
+llm_call (vision) → llm_call (reasoning, output_key: logic_response) → notification → wait (5 min) → verification → ha_action
 ```
 
 ### Conditional Alert Escalation
@@ -376,7 +486,7 @@ vision_analysis → logic_reasoning → notification → wait (5 min) → verifi
 Use conditions to route based on severity:
 
 ```text
-person_identification → vision_analysis → logic_reasoning → condition
+person_identification → llm_call (vision) → llm_call (reasoning, output_key: logic_response) → condition
   ├── (true: emergency) → notification [emergency level] → ha_action
   └── (false: routine)  → notification [info level]
 ```
@@ -386,7 +496,7 @@ person_identification → vision_analysis → logic_reasoning → condition
 Triggered by the `occupancy_duration` trigger type when a presence sensor has been on for longer than the configured threshold. The pipeline below sends a multilingual voice prompt asking if the person needs help:
 
 ```text
-translation → notification [alert_level: warning, channels: [websocket, telegram, realtime_voice]]
+llm_call (translation, output_key: translation) → notification [alert_level: warning, channels: [websocket, telegram, realtime_voice]]
 ```
 
 **Rule configuration:**

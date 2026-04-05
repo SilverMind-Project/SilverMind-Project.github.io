@@ -71,36 +71,101 @@ The `app.timezone` setting affects more than UI display. It is also used to popu
 
 ### LLM Configuration {#llm}
 
-The system uses three distinct LLM providers for different tasks:
+The `llm` section contains two independent subsystems: the legacy per-role providers used by the `vision_analysis`, `logic_reasoning`, and `translation` steps, and the named model registry used by the `llm_call` step.
+
+#### Named model registry (`llm.models`)
+
+The `llm_call` pipeline step selects a model by `id` from this list. Each entry is an independently reachable server with its own endpoint, API type, and capability declaration.
+
+```yaml
+llm:
+  models:
+    - id: cosmos_reason2
+      name: "Cosmos Reason2 8B (Vision)"
+      api_type: openai          # openai = /v1/chat/completions; ollama = /api/chat
+      base_url: ${VISION_MODEL_URL}
+      model: "nvidia/Cosmos-Reason2-8B"
+      capabilities: [text, vision]
+      max_tokens: 4096
+      timeout: 120
+      guided_decoding: true     # vLLM: sends guided_json in payload
+
+    - id: gemma4_26b
+      name: "Gemma 4 26B (General)"
+      api_type: openai
+      base_url: "http://192.168.1.31:8100"   # llama.cpp llama-server
+      model: "gemma-4-26B-A4B-it-GGUF"
+      capabilities: [text, vision, translation]
+      max_tokens: 4096
+      timeout: 60
+      guided_decoding: false    # schema injected as prompt instruction
+
+    - id: translate_gemma
+      name: "TranslateGemma 12B"
+      api_type: openai
+      base_url: ${TRANSLATE_MODEL_URL}
+      model: "Infomaniak-AI/vllm-translategemma-12b-it"
+      capabilities: [translation]
+      max_tokens: 4096
+      timeout: 60
+      guided_decoding: true
+
+    - id: gemma3_4b
+      name: "Gemma 3 4B (Logic)"
+      api_type: ollama
+      base_url: ${LOGIC_MODEL_URL}
+      model: "gemma3:4b"
+      capabilities: [text]
+      max_tokens: 4096
+      timeout: 60
+```
+
+**Field reference:**
+
+| Field | Required | Description |
+| ----- | -------- | ----------- |
+| `id` | yes | Unique identifier; used as `model_id` in step config. |
+| `name` | no | Display name shown in the pipeline builder UI. |
+| `api_type` | yes | `openai` for any `/v1/chat/completions` server; `ollama` for Ollama `/api/chat`. |
+| `base_url` | yes | Server endpoint (no trailing slash). |
+| `model` | yes | Model name string passed in the request payload. |
+| `capabilities` | yes | One or more of `text`, `vision`, `translation`. The UI filters the model selector by capability. Vision image attachment is skipped automatically when `vision` is absent. |
+| `max_tokens` | no | Maximum tokens to generate (default `4096`). |
+| `timeout` | no | HTTP request timeout in seconds (default `60`). |
+| `guided_decoding` | no | `true` injects the JSON Schema as `guided_json` (vLLM). `false` appends it as a prompt instruction (llama.cpp and others). Default `false`. |
+| `max_retries` | no | Hallucination retry attempts (default `3`). |
+
+#### Legacy per-role providers
+
+Used by the `vision_analysis`, `logic_reasoning`, and `translation` steps. These remain functional for existing pipelines.
 
 ```yaml
 llm:
   vision:
-    provider: vllm
-    model: nvidia/Cosmos-Reason2-8B
-    base_url: ${VISION_MODEL_URL}
-    max_tokens: 2048
-    temperature: 0.3
+    provider: vllm_vision
+    url: ${VISION_MODEL_URL}
+    model: "nvidia/Cosmos-Reason2-8B"
+    timeout: 120
 
   logic:
     provider: ollama
-    model: gemma3:4b
-    base_url: ${LOGIC_MODEL_URL}
-    max_tokens: 1024
-    temperature: 0.3
+    url: ${LOGIC_MODEL_URL}
+    model: "gemma3:4b"
+    timeout: 60
 
   translation:
-    provider: vllm
-    model: google/TranslateGemma-12b
-    base_url: ${TRANSLATE_MODEL_URL}
-    max_tokens: 1024
-    temperature: 0.1
+    provider: vllm_translation
+    url: ${TRANSLATE_MODEL_URL}
+    model: "Infomaniak-AI/vllm-translategemma-12b-it"
+    timeout: 60
 
   realtime:
-    provider: gemini
-    model: gemini-3.1-flash-live-preview
+    provider: gemini_live
     api_key: ${GEMINI_API_KEY}
+    model: "gemini-3.1-flash-live-preview"
 ```
+
+Each legacy provider also supports **chain** (primary with fallback) and **pool** (round-robin load balancing) modes. See the `LLM provider chains and pools` feature in the README for syntax.
 
 ### Event Aggregator {#event-aggregator}
 
