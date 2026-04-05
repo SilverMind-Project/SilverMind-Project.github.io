@@ -19,23 +19,67 @@ The reCamera is a compact Linux-based camera module from Seeed Studio. It captur
 
 **Integration flow:**
 
-1. reCamera captures an image on a trigger (motion, interval, or external signal)
-2. Image is POSTed to `/api/v1/device/recamera` with the device key
-3. The event aggregator batches the frame with others from the same sensor
-4. When a batch is ready, matching rules are evaluated and pipelines execute
+1. reCamera runs its on-device YOLO11 model and produces a JSON payload containing the JPEG image and detection results
+2. The payload is POSTed to `/api/v1/device/recamera` with the device key as the `?api_key=` query parameter
+3. The backend optionally rotates the image and applies a label filter before uploading to MinIO
+4. The event aggregator batches the frame with others from the same sensor
+5. When a batch is ready, matching rules are evaluated and pipelines execute
 
-**Configuration:**
+**Payload format:**
+
+The reCamera posts a JSON object with this structure:
+
+```json
+{
+  "code": 0,
+  "data": {
+    "image": "<base64-encoded JPEG>",
+    "labels": ["person"],
+    "boxes": [[x1, y1, x2, y2, score, class_id]],
+    "count": 287,
+    "perf": [[model_id, preprocess_ms, inference_ms]],
+    "resolution": [1280, 720]
+  },
+  "name": "invoke",
+  "type": 1
+}
+```
+
+`data.labels` lists the object classes detected by the YOLO11 model and can be used to filter which images are forwarded to the pipeline.
+
+**Device key configuration:**
 
 ```yaml
 # In config/auth.yaml
 device_keys:
-  RCAM0001:
-    sensor_id: kitchen_camera
+  - key: "RCAM0001"
+    name: "Kitchen reCamera"
     device_type: recamera
-  RCAM0002:
-    sensor_id: hallway_camera
-    device_type: recamera
+    sensor_id: recamera_kitchen
+    permissions:
+      - "device:recamera"
 ```
+
+**Per-camera options:**
+
+Configure per-camera behaviour in `config/settings.yaml` under the `cameras` key, using the `sensor_id` as the key:
+
+```yaml
+cameras:
+  recamera_kitchen:
+    rotate: 90           # clockwise rotation before storage (90, 180, 270)
+    label_filter:
+      labels: ["person"] # labels to match against payload.data.labels
+      mode: "any"        # "any": at least one match; "all": every label must match
+```
+
+| Option | Description |
+| ------ | ----------- |
+| `rotate` | Rotates the JPEG clockwise before uploading to MinIO. Useful for cameras mounted at non-standard angles. Accepted values: `90`, `180`, `270`. Omit to skip rotation. |
+| `label_filter.labels` | List of YOLO11 label strings. Images are only forwarded when the detected labels satisfy the filter. |
+| `label_filter.mode` | `"any"` (default): pass if at least one label matches. `"all"`: pass only when every configured label is detected. |
+
+When a label filter is configured and the image does not match, the endpoint returns `{"status": "filtered", "reason": "label_filter"}` and the image is not saved or forwarded to the pipeline.
 
 **Placement tips:**
 
@@ -43,6 +87,7 @@ device_keys:
 - Ensure adequate lighting for face recognition. ArcFace works best with even illumination.
 - Consider the field of view. Wider angles capture more context but reduce face resolution.
 - For multi-camera setups, assign each camera to a room for location tracking
+- Use `rotate` when the camera must be mounted sideways or upside-down due to physical constraints
 
 ### Seeed reTerminal
 
