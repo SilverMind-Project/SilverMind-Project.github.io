@@ -1,6 +1,6 @@
 # Multi-Channel Notifications
 
-Cognitive Companion routes alerts across notification channels via a plugin system, with escalation and repeat policies driven by alert severity. Each channel is a self-contained plugin in `backend/channels/builtin/` and is auto-discovered at startup via `ChannelRegistry`. Built-in channels currently include `websocket`, `telegram`, `eink`, `tts`, `realtime_voice`, `homeassistant`, and `webhook`. See [Extending the Pipeline](/development/extending-pipeline#adding-a-notification-channel) for how to add custom channels.
+Cognitive Companion routes alerts across notification channels via a plugin system, with escalation and repeat policies driven by alert severity. Each channel is a self-contained plugin in `backend/channels/builtin/` and is auto-discovered at startup via `ChannelRegistry`. Built-in channels currently include `websocket`, `telegram`, `eink`, `tts`, `announcement`, `realtime_voice`, `homeassistant`, and `webhook`. See [Extending the Pipeline](/development/extending-pipeline#adding-a-notification-channel) for how to add custom channels.
 
 ## Channels
 
@@ -133,6 +133,43 @@ Interactive voice check-ins via Google Gemini Live. Unlike TTS, which is a one-w
 **Configuration:** `realtime_voice` is included in the default `warning` routing in `notifications.yaml`. You can also add or remove it per rule through the `notification` step's `channels` field.
 
 > **Note:** This channel requires an active Gemini Live WebSocket connection (i.e., the companion UI must be open). If no session is active, the message is silently dropped. Pair it with `websocket` or `telegram` to ensure delivery when the voice UI is not in use.
+
+### PWA Announcements (`announcement`)
+
+One-way audio announcements delivered directly to connected PWA clients via WebSocket. This channel bypasses MinIO and Home Assistant entirely, streaming audio straight to the browser.
+
+**Two modes:**
+
+- **Streaming TTS** (default): Real-time text-to-speech synthesis streamed as PCM int16 chunks through the WebSocket. The `TTSClient.stream_audio()` method opens a streaming connection to the TTS service. The frontend accumulates all chunks until the stream completes, then plays the full audio as a single buffer via the Web Audio API. This avoids audible gaps when inference is slower than real-time.
+- **Audio file playback**: Sends a URL pointing to a pre-rendered audio file. The frontend plays it via the HTML5 Audio API.
+
+**WebSocket Protocol:**
+
+| Message | Direction | Format | Description |
+| --- | --- | --- | --- |
+| `stream_start` | Server to Client | JSON `{type: "announcement", subtype: "stream_start", sample_rate: 24000}` | Signals the beginning of a TTS stream |
+| PCM chunks | Server to Client | Binary (int16 LE) | Raw PCM audio data |
+| `stream_end` | Server to Client | JSON `{type: "announcement", subtype: "stream_end"}` | Signals the end of a TTS stream |
+| `audio_url` | Server to Client | JSON `{type: "announcement", subtype: "audio_url", url: "..."}` | Play a pre-rendered audio file |
+
+**Configuration:**
+
+```json
+{
+  "step_type": "notification",
+  "config_json": {
+    "alert_level": "reminder",
+    "channels": ["announcement"],
+    "mode": "stream",
+    "tts_language": "ta",
+    "tts_style": "clear"
+  }
+}
+```
+
+For file mode, set `"mode": "file"` and provide `"audio_url"` pointing to the pre-rendered audio.
+
+**Requirements:** At least one PWA client must be connected via WebSocket. If no clients are connected, the channel returns `False` without error. The TTS service must be configured and reachable for stream mode.
 
 ### Home Assistant Announcements
 

@@ -58,6 +58,7 @@ export default defineConfig({
             { text: "Voice Companion", link: "/features/voice-companion" },
             { text: "E-Ink Displays", link: "/features/eink-display" },
             { text: "Notifications", link: "/features/notifications" },
+            { text: "TTS Service", link: "/features/tts-service" },
             { text: "MCP Integration", link: "/features/mcp-integration" },
           ],
         },
