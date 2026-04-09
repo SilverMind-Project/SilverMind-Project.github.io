@@ -133,6 +133,7 @@ Key models:
 | `PersonActivity` | Detected activity (eating, sleeping, medication) |
 | `ActiveImageState` | Per-device e-ink display state |
 | `ImageTemplate` | E-ink template with background image and text regions |
+| `MediaCache` | MinIO object tracking with pre-signed URLs and expiry timestamps |
 
 ## Security Model
 
