@@ -1,12 +1,12 @@
 # Multi-Channel Notifications
 
-Cognitive Companion routes alerts across notification channels via a plugin system, with escalation and repeat policies driven by alert severity. Each channel is a self-contained plugin in `backend/channels/builtin/` and is auto-discovered at startup via `ChannelRegistry`. Built-in channels currently include `websocket`, `telegram`, `eink`, `tts`, `announcement`, `realtime_voice`, `homeassistant`, and `webhook`. See [Extending the Pipeline](/development/extending-pipeline#adding-a-notification-channel) for how to add custom channels.
+Cognitive Companion routes alerts across notification channels via a plugin system, with escalation and repeat policies driven by alert severity. Each channel is a self-contained plugin in `backend/channels/builtin/` and is auto-discovered at startup via `ChannelRegistry`. Built-in channels currently include `pwa_popup_text`, `telegram`, `eink`, `ha_speaker_tts`, `pwa_tts_announcement`, `pwa_realtime_ai`, and `webhook`. See [Extending the Pipeline](/development/extending-pipeline#adding-a-notification-channel) for how to add custom channels.
 
 ## Channels
 
-### WebSocket
+### PWA Popup Text (`pwa_popup_text`)
 
-Real-time push notifications to connected admin console clients. Every alert, regardless of level, includes a WebSocket notification.
+Real-time push notifications to connected PWA clients. Every alert, regardless of level, includes a popup text notification delivered via WebSocket.
 
 **How it works:** The `ConnectionManager` tracks active WebSocket connections and broadcasts alert payloads. Clients see alerts in the dashboard and can take action (dismiss, request assistance).
 
@@ -61,9 +61,9 @@ Channel-level template overrides optionally specialize formatting for that speci
 | -------------------------- | ------------------ | -------------------------------------------- |
 | `telegram_template` | `telegram` | HTML-formatted text; safe tags only. |
 | `eink_template` | `eink` | Short plain text; fits the small display. |
-| `tts_template` | `tts` | Spoken announcement; natural-language phrasing. |
-| `websocket_template` | `websocket` | Text shown in the companion UI overlay. |
-| `realtime_voice_template` | `realtime_voice` | Conversational prompt spoken by Gemini Live. |
+| `ha_speaker_tts_template` | `ha_speaker_tts`, `pwa_tts_announcement` | Spoken announcement; natural-language phrasing. Shared by both channels since they use the same TTS engine. |
+| `pwa_popup_text_template` | `pwa_popup_text` | Text shown in the companion UI overlay. |
+| `pwa_realtime_ai_template` | `pwa_realtime_ai` | Conversational prompt spoken by Gemini Live. |
 | `webhook_template` | `webhook` | JSON body template for the outbound POST. |
 
 Individual template overrides smoothly fall back to the generic `message_template` when omitted.
@@ -72,9 +72,14 @@ Individual template overrides smoothly fall back to the generic `message_templat
 
 Rendered notification images for color e-ink displays. Each device gets its own image based on a configurable template with text regions.
 
+**Per-rule configuration:** When `eink` is included in a notification step's channel list, you can configure:
+
+- **Image Template** (`eink_template_id`): Select a specific image template for the notification. When omitted, the default alert template is used.
+- **Expiry Duration** (`eink_expiry_minutes`): Number of minutes before the rendered image expires and the display reverts to its default template. Defaults to 30 minutes.
+
 See [E-Ink Display Pipeline](/features/eink-display) for full details.
 
-### Text-to-Speech (TTS)
+### HA Speaker TTS (`ha_speaker_tts`)
 
 Audio announcements played through Home Assistant media players. The [TTS service](https://github.com/SilverMind-Project/tts-service) provides multi-engine speech synthesis with an OpenAI-compatible API.
 
@@ -90,20 +95,20 @@ tts:
 
 **How it works:**
 
-1. The `TTSChannel` calls `TTSClient.generate_and_upload()` to synthesize MP3 audio and upload it to MinIO.
+1. The `HASpeakerTTSChannel` calls `TTSClient.generate_and_upload()` to synthesize MP3 audio and upload it to MinIO.
 2. The resulting presigned URL is passed to `HomeAssistantClient.play_audio()`, which calls `media_player.play_media` on the target entity.
 3. The target media player is set per-rule via the `ha_media_player` field in the notification step's config. If not set, it falls back to `media_player.living_room_speaker`.
 
 **Selecting the media player in the pipeline builder:**
 
-When `tts` is included in a notification step's channel list, the pipeline step config dialog shows a **TTS Media Player** autocomplete populated from `GET /api/v1/ha/media-players` (all `media_player.*` entities in HA). Select the device for this rule, or type an entity ID directly.
+When `ha_speaker_tts` is included in a notification step's channel list, the pipeline step config dialog shows an **HA Speaker TTS** section with a media player autocomplete populated from `GET /api/v1/ha/media-players` (all `media_player.*` entities in HA). Select the device for this rule, or type an entity ID directly.
 
 ```json
 {
   "step_type": "notification",
   "config_json": {
     "alert_level": "reminder",
-    "channels": ["tts"],
+    "channels": ["ha_speaker_tts"],
     "ha_media_player": "media_player.kitchen_display"
   }
 }
@@ -111,9 +116,9 @@ When `tts` is included in a notification step's channel list, the pipeline step 
 
 **Fallback behavior:** If MinIO or Home Assistant is not configured, the channel generates audio locally and returns `True` without playback. If the TTS service is not configured, the channel logs a warning and returns `False`.
 
-### Realtime Voice (`realtime_voice`)
+### PWA Realtime AI (`pwa_realtime_ai`)
 
-Interactive voice check-ins via Google Gemini Live. Unlike TTS, which is a one-way announcement, this channel initiates a two-way conversation where the AI asks the person a question and waits for a spoken response.
+Interactive voice check-ins via Google Gemini Live. Unlike HA Speaker TTS, which is a one-way announcement, this channel initiates a two-way conversation where the AI asks the person a question and waits for a spoken response.
 
 **How it works:** The channel queues a prompt on the WebSocket backend task queue. When an active Gemini Live session picks it up, the AI speaks the prompt and processes the person's reply. Any response is logged against the originating alert.
 
@@ -130,13 +135,13 @@ Interactive voice check-ins via Google Gemini Live. Unlike TTS, which is a one-w
 - Occupancy safety alerts: *"You've been in the bathroom a while, do you need any help?"*
 - Medication reminders: *"It's time for your afternoon medication, have you taken it yet?"*
 
-**Configuration:** `realtime_voice` is included in the default `warning` routing in `notifications.yaml`. You can also add or remove it per rule through the `notification` step's `channels` field.
+**Configuration:** `pwa_realtime_ai` is included in the default `warning` routing in `notifications.yaml`. You can also add or remove it per rule through the `notification` step's `channels` field.
 
-> **Note:** This channel requires an active Gemini Live WebSocket connection (i.e., the companion UI must be open). If no session is active, the message is silently dropped. Pair it with `websocket` or `telegram` to ensure delivery when the voice UI is not in use.
+> **Note:** This channel requires an active Gemini Live WebSocket connection (i.e., the companion UI must be open). If no session is active, the message is silently dropped. Pair it with `pwa_popup_text` or `telegram` to ensure delivery when the voice UI is not in use.
 
-### PWA Announcements (`announcement`)
+### PWA TTS Announcements (`pwa_tts_announcement`)
 
-One-way audio announcements delivered directly to connected PWA clients via WebSocket. This channel bypasses MinIO and Home Assistant entirely, streaming audio straight to the browser.
+One-way audio announcements delivered directly to connected PWA clients via WebSocket. This channel bypasses MinIO and Home Assistant entirely, streaming audio straight to the browser. It shares the `ha_speaker_tts_template` since both channels feed the same TTS engine.
 
 **Two modes:**
 
@@ -147,10 +152,10 @@ One-way audio announcements delivered directly to connected PWA clients via WebS
 
 | Message | Direction | Format | Description |
 | --- | --- | --- | --- |
-| `stream_start` | Server to Client | JSON `{type: "announcement", subtype: "stream_start", sample_rate: 24000}` | Signals the beginning of a TTS stream |
+| `stream_start` | Server to Client | JSON `{type: "pwa_tts_announcement", subtype: "stream_start", sample_rate: 24000}` | Signals the beginning of a TTS stream |
 | PCM chunks | Server to Client | Binary (int16 LE) | Raw PCM audio data |
-| `stream_end` | Server to Client | JSON `{type: "announcement", subtype: "stream_end"}` | Signals the end of a TTS stream |
-| `audio_url` | Server to Client | JSON `{type: "announcement", subtype: "audio_url", url: "..."}` | Play a pre-rendered audio file |
+| `stream_end` | Server to Client | JSON `{type: "pwa_tts_announcement", subtype: "stream_end"}` | Signals the end of a TTS stream |
+| `audio_url` | Server to Client | JSON `{type: "pwa_tts_announcement", subtype: "audio_url", url: "..."}` | Play a pre-rendered audio file |
 
 **Configuration:**
 
@@ -159,7 +164,7 @@ One-way audio announcements delivered directly to connected PWA clients via WebS
   "step_type": "notification",
   "config_json": {
     "alert_level": "reminder",
-    "channels": ["announcement"],
+    "channels": ["pwa_tts_announcement"],
     "mode": "stream",
     "tts_language": "ta",
     "tts_style": "clear"
@@ -170,10 +175,6 @@ One-way audio announcements delivered directly to connected PWA clients via WebS
 For file mode, set `"mode": "file"` and provide `"audio_url"` pointing to the pre-rendered audio.
 
 **Requirements:** At least one PWA client must be connected via WebSocket. If no clients are connected, the channel returns `False` without error. The TTS service must be configured and reachable for stream mode.
-
-### Home Assistant Announcements
-
-Leverages HA services to announce notifications through smart speakers, tablets, or other media devices in specific rooms. In channel lists and rule overrides, this channel is named `homeassistant`.
 
 ## Alert Levels
 
@@ -190,10 +191,10 @@ Alert level to channel routing is configured in `config/notifications.yaml`:
 
 | Level | Default Channels | Escalation |
 | ------- | ----------------- | ---------- |
-| `emergency` | WebSocket, Telegram, eInk, TTS, Home Assistant | Every 5 min, 3x repeat |
-| `warning` | WebSocket, Telegram, eInk, Realtime Voice | Every 10 min |
-| `info` | WebSocket only | None |
-| `reminder` | WebSocket, TTS, eInk | None |
+| `emergency` | PWA Popup Text, Telegram, eInk, HA Speaker TTS | Every 5 min, 3x repeat |
+| `warning` | PWA Popup Text, Telegram, eInk, PWA Realtime AI | Every 10 min |
+| `info` | PWA Popup Text only | None |
+| `reminder` | PWA Popup Text, HA Speaker TTS, eInk | None |
 
 The outbound `webhook` channel is available but not enabled in the default level mappings. Add it to `notification_defaults.<level>.channels` or opt into it on a per-rule basis.
 
@@ -204,7 +205,7 @@ For critical alerts, the system automatically re-sends notifications if they are
 ```yaml
 notification_defaults:
   emergency:
-    channels: [websocket, telegram, eink, tts, homeassistant]
+    channels: [pwa_popup_text, telegram, eink, ha_speaker_tts]
     escalation_minutes: 5
     repeat_count: 3
 ```
@@ -220,7 +221,7 @@ Notifications are triggered by `notification` pipeline steps:
   "step_type": "notification",
   "config_json": {
     "alert_level": "warning",
-    "channels": ["websocket", "telegram", "webhook"],
+    "channels": ["pwa_popup_text", "telegram", "webhook"],
     "webhook_url": "https://example.internal/hooks/cognitive-companion",
     "webhook_template": "{\"message\": \"{message}\", \"room\": \"{room}\", \"severity\": \"warning\"}"
   }
