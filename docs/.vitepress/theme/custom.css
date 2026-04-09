@@ -33,6 +33,8 @@
   /* Hero */
   --vp-home-hero-name-color: transparent;
   --vp-home-hero-name-background: linear-gradient(120deg, #0a84ff 0%, #5e5ce6 60%, #bf5af2 100%);
+  --cc-brand-gradient-size: 180% 180%;
+  --cc-brand-gradient-duration: 18s;
   --vp-home-hero-image-background-image: radial-gradient(closest-side, rgba(10, 132, 255, 0.18), rgba(94, 92, 230, 0.0));
   --vp-home-hero-image-filter: blur(72px);
 
@@ -111,6 +113,9 @@ body {
 
 .VPHero .name {
   font-weight: 700;
+  background-size: var(--cc-brand-gradient-size);
+  background-position: 0% 50%;
+  animation: cc-gradient-drift var(--cc-brand-gradient-duration) ease-in-out infinite;
 }
 
 .VPHero .text {
@@ -127,6 +132,27 @@ body {
   max-width: 640px;
   color: var(--vp-c-text-2);
   font-weight: 400;
+}
+
+@keyframes cc-gradient-drift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 45%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .VPHero .name {
+    animation: none;
+    background-position: 50% 50%;
+  }
 }
 
 .VPHero .actions {
