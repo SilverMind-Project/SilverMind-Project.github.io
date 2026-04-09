@@ -29,16 +29,28 @@ Every step receives the full `pipeline_data` dictionary and a `TriggerContext` w
 ```python
 @dataclass
 class TriggerContext:
-    trigger_type: str              # "sensor_event", "cron", "manual", "webhook", "occupancy_duration"
+    trigger_type: str              # "sensor_event", "cron", "manual", "webhook", "occupancy_duration", "telegram"
     sensor_id: str | None
     room_name: str | None
     media_paths: list[str]
     media_type: str | None
-    webhook_payload: dict | None   # Payload from webhook triggers
+    webhook_payload: dict | None   # Payload from webhook and Telegram triggers
     occupancy_duration_minutes: float | None  # Set for occupancy_duration triggers
 ```
 
-For webhook triggers, `webhook_payload` is also available in `pipeline_data["trigger_input"]`. For `occupancy_duration` triggers, `occupancy_duration_minutes` reflects how long the sensor has been continuously occupied at the moment the rule fired.
+For `webhook` and `telegram` triggers, the payload is also available in `pipeline_data["trigger_input"]`. For `occupancy_duration` triggers, `occupancy_duration_minutes` reflects how long the sensor has been continuously occupied at the moment the rule fired.
+
+**Telegram trigger payload keys** (accessible as `{{trigger_input.command}}` etc.):
+
+| Key | Description |
+| --- | --- |
+| `trigger_input.command` | The matched command, e.g. `"/medication"` |
+| `trigger_input.args` | List of words following the command |
+| `trigger_input.text` | Raw message text |
+| `trigger_input.chat_id` | Telegram chat ID as a string |
+| `trigger_input.from_user` | Telegram user object (id, first_name, username) |
+
+See [Telegram Command Triggers](#telegram-command-triggers) below for configuration details.
 
 The executor also injects a localized `system` object into `pipeline_data` using `app.timezone` from `settings.yaml`:
 
@@ -112,15 +124,65 @@ Record a single activity to the PersonActivity table. All fields support [prompt
 
 ::: v-pre
 
-- `activity_type` (required): activity to record. Supports templates (e.g. `{{logic_response.activity_type}}` or a literal like `"bathroom_occupancy"`)
+- `activity_type` (required): activity to record. Supports templates (e.g. `{{logic_response.activity_type}}` or a literal like `"bathroom_occupancy"`). The UI offers 30+ pre-programmed suggestions (eating, sleeping, medication, bathing, etc.) but any free-form string is accepted.
 - `person_id` (optional): person to attribute the activity to. Supports templates (e.g. `{{person_detections.0.person_id}}`). Leave empty to record as unknown person.
 - `room_name` (optional): room where the activity occurred. Supports templates (e.g. `{{room_name}}`). Defaults to the trigger room when empty.
 - `confidence`: confidence score (0-1). Accepts a fixed number or `{{template}}` syntax (e.g. `{{logic_response.confidence}}`). Defaults to `0.8`.
+- `capture_scene_description` (bool, default `false`): when `true`, saves the upstream vision model output into `metadata_json.scene_description` alongside the activity record. Creates a complete audit trail linking *what was observed* to *what was recorded*.
+- `scene_description_key` (str, default `"vision_response"`): which `pipeline_data` key to read when `capture_scene_description` is enabled. Override to `"llm_response"` or any other key when using `llm_call` with a custom `output_key`.
+- `metadata_extra` (str, optional): a JSON string (supports `{{template}}` syntax) merged into `metadata_json` alongside any captured scene description. Useful for recording structured reasoning alongside the activity: `{"reasoning": "{{logic_response.reasoning}}"}`.
 - `trigger_cooloff`: whether a successful activity record should count toward the rule cool-off window. Defaults to `true`.
 
 :::
 
-**Output keys:** `detected_activities` (list with one entry), optional `_cooloff_triggered`
+**Output keys:** `detected_activities` (list with one entry, including `metadata` when populated), optional `_cooloff_triggered`
+
+::: tip Detecting long-duration activities (meals, extended occupancy)
+
+The VLM window in a `vision_analysis` or `llm_call` step is bounded by the EventAggregator batch (typically 10 s -- 1 min). To detect activities that unfold over a longer duration such as a meal, extend the temporal window on the **upstream** step:
+
+```yaml
+step_type: llm_call
+config:
+  model_id: cosmos_reason2
+  image_source: both
+  image_time_filter:
+    since_minutes: 30    # pull the last 30 minutes of frames from MinIO
+  prompt: "Looking at frames from the last 30 minutes, has the person had lunch?"
+  output_key: vision_response
+```
+
+The `activity_detection` step then records the *conclusion* of that extended analysis. Enable `capture_scene_description: true` to save the VLM's full reasoning alongside the record.
+
+:::
+
+::: details Example: meal detection with scene capture
+
+```yaml
+# 1. Pull 30 minutes of kitchen frames, ask the vision model
+step_type: llm_call
+config:
+  model_id: cosmos_reason2
+  image_source: both
+  additional_room_names: [Kitchen]
+  image_time_filter:
+    since_minutes: 30
+  sort_by_sensor_then_time: true
+  prompt: "Review all frames. Has {{person_detections.0.name}} eaten lunch today?"
+  output_key: vision_response
+
+# 2. Record the activity with the scene description attached
+step_type: activity_detection
+config:
+  activity_type: meal_lunch
+  person_id: "{{person_detections.0.person_id}}"
+  confidence: "{{logic_response.confidence}}"
+  capture_scene_description: true
+  scene_description_key: vision_response
+  metadata_extra: '{"reasoning": "{{logic_response.reasoning}}"}'
+```
+
+:::
 
 ### Reasoning
 
@@ -508,6 +570,35 @@ llm_call (translation, output_key: translation) → notification [alert_level: w
 - Context filters: add `time_range`, `person_presence`, or `room` filters as needed
 
 The `translation` step localises the message before the `notification` step dispatches it. The `realtime_voice` channel initiates an interactive voice check-in via Gemini Live; the `websocket` and `telegram` channels alert the admin console and caregiver simultaneously.
+
+### Telegram Command Trigger {#telegram-command-triggers}
+
+Rules with `trigger_type: telegram` fire when a matching Telegram bot command is received. The `TelegramTriggerService` polls the Bot API on a short interval (default 5 s, configurable via `notifications.telegram.trigger_poll_interval_seconds`). The service only starts when a Telegram bot token is configured.
+
+**Rule settings tab:**
+
+- `trigger_type`: `telegram`
+- `telegram_trigger_config.command`: the command to match, e.g. `/medication`. Leave empty to match any command.
+- `telegram_trigger_config.allowed_chat_ids`: list of Telegram chat IDs that may fire the rule. Empty = any chat allowed.
+- `telegram_trigger_config.respond_with_ack`: send a brief reply confirming the rule was triggered (default `true`).
+
+**Dispatch path:** identical to webhook triggers -- a `TriggerContext(trigger_type="telegram")` is built and executed by `PipelineExecutor`. The command payload is available via `trigger_input` keys.
+
+::: details Example: medication reminder on demand
+
+A caregiver or the senior sends `/medication` in the family Telegram group. The rule records a medication activity and sends a Tanglish voice confirmation:
+
+```text
+Rule: trigger_type=telegram, command=/medication
+Pipeline:
+  activity_detection (activity_type: medication, person_id: {{trigger_input.from_user.id}})
+  → llm_call (translation, prompt: "Confirm: medication taken. Translate to Tamil.")
+  → notification [channels: telegram, tts]
+```
+
+The `notification` step sends the translated confirmation back to Telegram and plays it over the home speaker.
+
+:::
 
 ## Workflow Execution
 
