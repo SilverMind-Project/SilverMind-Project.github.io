@@ -1,38 +1,285 @@
-:root {
-  --vp-c-brand-1: #5b8def;
-  --vp-c-brand-2: #3a6bd5;
-  --vp-c-brand-3: #2952a3;
-  --vp-c-brand-soft: rgba(91, 141, 239, 0.14);
+/*
+ * Cognitive Companion documentation theme.
+ *
+ * Inspired by Apple's product pages: generous whitespace, restrained
+ * typography, a single accent colour, and frosted-glass surfaces in
+ * dark mode. Mirrors the tokens used by the admin console so that the
+ * marketing site and the in-product UI feel like the same product.
+ */
 
+:root {
+  /* Brand */
+  --vp-c-brand-1: #0a84ff;
+  --vp-c-brand-2: #0071e3;
+  --vp-c-brand-3: #0058b8;
+  --vp-c-brand-soft: rgba(10, 132, 255, 0.12);
+  --vp-c-brand-softer: rgba(10, 132, 255, 0.06);
+
+  /* Surfaces */
+  --vp-c-bg: #fbfbfd;
+  --vp-c-bg-alt: #ffffff;
+  --vp-c-bg-elv: #ffffff;
+  --vp-c-bg-soft: #f5f5f7;
+
+  /* Text */
+  --vp-c-text-1: #1d1d1f;
+  --vp-c-text-2: #515154;
+  --vp-c-text-3: #86868b;
+
+  /* Borders */
+  --vp-c-divider: rgba(0, 0, 0, 0.08);
+  --vp-c-gutter: rgba(0, 0, 0, 0.05);
+
+  /* Hero */
   --vp-home-hero-name-color: transparent;
-  --vp-home-hero-name-background: linear-gradient(135deg, #5b8def 0%, #8b5cf6 100%);
-  --vp-home-hero-image-background-image: linear-gradient(135deg, #5b8def33 0%, #8b5cf633 100%);
-  --vp-home-hero-image-filter: blur(44px);
+  --vp-home-hero-name-background: linear-gradient(120deg, #0a84ff 0%, #5e5ce6 60%, #bf5af2 100%);
+  --vp-home-hero-image-background-image: radial-gradient(closest-side, rgba(10, 132, 255, 0.18), rgba(94, 92, 230, 0.0));
+  --vp-home-hero-image-filter: blur(72px);
+
+  /* Typography */
+  --vp-font-family-base:
+    "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --vp-font-family-mono:
+    ui-monospace, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
 .dark {
-  --vp-c-brand-1: #7aa2f7;
-  --vp-c-brand-2: #5b8def;
-  --vp-c-brand-3: #3a6bd5;
-  --vp-c-brand-soft: rgba(122, 162, 247, 0.14);
+  --vp-c-brand-1: #0a84ff;
+  --vp-c-brand-2: #409cff;
+  --vp-c-brand-3: #66b2ff;
+  --vp-c-brand-soft: rgba(10, 132, 255, 0.18);
+  --vp-c-brand-softer: rgba(10, 132, 255, 0.08);
+
+  --vp-c-bg: #000000;
+  --vp-c-bg-alt: #0b0b0f;
+  --vp-c-bg-elv: #1c1c1e;
+  --vp-c-bg-soft: #16161a;
+
+  --vp-c-text-1: #f5f5f7;
+  --vp-c-text-2: #a1a1a6;
+  --vp-c-text-3: #6e6e73;
+
+  --vp-c-divider: rgba(255, 255, 255, 0.10);
+  --vp-c-gutter: rgba(255, 255, 255, 0.05);
+
+  --vp-home-hero-image-background-image: radial-gradient(closest-side, rgba(10, 132, 255, 0.32), rgba(94, 92, 230, 0));
+}
+
+/* ----- Global typography refinements ----- */
+
+html {
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  letter-spacing: -0.011em;
+}
+
+.vp-doc h1 {
+  letter-spacing: -0.024em;
+  font-weight: 700;
+}
+
+.vp-doc h2 {
+  letter-spacing: -0.018em;
+  font-weight: 650;
+  border-top: 1px solid var(--vp-c-divider);
+  padding-top: 2rem;
+  margin-top: 3rem;
+}
+
+.vp-doc h3 {
+  letter-spacing: -0.014em;
+  font-weight: 600;
+}
+
+.vp-doc p,
+.vp-doc li {
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+/* ----- Hero ----- */
+
+.VPHero .name,
+.VPHero .text {
+  letter-spacing: -0.025em;
+}
+
+.VPHero .name {
+  font-weight: 700;
 }
 
 .VPHero .text {
-  font-size: 20px !important;
+  font-size: 28px !important;
+  line-height: 1.25 !important;
+  font-weight: 600;
+  max-width: 720px;
+  color: var(--vp-c-text-1);
+}
+
+.VPHero .tagline {
+  font-size: 19px !important;
   line-height: 1.5 !important;
   max-width: 640px;
+  color: var(--vp-c-text-2);
+  font-weight: 400;
+}
+
+.VPHero .actions {
+  margin-top: 2rem;
+}
+
+.VPButton.brand {
+  background-color: var(--vp-c-brand-2);
+  border-color: var(--vp-c-brand-2);
+  border-radius: 980px;
+  font-weight: 500;
+  padding: 0 22px;
+  transition: background-color 0.18s ease, transform 0.18s ease;
+}
+
+.VPButton.brand:hover {
+  background-color: var(--vp-c-brand-1);
+  border-color: var(--vp-c-brand-1);
+  transform: translateY(-1px);
+}
+
+.VPButton.alt {
+  border-radius: 980px;
+  font-weight: 500;
+  padding: 0 22px;
+  transition: background-color 0.18s ease, transform 0.18s ease;
+}
+
+.VPButton.alt:hover {
+  transform: translateY(-1px);
+}
+
+/* ----- Feature grid ----- */
+
+.VPFeature {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 18px;
+  background-color: var(--vp-c-bg-alt);
+  padding: 28px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.dark .VPFeature {
+  background-color: var(--vp-c-bg-elv);
+}
+
+.VPFeature:hover {
+  transform: translateY(-3px);
+  border-color: var(--vp-c-brand-soft);
+  box-shadow: 0 18px 40px -20px rgba(10, 132, 255, 0.25);
+}
+
+.VPFeature .icon {
+  background: var(--vp-c-brand-soft);
+  border-radius: 14px;
+  font-size: 26px;
+}
+
+.VPFeature .title {
+  font-weight: 600;
+  letter-spacing: -0.012em;
+}
+
+.VPFeature .details {
+  color: var(--vp-c-text-2);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+/* ----- Navigation bar ----- */
+
+.VPNav {
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  background-color: rgba(251, 251, 253, 0.75) !important;
+}
+
+.dark .VPNav {
+  background-color: rgba(11, 11, 15, 0.72) !important;
+}
+
+.VPNavBar .title {
+  font-weight: 600;
+  letter-spacing: -0.014em;
+}
+
+/* ----- Sidebar ----- */
+
+.VPSidebarItem .text {
+  font-size: 14px;
+  letter-spacing: -0.005em;
+}
+
+.VPSidebarItem.is-active > .item .text {
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
+}
+
+/* ----- Code blocks ----- */
+
+.vp-doc div[class*="language-"] {
+  border-radius: 12px;
+  border: 1px solid var(--vp-c-divider);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
+}
+
+.vp-doc :not(pre) > code {
+  background-color: var(--vp-c-brand-softer);
+  color: var(--vp-c-brand-2);
+  font-size: 0.88em;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.dark .vp-doc :not(pre) > code {
+  color: var(--vp-c-brand-3);
+}
+
+/* ----- Tables ----- */
+
+.vp-doc table {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--vp-c-divider);
+  display: table;
+  width: 100%;
+}
+
+.vp-doc th {
+  background-color: var(--vp-c-bg-soft);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.vp-doc tr:nth-child(even) {
+  background-color: var(--vp-c-bg-soft);
+}
+
+/* ----- Custom callout blocks ----- */
+
+.vp-doc .custom-block {
+  border-radius: 12px;
+  border-left-width: 3px;
+  padding: 16px 20px;
 }
 
 .vp-doc .custom-block.tip {
   border-color: var(--vp-c-brand-1);
+  background-color: var(--vp-c-brand-softer);
 }
 
-/* Feature grid styling */
-.VPFeature {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.VPFeature:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+.vp-doc .custom-block-title {
+  font-weight: 600;
+  letter-spacing: -0.005em;
 }

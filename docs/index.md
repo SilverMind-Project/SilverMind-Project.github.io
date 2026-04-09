@@ -72,13 +72,6 @@ features:
     link: /features/pipeline#condition-expressions
 ---
 
-<style>
-:root {
-  --vp-home-hero-name-color: transparent;
-  --vp-home-hero-name-background: linear-gradient(135deg, #5b8def 0%, #8b5cf6 100%);
-}
-</style>
-
 ## Why Cognitive Companion?
 
 Cognitive decline doesn't have to mean loss of independence. Most monitoring systems either do too little (basic motion alerts) or too much (full automation that strips away agency). Cognitive Companion sits in the middle: it understands *context* through vision and language models, then delivers gentle reminders only when they're actually needed.
