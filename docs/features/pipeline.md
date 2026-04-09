@@ -40,7 +40,7 @@ class TriggerContext:
 
 For `webhook` and `telegram` triggers, the payload is also available in `pipeline_data["trigger_input"]`. For `occupancy_duration` triggers, `occupancy_duration_minutes` reflects how long the sensor has been continuously occupied at the moment the rule fired.
 
-**Telegram trigger payload keys** (accessible as `{{trigger_input.command}}` etc.):
+**Telegram trigger payload keys** (accessible as <code v-pre>{{trigger_input.command}}</code> etc.):
 
 | Key | Description |
 | --- | --- |

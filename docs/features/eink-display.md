@@ -83,7 +83,7 @@ When a device polls for its image:
 
 ### Image Expiry
 
-Active images have an `expires_at` timestamp. When a notification image expires, the device automatically reverts to its default display. Expiry duration is configured per alert level in `notifications.yaml` (default: 30 minutes).
+Active images have an `expires_at` timestamp. When a notification image expires, the device automatically reverts to its default display. The default expiry duration is set in `notifications.yaml` (default: 30 minutes), but can be overridden on a per-rule basis via the `eink_expiry_minutes` configuration field in a notification step.
 
 ## Pipeline Integration
 
@@ -92,17 +92,20 @@ The `notification` pipeline step supports e-ink targeting via the `eink_targets`
 ```json
 {
   "alert_level": "warning",
-  "channels": ["websocket", "telegram", "eink"],
-  "eink_targets": ["hallway_display", "kitchen_display"]
+  "channels": ["pwa_popup_text", "telegram", "eink"],
+  "eink_targets": ["hallway_display", "kitchen_display"],
+  "eink_template_id": 5,
+  "eink_expiry_minutes": 60
 }
 ```
 
 When `eink` is included in the notification channels, the `NotificationDispatcher`:
 
 1. Formats the notification text
-2. Calls `EInkRenderer.render()` with the text, template, and target sensor IDs
-3. Each target device's `ActiveImageState` is updated
-4. Devices pick up the new image on their next poll
+2. Resolves the image template (from `eink_template_id` or the fallback default)
+3. Calls `EInkRenderer.render()` with the text, template, and target sensor IDs
+4. Each target device's `ActiveImageState` is updated with an expiration based on `eink_expiry_minutes`
+5. Devices pick up the new image on their next poll
 
 If `eink_targets` is omitted, all registered e-ink sensors are targeted.
 
