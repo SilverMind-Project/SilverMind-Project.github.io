@@ -116,6 +116,79 @@ This pattern ensures:
 - **Testability**: services can be replaced with mocks by modifying `app.state`
 - **No circular imports**: routers never import service modules directly
 
+## Core Foundation Layer
+
+Every other backend package depends on a small, deliberately boring layer at
+`backend/core/`. It is the part of the codebase most tightly held to the
+quality bar you would expect from a company shipping medical-adjacent
+infrastructure.
+
+| Module | Responsibility | Public surface |
+| --- | --- | --- |
+| `config.py` | YAML configuration with `${ENV_VAR}` interpolation | `Settings` class, `settings` singleton |
+| `database.py` | SQLAlchemy engine, session factory, SQLite pragma wiring | `Database` class, `Base`, `init_db`, `get_db`, `get_session` |
+| `auth.py` | API + device key resolution, fnmatch permission checks | `KeyStore` class, `AuthContext`, `get_auth_context`, `require_permission` |
+| `exceptions.py` | HTTP-aware error hierarchy and FastAPI handler | `AppError`, `NotFoundError`, `ConflictError`, `AuthenticationError`, `PermissionDeniedError`, `ValidationError` |
+| `logging.py` | Structured stdlib logging wrapper | `BoundLogger`, `get_logger`, `setup_logging` |
+| `template.py` | `\{\{dotted.path\}\}` renderer used by pipeline step prompts | `render_template`, `resolve_path` |
+
+### Design invariants
+
+The layer is held to three invariants that are enforced by code review, by the
+package test suite, and by a stricter per-module mypy override in
+`pyproject.toml`:
+
+1. **No upward dependencies.** Modules in `backend.core` do not import from
+   `backend.services`, `backend.routers`, `backend.channels`, `backend.steps`,
+   or any other higher-level package. `backend.models` is imported lazily only
+   inside `Database.create_all` so that `Base.metadata` is populated before
+   DDL is issued.
+2. **No framework imports except at the FastAPI edge.** Only `auth.py` and
+   `exceptions.register_exception_handlers` are allowed to touch FastAPI
+   types. Everything else in `backend.core` is usable from CLI scripts,
+   workers, and tests without dragging FastAPI into the import graph.
+3. **Testability by construction.** Every stateful module-level singleton
+   (`settings`, the default `Database`, the default `KeyStore`) is a thin
+   facade over a class that can be instantiated directly in a test with no
+   global reset. For example:
+
+   ```python
+   from backend.core.config import Settings
+   from backend.core.database import Database
+   from backend.core.auth import KeyStore
+
+   s = Settings.from_dict({"llm": {"model": "fake"}})
+   db = Database("sqlite:///:memory:")
+   ks = KeyStore(api_keys=[{"key": "K1", "name": "admin", "permissions": ["*"]}])
+   ```
+
+### Quality bar
+
+| Metric | Status |
+| --- | --- |
+| Tests | 113 pytest cases in `backend/tests/core/` |
+| Branch coverage | ~98% on `backend/core/` |
+| Typing | Strict mypy (`disallow_untyped_defs = true`) for `backend.core.*` only |
+| Lint | `ruff` clean, including the enabled `B`, `SIM`, `PIE`, `PT`, `C4`, `T20`, `RUF` rule sets |
+| Build | `make check` runs lint, strict type-check, and the core test suite as a single fast gate |
+
+### Services layer
+
+The `backend/services/` package is the next layer up and holds the business
+logic: scheduling, condition evaluation, notification dispatch, workflow
+orchestration, conversation management, RAG lookup, and media processing.
+
+| Metric | Status |
+| --- | --- |
+| Tests | 177 pytest cases in `backend/tests/services/` |
+| Branch coverage | 89-100% across 7 dedicated test suites |
+| Scheduler | Refactored: module-level globals lifted into a `Scheduler` class for testability |
+| Build | `make test-services` or `make check-all` (adds services to the pre-commit gate) |
+
+The remaining services (person tracking, sensor polling, telegram trigger) are
+integration-heavy and are on a separate pass with substantial HTTP mocking
+investment.
+
 ## Database
 
 SQLite with SQLAlchemy 2.0 ORM in WAL mode. Tables are auto-created from model definitions on startup. There are no migrations. For schema changes, delete `data/cognitive_companion.db` and restart.

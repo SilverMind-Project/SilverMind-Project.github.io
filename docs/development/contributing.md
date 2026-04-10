@@ -55,6 +55,10 @@ Before submitting a PR, verify:
 - [ ] No secrets are hardcoded; use `${ENV_VAR}` interpolation
 - [ ] `ruff check` and `ruff format` pass
 - [ ] `mypy` type check passes (run `./scripts/lint.sh` to check all at once)
+- [ ] If you touched `backend/core/*`, `make check` is green (lint, strict mypy on core, and the core test suite)
+- [ ] If you touched `backend/services/*`, `make check-all` is green (adds the services test suite)
+- [ ] New behavior in `backend/core/*` has a corresponding test under `backend/tests/core/`
+- [ ] New behavior in `backend/services/*` has a corresponding test under `backend/tests/services/`
 - [ ] Frontend builds without errors
 
 ### Commit Messages

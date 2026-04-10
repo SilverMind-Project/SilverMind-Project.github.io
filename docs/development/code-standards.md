@@ -12,6 +12,50 @@ This document outlines the coding standards and conventions used in Cognitive Co
 - **Target**: Python 3.11+
 - **Async**: Use `async`/`await` for all I/O operations
 
+### Foundation Layer: `backend.core.*`
+
+The `backend/core/` package holds a higher bar than the rest of the tree and
+is the reference implementation new contributors should read first. A
+dedicated `[[tool.mypy.overrides]]` section in `backend/pyproject.toml` applies
+`disallow_untyped_defs = true` and `disallow_incomplete_defs = true` to
+`backend.core.*` only; the rest of the tree remains on gradual adoption.
+
+Rules specific to code under `backend/core/`:
+
+- Every function must carry full type annotations.
+- No imports from higher-level packages (`backend.services`, `backend.routers`,
+  `backend.channels`, `backend.steps`, etc.). `backend.models` may only be
+  imported lazily inside `Database.create_all`.
+- Framework imports are allowed only at FastAPI-facing leaves: `auth.py` and
+  `exceptions.register_exception_handlers`.
+- Every stateful module-level singleton must be a thin facade over a class
+  (`Settings`, `Database`, `KeyStore`) that can be constructed in a test
+  without touching process globals.
+- Public API changes require a corresponding update to `backend/tests/core/`.
+
+The canonical test suite for this layer lives at `backend/tests/core/` and
+covers 113 cases across 6 modules at roughly 98% branch coverage. Treat it
+as the contract: if a refactor changes a public behavior in
+`backend.core.*`, those tests should be updated in the same commit.
+
+### Running the developer gates
+
+```bash
+make test              # full backend suite
+make test-core         # backend.core only (113 tests)
+make test-services     # backend.services only (177 tests)
+make coverage          # backend.core with branch coverage (terminal)
+make coverage-services # backend.services with branch coverage
+make coverage-html     # + HTML report under ./htmlcov
+make lint              # ruff (no fixes)
+make lint-fix          # ruff with --fix
+make format            # ruff format
+make typecheck         # mypy over the full backend tree
+make typecheck-core    # strict mypy over backend.core only
+make check             # lint + typecheck-core + test-core (fast gate)
+make check-all         # lint + typecheck-core + test-core + test-services
+```
+
 ### Imports
 
 All imports must be at the top of the file, following PEP 8:

@@ -33,7 +33,27 @@ cd backend
 uv sync --extra dev --extra gemini
 ```
 
-This creates a `.venv` automatically and installs all dependencies from the lockfile (`uv.lock`). The `dev` extra includes `ruff`, `mypy`, `pytest`, and `pytest-asyncio`. The `gemini` extra adds the `google-genai` package for voice companion support.
+This creates a `.venv` automatically and installs all dependencies from the lockfile (`uv.lock`). The `dev` extra includes `ruff`, `mypy`, `pytest`, `pytest-asyncio`, `pytest-cov`, and `coverage`. The `gemini` extra adds the `google-genai` package for voice companion support.
+
+### Run the developer gates
+
+A top-level `Makefile` wraps the common developer tasks so you can exercise the full quality gate with one command:
+
+```bash
+cd ..                   # back to the repository root
+make help               # list all targets
+make test               # full backend test suite
+make test-core          # backend.core only (113 tests)
+make test-services      # backend.services only (177 tests)
+make coverage           # backend.core with branch coverage
+make coverage-services  # backend.services with branch coverage
+make coverage-html      # + HTML report under ./htmlcov
+make typecheck-core     # strict mypy over backend.core only
+make check              # lint + typecheck-core + test-core (fast pre-commit gate)
+make check-all          # lint + typecheck-core + test-core + test-services
+```
+
+The `check` target is the minimum bar before opening a pull request that touches anything under `backend/core/`.
 
 ### Configure Environment
 

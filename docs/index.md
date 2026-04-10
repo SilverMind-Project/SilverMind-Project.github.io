@@ -70,6 +70,12 @@ features:
     title: Natural Language Rules
     details: Define rules with context filters for room, time of day, day of week, person presence, and recent activities. Evaluated by LLMs that understand context, not rigid conditions.
     link: /features/pipeline#condition-expressions
+
+  - icon: 🛠️
+    title: Engineered for Trust
+    details: 290 tests across the core and services layers at 89-100 percent branch coverage, strict mypy, zero upward dependencies, and a single-command pre-commit gate. Built to the quality bar expected of software that lives in someone's home.
+    link: /guide/architecture#core-foundation-layer
+    linkText: See the quality bar
 ---
 
 ## Why Cognitive Companion?

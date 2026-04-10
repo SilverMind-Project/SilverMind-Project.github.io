@@ -149,7 +149,8 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .VPHero .name {
+  .VPHero .name,
+  .VPNavBar .title {
     animation: none;
     background-position: 50% 50%;
   }
@@ -237,6 +238,14 @@ body {
 .VPNavBar .title {
   font-weight: 600;
   letter-spacing: -0.014em;
+  background: linear-gradient(120deg, #0a84ff 0%, #5e5ce6 60%, #bf5af2 100%);
+  background-size: var(--cc-brand-gradient-size);
+  background-position: 0% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: cc-gradient-drift var(--cc-brand-gradient-duration) ease-in-out infinite;
 }
 
 /* ----- Sidebar ----- */
