@@ -579,7 +579,7 @@ Rules with `trigger_type: telegram` fire when a matching Telegram bot command is
 
 - `trigger_type`: `telegram`
 - `telegram_trigger_config.command`: the command to match, e.g. `/medication`. Leave empty to match any command.
-- `telegram_trigger_config.allowed_chat_ids`: list of Telegram chat IDs that may fire the rule. Empty = any chat allowed.
+- `telegram_trigger_config.allowed_chat_ids`: list of Telegram chat IDs that may fire the rule. Falls back to `notifications.telegram.trigger_allowed_chat_ids` in settings. **An absent or empty whitelist blocks the command (fail-closed).**
 - `telegram_trigger_config.respond_with_ack`: send a brief reply confirming the rule was triggered (default `true`).
 
 **Dispatch path:** identical to webhook triggers -- a `TriggerContext(trigger_type="telegram")` is built and executed by `PipelineExecutor`. The command payload is available via `trigger_input` keys.
