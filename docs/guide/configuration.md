@@ -67,7 +67,19 @@ interval = settings.get("homeassistant.poll_interval_seconds", 30)
 | `image` | eInk template and font paths |
 | `logging` | Log level |
 
-The `app.timezone` setting affects more than UI display. It is also used to populate `pipeline_data.system.local_time`, `pipeline_data.system.local_date`, `pipeline_data.system.local_day_of_week`, and to interpret `verification` step fixed time windows against the local day.
+### Timezone
+
+`app.timezone` is the single source of truth for local time across the entire stack. Set it to any valid IANA timezone string (e.g. `"America/New_York"`, `"Europe/London"`, `"Asia/Kolkata"`). It defaults to `"UTC"` and affects:
+
+- **Admin UI.** Every timestamp in the admin interface is displayed in this timezone. DST transitions are handled automatically by the browser's `Intl` API.
+- **Cron rules.** A cron expression like `0 8 * * *` fires at 08:00 local time. APScheduler resolves DST transitions so "8 AM" always means 8 AM local.
+- **Time range and day-of-week context filters.** Filter windows are interpreted in local time, not UTC.
+- **Daily trigger limits.** The `max_daily_triggers` counter resets at local midnight, not UTC midnight.
+- **Pipeline context.** `system.local_time`, `system.local_date`, `system.local_day_of_week`, and `system.timezone` in pipeline data are derived from this setting.
+
+All timestamps are stored in the database as UTC. The timezone setting affects scheduling and display only, never the underlying data.
+
+To change the timezone: update `app.timezone` in `config/settings.yaml` and restart the server. The frontend re-reads it on the next page load via `GET /api/v1/admin/app-info`.
 
 ### LLM Configuration {#llm}
 
