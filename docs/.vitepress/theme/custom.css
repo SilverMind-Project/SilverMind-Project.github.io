@@ -78,6 +78,11 @@ html {
 
 body {
   letter-spacing: -0.011em;
+  background: transparent !important;
+}
+
+#app {
+  background: transparent !important;
 }
 
 .vp-doc h1 {
