@@ -230,14 +230,24 @@ body {
 
 /* ----- Navigation bar ----- */
 
-.VPNav {
+.VPNavBar {
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   background-color: rgba(251, 251, 253, 0.75) !important;
 }
 
-.dark .VPNav {
+.dark .VPNavBar {
   background-color: rgba(11, 11, 15, 0.72) !important;
+}
+
+.VPNavScreen {
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  background-color: rgba(251, 251, 253, 0.95) !important;
+}
+
+.dark .VPNavScreen {
+  background-color: rgba(11, 11, 15, 0.95) !important;
 }
 
 .VPNavBar .title {
