@@ -16,21 +16,13 @@ See [API Reference: Webhooks](/api/reference#webhooks) for details.
 
 `TriggerContext` now includes a `webhook_payload` field. Webhook payloads and manual trigger parameters are available in `pipeline_data["trigger_input"]` for downstream steps to reference.
 
-## Gemini Live Tool Calling
+## ~~Gemini Live Tool Calling~~ :white_check_mark:
 
-**Status:** Proposed
+**Status:** Implemented
 
-**Problem:** The voice agent can only converse. It can't look up information or take actions mid-conversation.
+The voice companion supports function calling via the Gemini Live session. Tool definitions are built from the MCP registry and a configurable subset is passed to `GeminiLiveProvider` at startup. When Gemini emits a `FunctionCall` part, the audio handler routes it to the matching MCP tool handler and sends a `FunctionResponse` back. The voice agent can now answer questions like "Where is grandma?" or "What happened today?" using real system data.
 
-**Design:** Extend `GeminiLiveProvider.build_config()` to include tool definitions built from the MCP registry. Add RAG as a `lookup_knowledge` tool. In the audio session handler, detect `FunctionCall` parts from Gemini responses, route to the appropriate MCP tool or RAG service, and send `FunctionResponse` back.
-
-All execution is client-side, so no public endpoint is needed. The voice agent could:
-
-- "Let me check where grandma is" calls `get_person_locations`, then responds with the result
-- "What happened today?" calls `get_event_logs`, then summarizes recent activity
-- "Turn off the kitchen lights" calls `trigger_rule`, then confirms the action
-
-**Impact:** Transforms the voice companion from a conversational AI into an agentic assistant.
+Configure which tools are available to the voice companion via `mcp.gemini_tools` in `settings.yaml`. See [MCP Integration](/features/mcp-integration) for the full tool list.
 
 ## Pipeline Templates / Presets
 

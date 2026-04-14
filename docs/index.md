@@ -22,69 +22,61 @@ hero:
 features:
   - icon: 🧩
     title: Composable Pipelines
-    details: 10 pipeline step types assembled in any order per rule, including vision analysis, logic reasoning, conditional branching, wait/resume, and more. No fixed chains.
+    details: 10 registered step types assembled in any order per rule, including unified LLM calls, scene analysis, conditional branching, and wait/resume workflows. Each rule defines its own pipeline.
     link: /features/pipeline
-    linkText: Learn more
+
+  - icon: 👁️
+    title: Scene Analysis
+    details: Integrated scene-analysis-service runs YOLO11x object detection, Florence-2-large structured descriptions, and CLIP ViT-L/14 image embeddings entirely on your hardware. YAML-configured hazard rules fire alerts automatically.
+    link: /features/pipeline#scene-analysis
 
   - icon: 👤
     title: Person Identification
-    details: GPU-accelerated face recognition via ArcFace embeddings with whole-house location tracking, motion direction detection, and Home Assistant integration.
+    details: GPU-accelerated face recognition via ArcFace embeddings with whole-house location tracking, camera topology for semantic room transitions, and Home Assistant integration.
     link: /features/person-tracking
-    linkText: Learn more
 
   - icon: 🗣️
     title: Voice Companion
-    details: Real-time conversational AI powered by Google Gemini Live with WebSocket audio streaming and Tamil language support.
+    details: Real-time conversational AI powered by Google Gemini Live with WebSocket audio streaming, voice tool calling via the MCP registry, and Tamil language support.
     link: /features/voice-companion
-    linkText: Learn more
 
   - icon: 🖼️
     title: E-Ink Display Pipeline
-    details: Per-device notification images for color e-ink displays with a visual template editor, bounding box regions, and automatic expiry.
+    details: Per-device notification images for color e-ink displays with a visual template editor, configurable text regions, and automatic expiry management.
     link: /features/eink-display
-    linkText: Learn more
 
   - icon: 📡
     title: Multi-Channel Notifications
-    details: Route alerts by severity across WebSocket, Telegram, e-ink displays, TTS, realtime voice, Home Assistant, and outbound webhooks. Supports escalation and repeat policies.
+    details: Route alerts by severity across WebSocket, Telegram, e-ink displays, TTS, realtime voice, Home Assistant, and outbound webhooks. Per-channel templates and escalation policies.
     link: /features/notifications
-    linkText: Learn more
 
   - icon: 🤖
     title: MCP Tool Server
-    details: Expose system state to AI agents via the Model Context Protocol. 16 read-only tools plus rule triggering, with no public endpoint required.
+    details: Expose system state to AI agents via the Model Context Protocol. 19 tools including rule triggering, person locations, activity history, and real-time sensor data.
     link: /features/mcp-integration
-    linkText: Learn more
 
   - icon: 🏠
     title: Home Assistant Native
-    details: Deep HA integration. Poll sensors, call services, sync rooms and areas, announce via media players, and push person locations to HA helpers.
+    details: Deep HA integration. Poll sensors, call services, sync rooms and areas, announce via media players, and push person locations to HA input helpers.
     link: /guide/configuration#home-assistant
 
   - icon: 🔒
     title: Fully On-Premise
-    details: All vision and language models run locally via vLLM and Ollama. No cloud dependency for core functionality. Your data never leaves your network.
+    details: All vision, reasoning, and recognition models run locally via vLLM, llama.cpp, and the scene-analysis-service. No cloud dependency for core functionality. Your data stays on your network.
     link: /guide/architecture
 
-  - icon: 🌐
-    title: Natural Language Rules
-    details: Define rules with context filters for room, time of day, day of week, person presence, and recent activities. Evaluated by LLMs that understand context, not rigid conditions.
-    link: /features/pipeline#condition-expressions
 
-  - icon: 🛠️
-    title: Engineered for Trust
-    details: 290 tests across the core and services layers at 89-100 percent branch coverage, strict mypy, zero upward dependencies, and a single-command pre-commit gate. Built to the quality bar expected of software that lives in someone's home.
-    link: /guide/architecture#core-foundation-layer
-    linkText: See the quality bar
 ---
 
 ## Why Cognitive Companion?
 
-Cognitive decline doesn't have to mean loss of independence. Most monitoring systems either do too little (basic motion alerts) or too much (full automation that strips away agency). Cognitive Companion sits in the middle: it understands *context* through vision and language models, then delivers gentle reminders only when they're actually needed.
+Cognitive decline doesn't have to mean loss of independence. Most monitoring systems either do too little (basic motion alerts) or too much (full automation that removes the daily routines giving seniors agency). Cognitive Companion occupies a different position: it understands context through vision and language models, then delivers gentle reminders only when they're actually warranted.
 
-**Built for real families.** Designed for multigenerational households where a senior lives with family members who want to help but can't watch 24/7. The system tracks who is where, what activities have happened, and applies rules written in natural language to decide when intervention is appropriate.
+**Built for real families.** Designed for multigenerational households where a senior lives with family members who want to help but can't watch 24/7. The system tracks who is where, what activities have happened, and applies rules written in natural language to decide when a nudge is appropriate.
 
-**Built for privacy.** Every model runs on your hardware. Camera frames are processed locally, never uploaded. The system is designed to run entirely within your home network.
+**Built for privacy.** Every model runs on your hardware. Camera frames are processed locally and never leave your network. The system is designed from the ground up to operate entirely within your home.
+
+**Built to be extended.** Each pipeline step, notification channel, and context filter is a self-contained plugin. Drop a Python file in the right directory and the system discovers it at startup. No fork required.
 
 ---
 

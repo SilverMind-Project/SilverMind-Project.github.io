@@ -184,6 +184,65 @@ config:
 
 :::
 
+#### `scene_analysis` {#scene-analysis}
+
+Calls the standalone [scene-analysis-service](/guide/architecture#scene-analysis-service) for multi-modal analysis of a trigger image. Three inference components run in a single request: YOLO11x object detection, Florence-2-large structured scene description, and CLIP ViT-L/14 image embeddings. A YAML-configured hazard rule engine evaluates detections against named hazard rules and emits alerts for matches.
+
+The step always continues the pipeline. When the scene-analysis-service is unreachable or disabled, all result keys are empty.
+
+**Config fields:**
+
+- `run_detect` (bool, default `true`): run YOLO11x object detection
+- `run_describe` (bool, default `true`): run Florence-2-large scene description
+- `run_embed` (bool, default `false`): run CLIP ViT-L/14 embedding (higher latency)
+- `run_hazards` (bool, default `true`): evaluate YAML hazard rules against detections
+- `max_images` (int, default `1`): number of trigger images to send for analysis
+
+**Output keys:**
+
+| Key | Type | Description |
+| --- | ---- | ----------- |
+| `scene_detections` | list | Object detections: `label`, `confidence`, `bbox` [x1,y1,x2,y2], `class_id` |
+| `scene_description` | str | Structured natural-language caption from Florence-2 |
+| `scene_embedding` | list[float] | 768-dim L2-normalized CLIP embedding vector (empty when `run_embed` is false) |
+| `scene_hazards` | list | Triggered hazard alerts: `name`, `severity`, `description`, `detection` |
+| `scene_detector_available` | bool | Whether YOLO was loaded in the service |
+| `scene_describer_available` | bool | Whether Florence-2 was loaded in the service |
+| `scene_embedder_available` | bool | Whether CLIP was loaded in the service |
+
+::: details Example: detect and alert on hazards
+
+```yaml
+# 1. Run full scene analysis on the trigger frame
+step_type: scene_analysis
+config:
+  run_detect: true
+  run_describe: true
+  run_embed: false
+  run_hazards: true
+  max_images: 1
+
+# 2. Branch on hazards
+step_type: condition
+config:
+  expression: "scene_hazards.count > 0"
+
+# 3. Notify caregiver with the scene description
+step_type: notification
+config:
+  alert_level: warning
+  message_template: "Hazard detected: {scene_description}"
+  telegram_template: "Hazard in {{room_name}}: {{scene_description}}"
+```
+
+:::
+
+::: tip Combining with person identification
+
+Place `person_identification` before `scene_analysis` in the pipeline. The `scene_detections` output complements face detections by identifying objects in the frame. Use a `condition` step to branch on both `person_detections.count > 0 and scene_hazards.count > 0` for context-aware alerts.
+
+:::
+
 ### Reasoning
 
 #### `llm_call`

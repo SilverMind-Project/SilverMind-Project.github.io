@@ -83,6 +83,74 @@ Cross-frame centroid tracking classifies movement direction:
 
 **Use case:** Door-mounted cameras can infer entering vs. leaving a room based on movement direction relative to camera placement.
 
+## Camera Topology
+
+Raw motion directions carry no room-level meaning on their own. Camera topology maps each raw direction to a semantic transition for a specific camera, so a rule can fire when someone *enters* the kitchen rather than just when motion is detected.
+
+### Configuration
+
+Add a `movement_map` to a sensor's `config_json` in the admin UI or via `PUT /api/v1/sensors/{id}`:
+
+```json
+{
+  "movement_map": {
+    "left-to-right": "entering",
+    "right-to-left": "exiting",
+    "towards-camera": "approaching_exit",
+    "away-from-camera": "entering_depth",
+    "stationary": "stationary"
+  }
+}
+```
+
+Valid semantic values: `entering`, `exiting`, `approaching_exit`, `entering_depth`, `stationary`. Any raw direction not present in the map is ignored.
+
+### How it works
+
+When a `person_identification` step runs and raw motion direction data is available from the person-ID service, `infer_room_transition()` in `backend/services/camera_topology.py` looks up the direction in the sensor's `movement_map` and returns a frozen `RoomTransition` dataclass:
+
+```python
+@dataclass(frozen=True)
+class RoomTransition:
+    person_id: str
+    person_name: str
+    sensor_id: str
+    direction_raw: str        # e.g. "left-to-right"
+    semantic: str             # e.g. "entering"
+    from_room_id: str | None
+    from_room_name: str | None
+    to_room_id: str | None
+    to_room_name: str | None
+    confidence: float
+```
+
+Each computed transition is written to `PersonLocationHistory` with the `direction_semantic` field populated. The `person_identification` step also writes transitions to `pipeline_data["room_transitions"]` for use in downstream steps and notification templates.
+
+### Room Transition filter
+
+The `room_transition` context filter lets rules fire only when a person makes a specific type of transition. Configure it on a rule alongside other context filters:
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `person_id` | str (required) | Person whose transitions to watch |
+| `semantic` | str (optional) | Semantic transition type to match (e.g. `"entering"`) |
+| `to_room_name` | str (optional) | Destination room name (case-insensitive) |
+| `from_room_name` | str (optional) | Origin room name (case-insensitive) |
+| `within_minutes` | int (default 5) | Lookback window for recent transitions |
+
+**Example:** Fire a reminder rule only when grandma enters the kitchen:
+
+```yaml
+context_type: room_transition
+config:
+  person_id: grandma
+  semantic: entering
+  to_room_name: Kitchen
+  within_minutes: 2
+```
+
+This filter is evaluated against `PersonLocationHistory` records, so it works correctly across both direct camera detections and HA-sensor-inferred transitions.
+
 ## Whole-House Location Tracking
 
 The `PersonTrackingService` maintains a real-time location state for each household member by fusing two data sources:
