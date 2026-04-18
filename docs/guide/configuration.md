@@ -292,26 +292,26 @@ eink:
 
 notification_defaults:
   emergency:
-    channels: [websocket, telegram, eink, tts, homeassistant]
+    channels: [pwa_popup_text, telegram, eink, ha_speaker_tts]
     escalation_minutes: 5
     repeat_count: 3
 
   warning:
-    channels: [websocket, telegram, eink, realtime_voice]
+    channels: [pwa_popup_text, telegram, eink, pwa_realtime_ai]
     escalation_minutes: 10
 
   info:
-    channels: [websocket]
+    channels: [pwa_popup_text]
 
   reminder:
-    channels: [websocket, tts, eink]
+    channels: [pwa_popup_text, ha_speaker_tts, eink]
 ```
 
 | Level | Default Channels | Escalation |
 |-------|-----------------|------------|
-| `emergency` | WebSocket, Telegram, eInk, TTS, Home Assistant | Every 5 min, 3x repeat |
-| `warning` | WebSocket, Telegram, eInk, Realtime Voice | Every 10 min |
-| `info` | WebSocket only | None |
-| `reminder` | WebSocket, TTS, eInk | None |
+| `emergency` | PWA Popup Text, Telegram, eInk, HA Speaker TTS | Every 5 min, 3x repeat |
+| `warning` | PWA Popup Text, Telegram, eInk, PWA Realtime AI | Every 10 min |
+| `info` | PWA Popup Text only | None |
+| `reminder` | PWA Popup Text, HA Speaker TTS, eInk | None |
 
 The `webhook` channel is configured globally here but is opt-in by default. Add `webhook` to a level's `channels` list, or set it per `notification` step through the pipeline builder. A step-level `webhook_url` overrides `webhook.url`.

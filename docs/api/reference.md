@@ -72,7 +72,7 @@ Rooms represent physical spaces in the household (kitchen, bedroom, hallway). Ea
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `step_type` | string | One of the 10 step types |
+| `step_type` | string | One of the 14 step types |
 | `label` | string | Display label |
 | `config_json` | object | Step-type-specific configuration |
 | `enabled` | boolean | Whether the step is active |
@@ -100,6 +100,8 @@ Rooms represent physical spaces in the household (kitchen, bedroom, hallway). Ea
 | `day_of_week` | Rule only fires on specified days |
 | `person_presence` | Rule requires specified persons to be present (or absent) |
 | `person_activity` | Rule requires a recent activity (or absence thereof) for a person |
+| `room_transition` | Rule fires only on specific room transitions (entering/exiting) for a person |
+| `scene_trend` | Rule fires based on object trend anomaly severity in specified rooms |
 
 ## Workflows
 

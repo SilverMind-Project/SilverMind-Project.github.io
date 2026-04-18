@@ -139,7 +139,7 @@ Record a single activity to the PersonActivity table. All fields support [prompt
 
 ::: tip Detecting long-duration activities (meals, extended occupancy)
 
-The VLM window in a `vision_analysis` or `llm_call` step is bounded by the EventAggregator batch (typically 10 s -- 1 min). To detect activities that unfold over a longer duration such as a meal, extend the temporal window on the **upstream** step:
+The VLM window in an `llm_call` step is bounded by the EventAggregator batch (typically 10 s -- 1 min). To detect activities that unfold over a longer duration such as a meal, extend the temporal window on the **upstream** step:
 
 ```yaml
 step_type: llm_call
@@ -243,6 +243,28 @@ Place `person_identification` before `scene_analysis` in the pipeline. The `scen
 
 :::
 
+#### `object_trend_analysis`
+
+Queries the [semantic-memory-service](/guide/architecture#semantic-memory-service) for room-level object trend state: clutter scores, persistent/novel objects, and anomaly severity. Designed to precede a `condition` step (for rule branching) or an `llm_call` step (for LLM-enriched reasoning).
+
+**Config fields:**
+
+- `room_ids`: list of room IDs to query. Empty = use the trigger room.
+- `include_snapshots_hours`: if > 0, fetch raw hourly snapshots for LLM context.
+- `severity_threshold`: anomalies below this severity are stripped (`ok`, `info`, `warning`, `critical`; default `info`).
+- `output_key`: key under which the result map is written (default `room_trends`).
+
+**Output keys:**
+
+| Key | Type | Description |
+| --- | ---- | ----------- |
+| `room_trends` | dict | Maps room_id to trend result: `clutter_score`, `trend_direction`, `overall_severity`, `persistent_objects`, `novel_objects`, `anomalies` |
+| `room_trends_any_warning` | bool | Whether any room has severity >= warning |
+| `room_trends_max_severity` | str | Highest severity across all rooms |
+| `room_trends_summary` | str | Compact single-line text ready for LLM prompt injection |
+
+Graceful degradation: if `object_trend_client` is unavailable or the service returns no data, the step writes empty results and continues.
+
 ### Reasoning
 
 #### `llm_call`
@@ -338,24 +360,6 @@ config:
 
 :::
 
-#### `logic_reasoning`
-
-Evaluates upstream analysis with the logic LLM to decide whether action is warranted.
-
-::: tip Prefer `llm_call` for new pipelines
-`logic_reasoning` is hardwired to the global `llm.logic` provider. The `llm_call` step gives you per-step model selection, a configurable output key, and the same JSON schema enforcement.
-:::
-
-**Config fields:**
-
-- `prompt`: the reasoning prompt (supports [prompt templates](#prompt-templates))
-- `include_context`: list of `pipeline_data` keys to optionally include in the context
-- `response_format`: `"default"`, `"activity_detection"`, or `"custom"` (default `"default"`)
-- `response_schema`: custom instruction string appended to the prompt when `response_format` is `"custom"`
-- `response_json_schema`: JSON Schema string to strictly enforce output structure via guided decoding.
-
-**Output keys:** `logic_response` (the structured model response as a parsed dictionary. Schema depends on `response_format`; typically includes `is_notification_needed`, `user_notification`, `alert_level`, etc.)
-
 #### `condition`
 
 Evaluates a boolean expression against `pipeline_data` to control execution flow. Can branch to different steps based on the result.
@@ -398,7 +402,7 @@ Query the PersonActivity database to verify whether household members completed,
 
 #### `notification`
 
-Dispatches an alert to configured notification channels based on alert level. The `NotificationDispatcher` can route to WebSocket, Telegram, e-ink, TTS, `realtime_voice`, `homeassistant`, and outbound `webhook` channels.
+Dispatches an alert to configured notification channels based on alert level. The `NotificationDispatcher` can route to `pwa_popup_text`, Telegram, e-ink, `ha_speaker_tts`, `pwa_realtime_ai`, `pwa_tts_announcement`, and outbound `webhook` channels.
 
 **Config fields:**
 
@@ -427,22 +431,61 @@ Calls a Home Assistant service. Can turn on lights, lock doors, activate scenes,
 
 **Output keys:** `ha_action.domain`, `ha_action.service`, `ha_action.entity_id`, `ha_action.success`, optional `_cooloff_triggered`
 
-#### `translation`
+#### `activity_session_start`
 
-Translates text to a target language. Can automatically retry requests if the model outputs known gibberish.
-
-::: tip Prefer `llm_call` for new pipelines
-`translation` is hardwired to the global `llm.translation` provider and its TranslateGemma-specific prompt format. The `llm_call` step lets you use any capable model (including Gemma 4) with a natural-language prompt and the same hallucination retry.
-:::
+Open a duration-aware activity session for a person. Idempotent: reuses an existing open session of the same type if one already exists. Stores timeout configuration for automatic stale-session cleanup.
 
 **Config fields:**
 
-- `target_language`: language code (e.g., `ta` for Tamil)
-- `source_text`: text to translate (supports [prompt templates](#prompt-templates)). Leave empty to auto-detect from `logic_response.user_notification` or `vision_response`.
-- `special_instructions`: optional instructions prepended to the prompt to enforce translation style (e.g., informal Tanglish).
-- `hallucination_marker`: an optional string that, if found in the model's output, forces the step to automatically retry the request using Tenacity.
+::: v-pre
 
-**Output keys:** `translation` (the translated text)
+- `activity_type` (required): activity type (e.g. `sleep`, `bathroom`, `meal_prep`). Supports `{{template}}` syntax.
+- `person_id`: person to attribute this session to. Supports templates (e.g. `{{person_detections.0.person_id}}`).
+- `room_name`: room where the activity occurs. Supports templates. Defaults to trigger room.
+- `confidence`: detection confidence (0-1). Accepts a fixed number or `{{template}}` syntax (default `0.85`).
+- `timeout_minutes`: maximum session duration in minutes before auto-close. Uses built-in default for the activity type when empty. Supports templates.
+- `metadata_extra`: optional JSON string of extra fields to merge into session metadata. Supports `{{template}}` syntax.
+- `output_key`: `pipeline_data` key to write the session result under (default `session`).
+
+:::
+
+**Output keys:** `pipeline_data[output_key]` with `session_id`, `person_id`, `activity_type`, `room_name`, `started_at`, `timeout_minutes`, `was_existing`
+
+#### `activity_session_end`
+
+Close an open duration-aware activity session for a person. Computes duration from open to close. Optionally records a `PersonActivity` with `duration_minutes` populated. If no open session exists, logs a warning and continues.
+
+**Config fields:**
+
+::: v-pre
+
+- `activity_type` (required): activity type to close. Supports `{{template}}` syntax.
+- `person_id`: person to close the session for. Supports templates.
+- `write_activity_record`: when `true`, also records a `PersonActivity` with `duration_minutes` populated (default `true`).
+- `output_key`: `pipeline_data` key to write the closed session result under (default `closed_session`).
+
+:::
+
+**Output keys:** `pipeline_data[output_key]` with `session_id`, `person_id`, `activity_type`, `started_at`, `closed_at`, `duration_minutes`, `status`, `closed_via`
+
+#### `daily_report`
+
+Generate end-of-day activity reports for one or all household members. Aggregates sleep, meals, medication, bathroom, door events, exercise, and location data into structured `DailyReport` records with wellness scoring. Designed to be triggered by a cron rule at end of day.
+
+**Config fields:**
+
+::: v-pre
+
+- `person_ids`: list of person IDs to generate reports for. Empty list means all active household members.
+- `report_date_offset_days`: days offset from today for the report date (0 = today, -1 = yesterday).
+- `generate_summary_text`: when `true`, generates an LLM prose summary of the day.
+- `summary_model_id`: LLM model ID to use for summary generation (default `gemma4_26b`).
+- `notify_on_complete`: when `true`, sends a notification when reports are ready.
+- `output_key`: `pipeline_data` key to write the report results under (default `daily_reports`).
+
+:::
+
+**Output keys:** `pipeline_data[output_key]` (list of report results with `person_id`, `report_date`, `report_id`, `wellness_score`)
 
 ### Flow
 
@@ -510,7 +553,7 @@ logic_response.alert_level == "emergency"
 ## Prompt Templates {#prompt-templates}
 
 ::: v-pre
-Several step config fields support `{{variable}}` template syntax: the `prompt` and `special_instructions` fields in `llm_call`, `vision_analysis`, `logic_reasoning`, and `translation`; the `person_id`, `activity_type`, and `room_name` fields in `activity_detection`; and the `person_id` and `room_name` fields in `verification` conditions. At execution time, placeholders are replaced with values from `pipeline_data` and trigger context.
+Several step config fields support `{{variable}}` template syntax: the `prompt` and `special_instructions` fields in `llm_call`, `vision_analysis`; the `person_id`, `activity_type`, and `room_name` fields in `activity_detection`; and the `person_id` and `room_name` fields in `verification` conditions. At execution time, placeholders are replaced with values from `pipeline_data` and trigger context.
 :::
 
 ### Syntax
@@ -532,10 +575,10 @@ Any key in `pipeline_data` is available. Common variables:
 
 | Variable | Source | Example Value |
 | -------- | ------ | ------------- |
-| `vision_response` | vision_analysis step | `"A person is standing at the stove"` |
+| `vision_response` | llm_call step (output_key: vision_response) | `"A person is standing at the stove"` |
 | `person_detections.0.name` | person_identification step | `"grandma"` |
 | `person_detections.0.confidence` | person_identification step | `0.92` |
-| `logic_response.user_notification` | logic_reasoning step | `"Stove left on"` |
+| `logic_response.user_notification` | llm_call step (output_key: logic_response) | `"Stove left on"` |
 | `system.local_time` | executor-injected system context | `"08:42 AM"` |
 | `system.local_day_of_week` | executor-injected system context | `"Sunday"` |
 | `trigger_input.reason` | webhook trigger payload | `"medication_missed"` |
@@ -617,7 +660,7 @@ person_identification → llm_call (vision) → llm_call (reasoning, output_key:
 Triggered by the `occupancy_duration` trigger type when a presence sensor has been on for longer than the configured threshold. The pipeline below sends a multilingual voice prompt asking if the person needs help:
 
 ```text
-llm_call (translation, output_key: translation) → notification [alert_level: warning, channels: [websocket, telegram, realtime_voice]]
+llm_call (translation, output_key: translation) → notification [alert_level: warning, channels: [pwa_popup_text, telegram, pwa_realtime_ai]]
 ```
 
 **Rule configuration:**
@@ -628,7 +671,7 @@ llm_call (translation, output_key: translation) → notification [alert_level: w
 - `cool_off_minutes`: `30`, which prevents re-firing until a cool-off-triggering execution ages out
 - Context filters: add `time_range`, `person_presence`, or `room` filters as needed
 
-The `translation` step localises the message before the `notification` step dispatches it. The `realtime_voice` channel initiates an interactive voice check-in via Gemini Live; the `websocket` and `telegram` channels alert the admin console and caregiver simultaneously.
+The `llm_call` step localises the message before the `notification` step dispatches it. The `pwa_realtime_ai` channel initiates an interactive voice check-in via Gemini Live; the `pwa_popup_text` and `telegram` channels alert the admin console and caregiver simultaneously.
 
 ### Telegram Command Trigger {#telegram-command-triggers}
 
@@ -652,7 +695,7 @@ Rule: trigger_type=telegram, command=/medication
 Pipeline:
   activity_detection (activity_type: medication, person_id: {{trigger_input.from_user.id}})
   → llm_call (translation, prompt: "Confirm: medication taken. Translate to Tamil.")
-  → notification [channels: telegram, tts]
+  → notification [channels: telegram, ha_speaker_tts]
 ```
 
 The `notification` step sends the translated confirmation back to Telegram and plays it over the home speaker.

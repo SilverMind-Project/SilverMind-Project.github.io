@@ -28,16 +28,16 @@ Configure which tools are available to the voice companion via `mcp.gemini_tools
 
 **Status:** Proposed
 
-**Problem:** Creating pipelines from scratch is complex for new users. Each of the 10 step types has its own configuration, and choosing the right combination requires understanding the system.
+**Problem:** Creating pipelines from scratch is complex for new users. Each of the 14 step types has its own configuration, and choosing the right combination requires understanding the system.
 
 **Design:** Ship JSON fixtures with preset pipeline definitions:
 
 | Template | Steps |
 |----------|-------|
-| Camera Alert | person_id → vision → logic → translation → notification |
-| Periodic Check | vision → logic → condition → notification |
+| Camera Alert | person_identification → llm_call (vision) → llm_call (reasoning) → notification |
+| Periodic Check | llm_call (vision) → llm_call (reasoning) → condition → notification |
 | Medication Reminder | activity_detection → wait → verification → notification |
-| Door Monitor | person_id → condition → notification → ha_action |
+| Door Monitor | person_identification → condition → notification → ha_action |
 
 A `GET /rules/templates` endpoint lists presets, and `POST /rules/from-template` creates a rule from one. A "Use Template" button in the rule creation dialog would allow one-click setup.
 

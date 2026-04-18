@@ -143,15 +143,15 @@ docker run -p 80:80 cognitive-companion-ui
 A basic camera monitoring rule might look like:
 
 ```text
-person_identification → vision_analysis → logic_reasoning → translation → notification
+person_identification → llm_call (vision) → llm_call (reasoning) → notification
 ```
 
 1. Go to **Rules** → **New Rule**, enter a name, and click **Create**  -  you'll land on the rule detail page
 2. On the **Settings** tab, set the trigger type to `sensor_event` and bind it to a camera sensor
 3. Switch to the **Pipeline** tab and add steps from the palette in order:
    - **Person Identification**: identify who is in the frame
-   - **Vision Analysis**: describe what is happening
-   - **Logic Reasoning**: decide if a notification is warranted
+   - **LLM Call** (vision): describe what is happening
+   - **LLM Call** (reasoning): decide if a notification is warranted
    - **Translation**: translate the message to Tamil (or your target language)
    - **Notification**: send the alert to configured channels
 4. Configure each step's settings in its config dialog

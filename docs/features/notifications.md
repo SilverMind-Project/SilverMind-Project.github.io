@@ -228,7 +228,7 @@ Notifications are triggered by `notification` pipeline steps:
 }
 ```
 
-The notification step reads the message from upstream pipeline data (typically from `logic_reasoning` or `translation` steps) and routes it through the `NotificationDispatcher`.
+The notification step reads the message from upstream pipeline data (typically from `llm_call` steps) and routes it through the `NotificationDispatcher`.
 
 ### Channel Override
 
