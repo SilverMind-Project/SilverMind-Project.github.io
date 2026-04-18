@@ -22,7 +22,7 @@ hero:
 features:
   - icon: 🧩
     title: Composable Pipelines
-    details: 10 registered step types assembled in any order per rule, including unified LLM calls, scene analysis, conditional branching, and wait/resume workflows. Each rule defines its own pipeline.
+    details: 14 registered step types assembled in any order per rule, including unified LLM calls, scene analysis, conditional branching, and wait/resume workflows. Each rule defines its own pipeline.
     link: /features/pipeline
 
   - icon: 👁️
