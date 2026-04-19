@@ -61,7 +61,7 @@ Cognitive Companion takes a different path:
 
 | Capability | Description |
 |-----------|-------------|
-| **14 pipeline step types** | Person ID, scene analysis, object trend analysis, activity detection, activity session start/end, daily report, unified LLM call, wait, condition, verification, notification, HA action, perception, action |
+| **13 pipeline step types** | Person ID, scene analysis, object trend analysis, activity detection, activity session start/end, daily report, unified LLM call, wait, condition, verification, notification, HA action |
 | **Person tracking** | ArcFace face recognition + Home Assistant sensor fusion for whole-house location |
 | **Activity tracking** | Detect and record activities (eating, sleeping, medication) for use in downstream rule context filters |
 | **Activity sessions** | Duration-aware open/close sessions with automatic stale cleanup |
@@ -70,7 +70,7 @@ Cognitive Companion takes a different path:
 | **Voice companion** | Real-time conversations via Google Gemini Live with WebSocket audio |
 | **E-ink displays** | Per-device notification images with template editor and automatic expiry |
 | **Multi-channel alerts** | PWA popup, Telegram, e-ink, HA Speaker TTS, PWA TTS announcements, PWA Realtime AI, and outbound webhook delivery with escalation policies |
-| **MCP tool server** | 16 read-only tools plus rule triggering for AI agent integration via Model Context Protocol |
+| **MCP tool server** | 22 tools (21 read-only plus rule triggering) for AI agent integration via Model Context Protocol |
 | **RBAC authentication** | API keys, device keys, and fnmatch permission patterns |
 | **Tamil language support** | Translation and voice interaction in Tamil |
 

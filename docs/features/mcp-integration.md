@@ -1,6 +1,6 @@
 # MCP Integration
 
-Cognitive Companion includes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, that exposes tools for AI agent integration. Agents can discover system state, query sensor data, inspect enrollment and e-ink status, check person locations, and trigger rule executions. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
+Cognitive Companion includes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, that exposes 22 tools for AI agent integration. Agents can discover system state, query sensor data, inspect enrollment and e-ink status, check person locations, review activity timelines and daily reports, and trigger rule executions. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
 
 ## What is MCP?
 
@@ -54,6 +54,9 @@ A `GeminiToolAdapter` reads the same tool definitions and converts them to Gemin
 | `get_eink_display_status`  | Active e-ink image state for one or all displays             | `sensor_id` (optional)                        |
 | `get_local_datetime`       | Current local date and time for the household's timezone     | None                                          |
 | `get_weather`              | Current weather from Home Assistant                          | None                                          |
+| `get_person_timeline`      | Chronological timeline of activities and sightings for a person | `person_id`, `minutes` (optional)          |
+| `get_daily_report`         | End-of-day wellness report for one or all members            | `person_id`, `report_date` (optional)       |
+| `get_open_sessions`        | Currently open activity sessions (meals, bathroom, etc.)     | `person_id`, `activity_type` (optional)     |
 
 ## Authentication
 

@@ -96,26 +96,6 @@ Sends media frames to the person identification service for face recognition. Re
 
 **Output keys:** `person_detections` (list of detections with identity, confidence, bbox), `annotated_images` (if enabled)
 
-#### `vision_analysis`
-
-Sends media frames with a prompt to the vision LLM (Cosmos Reason2) for scene description and analysis. Supports acquiring additional images across the home for temporal or multi-angle context.
-
-::: tip Prefer `llm_call` for new pipelines
-The `llm_call` step (see [Reasoning](#reasoning)) is a superset of `vision_analysis`. It supports the same image-source options plus model selection, sensor-ordered image assembly for inter-frame analysis, and a configurable output key.
-:::
-
-**Config fields:**
-
-- `prompt`: the analysis prompt sent to the vision model (supports [prompt templates](#prompt-templates))
-- `image_source`: `"trigger"` (default), `"additional"`, or `"both"`. Controls which images to send to the model.
-- `max_images`: max total images to send to the vision model (default `5`).
-- `additional_sensor_ids` / `additional_room_names`: optionally pull recent images from extra cameras or rooms.
-- `image_time_filter`: optional object with `since_minutes`, `time_start`, `time_end` to filter additional images temporally.
-- `response_format`: `"default"` (text) or `"custom"` (JSON). Controls whether the vision model should output free text or structured JSON.
-- `response_schema` / `response_json_schema`: text instruction and JSON Schema to enforce structured output via guided decoding when `response_format` is `custom`.
-
-**Output keys:** `vision_response` (the model's response, which will be a parsed JSON dictionary if structured output is chosen, otherwise a textual analysis)
-
 #### `activity_detection`
 
 Record a single activity to the PersonActivity table. All fields support [prompt templates](#prompt-templates), so values can be fixed strings or resolved from any upstream step output or trigger context. Use multiple steps in sequence to record multiple activities.
@@ -264,6 +244,24 @@ Queries the [semantic-memory-service](/guide/architecture#semantic-memory-servic
 | `room_trends_summary` | str | Compact single-line text ready for LLM prompt injection |
 
 Graceful degradation: if `object_trend_client` is unavailable or the service returns no data, the step writes empty results and continues.
+
+#### `vision_analysis` _(deprecated)_
+
+::: warning Deprecated — use `llm_call` instead
+The `llm_call` step with `output_key: vision_response` is a superset of `vision_analysis`. It supports the same image-source options plus model selection, sensor-ordered image assembly for inter-frame analysis, and a configurable output key.
+:::
+
+Sends media frames with a prompt to the vision LLM (Cosmos Reason2) for scene description and analysis.
+
+**Config fields:**
+
+- `prompt`: the analysis prompt sent to the vision model (supports [prompt templates](#prompt-templates))
+- `image_source`: `"trigger"` (default), `"additional"`, or `"both"`
+- `max_images`: max total images (default `5`)
+- `additional_sensor_ids` / `additional_room_names`: pull images from extra cameras or rooms
+- `response_format`: `"default"` (text) or `"custom"` (JSON)
+
+**Output keys:** `vision_response`
 
 ### Reasoning
 
@@ -553,7 +551,7 @@ logic_response.alert_level == "emergency"
 ## Prompt Templates {#prompt-templates}
 
 ::: v-pre
-Several step config fields support `{{variable}}` template syntax: the `prompt` and `special_instructions` fields in `llm_call`, `vision_analysis`; the `person_id`, `activity_type`, and `room_name` fields in `activity_detection`; and the `person_id` and `room_name` fields in `verification` conditions. At execution time, placeholders are replaced with values from `pipeline_data` and trigger context.
+Several step config fields support `{{variable}}` template syntax: the `prompt` and `special_instructions` fields in `llm_call`; the `person_id`, `activity_type`, and `room_name` fields in `activity_detection`; and the `person_id` and `room_name` fields in `verification` conditions. At execution time, placeholders are replaced with values from `pipeline_data` and trigger context.
 :::
 
 ### Syntax

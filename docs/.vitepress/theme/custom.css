@@ -234,10 +234,25 @@ body {
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   background-color: rgba(251, 251, 253, 0.75) !important;
+
+}
+
+.VPNavBar .title {
+  border-bottom: none;
+  border-bottom-color: none;
 }
 
 .dark .VPNavBar {
   background-color: rgba(11, 11, 15, 0.72) !important;
+}
+
+/* Non-home pages: let the navbar's frosted glass show through uniformly */
+.VPNavBar:not(.home.top) .content-body {
+  background-color: transparent !important;
+}
+
+.VPNavBar .divider-line {
+  height: 0px;
 }
 
 .VPNavScreen {
@@ -332,4 +347,50 @@ body {
 .vp-doc .custom-block-title {
   font-weight: 600;
   letter-spacing: -0.005em;
+}
+
+.VPSidebar .group, .VPHomeFeatures .VPLink {
+  backdrop-filter: saturate(2%) blur(2px);
+  -webkit-backdrop-filter: saturate(2%) blur(2px);
+  background-color: rgba(251, 251, 253, 0.1) !important;
+}
+
+.dark .VPSidebar .group, .VPHomeFeatures .VPLink {
+  background-color: rgba(11, 11, 15, 0.01) !important;
+}
+
+.VPSidebar .nav {
+  margin-top: 48px;
+}
+
+/* Aside curtain — subtle gradient matching frosted glass (lets animation show) */
+.VPDoc .aside-curtain, .VPSidebar {
+  background: transparent !important;
+}
+
+.dark .VPDoc .aside-curtain, .VPSidebar {
+  background: transparent !important;
+}
+
+/* Aside container — subtle frosted glass */
+.VPDoc .content {
+  backdrop-filter: saturate(2%) blur(2px);
+  -webkit-backdrop-filter: saturate(2%) blur(2px);
+  background-color: rgba(251, 251, 253, 0.1) !important;
+  padding-top: 5px;
+}
+
+.dark .VPDoc .content {
+  background-color: rgba(0, 0, 0, 0.001) !important;
+}
+
+/* Footer — subtle frosted strip at page bottom */
+.VPFooter {
+  backdrop-filter: saturate(2%) blur(2px);
+  -webkit-backdrop-filter: saturate(2%) blur(2px);
+  background-color: rgba(251, 251, 253, 0.1) !important;
+}
+
+.dark .VPFooter {
+  background-color: rgba(255, 255, 255, 0.01) !important;
 }
