@@ -231,10 +231,11 @@ body {
 /* ----- Navigation bar ----- */
 
 .VPNavBar {
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(3px);
+  -webkit-backdrop-filter: saturate(180%) blur(3px);
   background-color: rgba(251, 251, 253, 0.75) !important;
-
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
 }
 
 .VPNavBar .title {
@@ -244,6 +245,8 @@ body {
 
 .dark .VPNavBar {
   background-color: rgba(11, 11, 15, 0.72) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
 }
 
 /* Non-home pages: let the navbar's frosted glass show through uniformly */
@@ -256,8 +259,8 @@ body {
 }
 
 .VPNavScreen {
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(3px);
+  -webkit-backdrop-filter: saturate(180%) blur(3px);
   background-color: rgba(251, 251, 253, 0.95) !important;
 }
 
@@ -349,48 +352,93 @@ body {
   letter-spacing: -0.005em;
 }
 
-.VPSidebar .group, .VPHomeFeatures .VPLink {
-  backdrop-filter: saturate(2%) blur(2px);
-  -webkit-backdrop-filter: saturate(2%) blur(2px);
-  background-color: rgba(251, 251, 253, 0.1) !important;
+/* ----- Sidebar — glass panel ----- */
+
+.VPSidebar {
+  backdrop-filter: saturate(160%) blur(3px);
+  -webkit-backdrop-filter: saturate(160%) blur(3px);
+  background-color: rgba(251, 251, 253, 0.62) !important;
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 2px 0 24px -8px rgba(0, 0, 0, 0.06);
 }
 
-.dark .VPSidebar .group, .VPHomeFeatures .VPLink {
-  background-color: rgba(11, 11, 15, 0.01) !important;
+.dark .VPSidebar {
+  background-color: rgba(11, 11, 15, 0.68) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 2px 0 24px -8px rgba(0, 0, 0, 0.4);
 }
 
 .VPSidebar .nav {
   margin-top: 48px;
 }
 
-/* Aside curtain — subtle gradient matching frosted glass (lets animation show) */
-.VPDoc .aside-curtain, .VPSidebar {
+/* Aside curtain — transparent to let animation show */
+.VPDoc .aside-curtain {
   background: transparent !important;
 }
 
-.dark .VPDoc .aside-curtain, .VPSidebar {
+.dark .VPDoc .aside-curtain {
   background: transparent !important;
 }
 
-/* Aside container — subtle frosted glass */
+/* Doc content — very light glass; keep blur minimal so animation stays visible */
 .VPDoc .content {
-  backdrop-filter: saturate(2%) blur(2px);
-  -webkit-backdrop-filter: saturate(2%) blur(2px);
-  background-color: rgba(251, 251, 253, 0.1) !important;
+  backdrop-filter: saturate(140%) blur(3px);
+  -webkit-backdrop-filter: saturate(140%) blur(3px);
+  background-color: rgba(251, 251, 253, 0.14) !important;
   padding-top: 5px;
 }
 
 .dark .VPDoc .content {
-  background-color: rgba(0, 0, 0, 0.001) !important;
+  background-color: rgba(0, 0, 0, 0.10) !important;
 }
 
-/* Footer — subtle frosted strip at page bottom */
+/* Footer — frosted strip with top-edge specular */
 .VPFooter {
-  backdrop-filter: saturate(2%) blur(2px);
-  -webkit-backdrop-filter: saturate(2%) blur(2px);
-  background-color: rgba(251, 251, 253, 0.1) !important;
+  backdrop-filter: saturate(140%) blur(3px);
+  -webkit-backdrop-filter: saturate(140%) blur(3px);
+  background-color: rgba(251, 251, 253, 0.72) !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .dark .VPFooter {
-  background-color: rgba(255, 255, 255, 0.01) !important;
+  background-color: rgba(11, 11, 15, 0.72) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ----- On-page local nav (sticky breadcrumb bar on doc pages) ----- */
+
+.VPLocalNav {
+  backdrop-filter: saturate(160%) blur(3px);
+  -webkit-backdrop-filter: saturate(160%) blur(3px);
+  background-color: rgba(251, 251, 253, 0.80) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.dark .VPLocalNav {
+  background-color: rgba(11, 11, 15, 0.80) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ----- Feature cards — glass in dark mode ----- */
+
+.dark .VPFeature {
+  background: rgba(20, 20, 24, 0.62) !important;
+  backdrop-filter: saturate(160%) blur(3px);
+  -webkit-backdrop-filter: saturate(160%) blur(3px);
+  border-color: rgba(255, 255, 255, 0.08);
+  border-top-color: rgba(255, 255, 255, 0.14);
+}
+
+/* Light mode cards — semi-transparent so backdrop-filter is visible */
+.VPFeature {
+  backdrop-filter: saturate(140%) blur(3px);
+  -webkit-backdrop-filter: saturate(140%) blur(3px);
+  background-color: rgba(255, 255, 255, 0.68) !important;
+}
+
+/* ----- Doc right aside — transparent to reveal animation ----- */
+
+.VPDoc .aside {
+  background: transparent !important;
 }
