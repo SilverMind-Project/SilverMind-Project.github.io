@@ -30,13 +30,31 @@
   --vp-c-divider: rgba(0, 0, 0, 0.08);
   --vp-c-gutter: rgba(0, 0, 0, 0.05);
 
-  /* Hero */
-  --vp-home-hero-name-color: transparent;
-  --vp-home-hero-name-background: linear-gradient(120deg, #0a84ff 0%, #5e5ce6 60%, #bf5af2 100%);
+  /* Brand gradient — shared by hero title and nav logo */
+  --cc-brand-gradient: linear-gradient(120deg, #0a84ff 0%, #5e5ce6 60%, #bf5af2 100%);
   --cc-brand-gradient-size: 180% 180%;
   --cc-brand-gradient-duration: 18s;
+
+  /* Hero */
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: var(--cc-brand-gradient);
   --vp-home-hero-image-background-image: radial-gradient(closest-side, rgba(10, 132, 255, 0.18), rgba(94, 92, 230, 0.0));
   --vp-home-hero-image-filter: blur(72px);
+
+  /* Glass surface backgrounds — light mode */
+  --cc-glass-nav:      rgba(251, 251, 253, 0.75);
+  --cc-glass-screen:   rgba(251, 251, 253, 0.95);
+  --cc-glass-sidebar:  rgba(251, 251, 253, 0.62);
+  --cc-glass-content:  rgba(251, 251, 253, 0.14);
+  --cc-glass-footer:   rgba(251, 251, 253, 0.72);
+  --cc-glass-localnav: rgba(251, 251, 253, 0.80);
+  --cc-glass-card:     rgba(255, 255, 255, 0.68);
+
+  /* Glass edges and depth — light mode */
+  --cc-edge:           rgba(0, 0, 0, 0.06);
+  --cc-edge-strong:    rgba(0, 0, 0, 0.07);
+  --cc-inset:          rgba(255, 255, 255, 0.80);
+  --cc-sidebar-shadow: 2px 0 24px -8px rgba(0, 0, 0, 0.06);
 
   /* Typography */
   --vp-font-family-base:
@@ -308,6 +326,9 @@ body {
   padding: 2px 6px;
   border-radius: 6px;
   font-weight: 500;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .dark .vp-doc :not(pre) > code {
@@ -318,10 +339,14 @@ body {
 
 .vp-doc table {
   border-radius: 12px;
-  overflow: hidden;
+  border-collapse: collapse;
   border: 1px solid var(--vp-c-divider);
-  display: table;
-  width: 100%;
+  display: block;
+  max-width: 100%;
+  margin: 20px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .vp-doc th {
@@ -355,8 +380,6 @@ body {
 /* ----- Sidebar — glass panel ----- */
 
 .VPSidebar {
-  backdrop-filter: saturate(160%) blur(3px);
-  -webkit-backdrop-filter: saturate(160%) blur(3px);
   background-color: rgba(251, 251, 253, 0.62) !important;
   border-right: 1px solid rgba(0, 0, 0, 0.06);
   box-shadow: 2px 0 24px -8px rgba(0, 0, 0, 0.06);
@@ -366,6 +389,17 @@ body {
   background-color: rgba(11, 11, 15, 0.68) !important;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow: 2px 0 24px -8px rgba(0, 0, 0, 0.4);
+}
+
+/* On desktop the sidebar is stationary — backdrop-filter is safe.
+   On mobile it starts off-screen with transform: translateX(-100%), and
+   backdrop-filter on a transformed off-screen fixed element causes browsers
+   to extend the scroll extent, widening the page and breaking the nav overlay. */
+@media (min-width: 960px) {
+  .VPSidebar {
+    backdrop-filter: saturate(160%) blur(3px);
+    -webkit-backdrop-filter: saturate(160%) blur(3px);
+  }
 }
 
 .VPSidebar .nav {
