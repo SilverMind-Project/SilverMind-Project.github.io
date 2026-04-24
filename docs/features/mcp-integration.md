@@ -57,6 +57,7 @@ A `GeminiToolAdapter` reads the same tool definitions and converts them to Gemin
 | `get_person_timeline`      | Chronological timeline of activities and sightings for a person | `person_id`, `minutes` (optional)          |
 | `get_daily_report`         | End-of-day wellness report for one or all members            | `person_id`, `report_date` (optional)       |
 | `get_open_sessions`        | Currently open activity sessions (meals, bathroom, etc.)     | `person_id`, `activity_type` (optional)     |
+| `respond_to_interactive_prompt` | Record user response to an interactive prompt step    | `execution_id`, `step_id`, `action`         |
 
 ## Authentication
 

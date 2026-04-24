@@ -251,6 +251,29 @@ Device endpoints accept authentication via `device_key` in the JSON body.
 
 See [MCP Integration](/features/mcp-integration) for the full tool reference.
 
+## Interactive Responses
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/interactive-responses` | Record user response to an interactive prompt step |
+
+Used by the frontend to record responses from interactive prompt steps. The request body includes:
+
+```json
+{
+  "execution_id": 123,
+  "step_id": 456,
+  "channel": "pwa_popup_text",
+  "action": "dismiss",
+  "raw_response": {}
+}
+```
+
+Valid channels: `pwa_popup_text`, `pwa_realtime_ai`, `timeout`  
+Valid actions: `escalate`, `dismiss`
+
+The service records the response, updates `pipeline_data`, cancels any pending timeout task, and triggers immediate pipeline resumption.
+
 ## Home Assistant Sync
 
 | Method | Path | Description |

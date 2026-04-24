@@ -22,7 +22,7 @@ hero:
 features:
   - icon: 🧩
     title: Composable Pipelines
-    details: 13 registered step types assembled in any order per rule, including unified LLM calls, scene analysis, conditional branching, and wait/resume workflows. Each rule defines its own pipeline.
+    details: 14 registered step types assembled in any order per rule, including unified LLM calls, scene analysis, interactive prompts, conditional branching, and wait/resume workflows. Each rule defines its own pipeline.
     link: /features/pipeline
 
   - icon: 👁️
@@ -52,7 +52,7 @@ features:
 
   - icon: 🤖
     title: MCP Tool Server
-    details: Expose system state to AI agents via the Model Context Protocol. 22 tools including rule triggering, person locations, activity history, and real-time sensor data.
+    details: Expose system state to AI agents via the Model Context Protocol. 23 tools including rule triggering, interactive response recording, person locations, activity history, and real-time sensor data.
     link: /features/mcp-integration
 
   - icon: 🏠

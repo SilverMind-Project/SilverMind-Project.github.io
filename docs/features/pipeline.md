@@ -497,6 +497,80 @@ Pauses pipeline execution for a configured duration. The execution state is pers
 
 **Output keys:** none (the step simply pauses execution)
 
+#### `interactive_prompt`
+
+Asks the user a question via popup text and/or voice AI, then pauses pipeline execution until a response is received or timeout occurs. Designed for check-ins, safety confirmations, and escalation workflows where the system needs explicit user input before proceeding.
+
+**Config fields:**
+
+::: v-pre
+
+- `voice_prompt_template`: voice prompt template with `{{variable}}` syntax for the Gemini Live voice channel
+- `popup_message_template`: popup message template with `{{variable}}` syntax for the PWA popup text channel
+- `auto_escalate`: when `true`, sets `auto_escalate_triggered` in `pipeline_data` if the user selects "escalate" or timeout occurs (default `false`)
+- `escalate_button_text`: text for the escalation button (default `"I need help"`)
+- `dismiss_button_text`: text for the dismiss button (default `"I'm okay"`)
+- `countdown_seconds`: timeout duration in seconds (5-300, default `30`)
+- `timeout_action`: action to take when timeout occurs: `"escalate"` or `"dismiss"` (default `"escalate"`)
+- `output_key`: key for storing response in `pipeline_data` (default `"interactive_response"`)
+
+:::
+
+At least one of `voice_prompt_template` or `popup_message_template` must be configured. Both channels can be used simultaneously for redundancy.
+
+**Output keys:** `pipeline_data[output_key]` with `channel` (`"pwa_popup_text"`, `"pwa_realtime_ai"`, or `"timeout"`), `action` (`"escalate"` or `"dismiss"`), `timestamp`, and `raw_response`. When `auto_escalate` is enabled and escalation is triggered, `auto_escalate_triggered: true` is also written.
+
+**Workflow status:** The execution status is set to `"waiting_for_response"` while the prompt is active. When a response arrives or timeout fires, the status transitions to `"running"` and the pipeline resumes from the next step.
+
+::: details Example: bathroom safety check-in
+
+A rule with `trigger_type: occupancy_duration` fires when the bathroom presence sensor has been on for 40 minutes. The pipeline sends a bilingual check-in prompt and waits for a response:
+
+```yaml
+# 1. Translate the check-in message to Tamil
+step_type: llm_call
+config:
+  model_id: gemma4_26b
+  special_instructions: "Translate using informal Tamil as spoken in Chennai:"
+  prompt: "Are you okay? Do you need help?"
+  output_key: translation
+
+# 2. Send interactive prompt via popup and voice
+step_type: interactive_prompt
+config:
+  popup_message_template: "Are you okay?"
+  voice_prompt_template: "{{translation}}"
+  auto_escalate: true
+  escalate_button_text: "I need help"
+  dismiss_button_text: "I'm okay"
+  countdown_seconds: 30
+  timeout_action: escalate
+  output_key: interactive_response
+
+# 3. Branch on response
+step_type: condition
+config:
+  expression: "auto_escalate_triggered == true"
+  trigger_cooloff: true
+
+# 4. If escalated, notify caregiver
+step_type: notification
+config:
+  alert_level: emergency
+  message_template: "Emergency: {{person_detections.0.name}} needs help in bathroom"
+  channels: [telegram, pwa_popup_text, ha_speaker_tts]
+```
+
+If the user dismisses the prompt, the pipeline ends without triggering cool-off. If they select "I need help" or timeout occurs, `auto_escalate_triggered` is set, the condition step marks the run as cool-off-worthy, and the caregiver is alerted.
+
+:::
+
+::: tip Response correlation with voice AI
+
+When using the `voice_prompt_template` channel, the prompt is sent to the Gemini Live voice companion with execution context metadata (`execution_id`, `step_id`) appended. The voice agent can then call the `respond_to_interactive_prompt` MCP tool to record the user's verbal response, which resumes the pipeline just like a popup button click.
+
+:::
+
 ## Condition Expressions {#condition-expressions}
 
 Condition steps use a safe expression evaluator built on a recursive-descent parser with no `eval()`. Supported syntax:
