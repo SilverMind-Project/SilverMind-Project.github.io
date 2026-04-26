@@ -68,6 +68,12 @@ features:
 
 ---
 
+## See It In Action
+
+<div style="display: flex; justify-content: center; margin: 2rem 0;">
+  <iframe width="100%" style="max-width: 800px; aspect-ratio: 16 / 9;" src="https://www.youtube.com/embed/Xur5_7VcWJg" title="Cognitive Companion Demo" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+</div>
+
 ## Why Cognitive Companion?
 
 Cognitive decline doesn't have to mean loss of independence. Most monitoring systems either do too little (basic motion alerts) or too much (full automation that removes the daily routines giving seniors agency). Cognitive Companion occupies a different position: it understands context through vision and language models, then delivers gentle reminders only when they're actually warranted.
