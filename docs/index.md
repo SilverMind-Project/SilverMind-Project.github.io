@@ -22,8 +22,13 @@ hero:
 features:
   - icon: 🧩
     title: Composable Pipelines
-    details: 14 registered step types assembled in any order per rule, including unified LLM calls, scene analysis, interactive prompts, conditional branching, and wait/resume workflows. Each rule defines its own pipeline.
+    details: 19 registered step types assembled in any order per rule, including unified LLM calls, scene analysis, semantic memory query/write, presence and home-state queries, interactive prompts, conditional branching, and wait/resume workflows. Each rule defines its own pipeline.
     link: /features/pipeline
+
+  - icon: 🛰️
+    title: Continuous Tracking
+    details: Optional multi-camera tracking via the continuous-tracking-service (BoT-SORT + Bayesian identity resolution + dementia signal worker). Pacing, sundowning, bathroom anomalies, and absence are surfaced through the dementia_signal filter and presence_query step.
+    link: /features/continuous-tracking
 
   - icon: 👁️
     title: Scene Analysis
@@ -52,7 +57,7 @@ features:
 
   - icon: 🤖
     title: MCP Tool Server
-    details: Expose system state to AI agents via the Model Context Protocol. 23 tools including rule triggering, interactive response recording, person locations, activity history, and real-time sensor data.
+    details: Expose system state to AI agents via the Model Context Protocol. 24 tools including rule triggering, semantic memory queries, person locations, activity history, and real-time sensor data. A configurable subset is mirrored to Gemini Live for voice tool calling.
     link: /features/mcp-integration
 
   - icon: 🏠

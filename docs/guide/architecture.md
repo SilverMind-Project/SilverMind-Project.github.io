@@ -191,7 +191,9 @@ investment.
 
 ## Database
 
-SQLite with SQLAlchemy 2.0 ORM in WAL mode. Tables are auto-created from model definitions on startup. There are no migrations. For schema changes, delete `data/cognitive_companion.db` and restart.
+PostgreSQL 17 with SQLAlchemy 2.0 ORM. Schema changes go through Alembic via `make migration` (autogenerate) and `make migrate` (apply). Tests use a PostgreSQL testcontainer started by the shared `db_engine` / `db_session` / `db_factory` fixtures in `backend/tests/conftest.py`.
+
+`Database.create_all()` is used only in development and tests; it is not the production schema path.
 
 Key models:
 

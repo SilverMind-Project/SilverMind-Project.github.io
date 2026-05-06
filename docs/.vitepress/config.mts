@@ -55,6 +55,7 @@ export default defineConfig({
           items: [
             { text: "Composable Pipelines", link: "/features/pipeline" },
             { text: "Person Tracking", link: "/features/person-tracking" },
+            { text: "Continuous Tracking (CTS)", link: "/features/continuous-tracking" },
             { text: "Voice Companion", link: "/features/voice-companion" },
             { text: "E-Ink Displays", link: "/features/eink-display" },
             { text: "Notifications", link: "/features/notifications" },

@@ -774,6 +774,153 @@ The `notification` step sends the translated confirmation back to Telegram and p
 
 :::
 
+## Real-world Examples {#real-world-examples}
+
+The examples below assume a household with one senior (`grandma`) and a small set of caregivers. Each example names the trigger, every filter, every step, and every notification channel so you can replicate it end-to-end. All filter and step type names match what `GET /api/v1/pipeline/filter-types` and `GET /api/v1/pipeline/step-types` return on a current build.
+
+### Stove caution when grandma is alone in the kitchen
+
+The goal: when grandma is the only person at home and steps into the kitchen, gently remind her about stove safety. The reminder fires at most once per hour even if she walks in and out.
+
+**Rule settings:**
+
+- `trigger_type`: `sensor_event`
+- `primary_sensor_id`: kitchen camera
+- `cool_off_minutes`: `60`
+
+**Filters (all must pass):**
+
+| Filter | Config | Negate |
+| --- | --- | --- |
+| `room` | `room_name: Kitchen` | no |
+| `home_state` | `person_id: grandma`, gate on `at_home` | no |
+| `person_presence` | `person_id: grandma` | no |
+| `person_presence` | `person_id: caregiver_1` | yes |
+| `person_presence` | `person_id: caregiver_2` | yes |
+| `time_range` | `06:00 - 22:00` (avoid waking her at night) | no |
+
+**Pipeline:**
+
+```text
+1. scene_analysis  (run_detect=true, run_describe=true, run_hazards=true)
+2. condition       expression: any_in(scene_detections.*.label, ["stove","oven","cooktop"])
+                   on_true → step 3, on_false → end
+3. notification    channels: [pwa_tts_announcement, eink]
+                   pwa_tts_announcement_template: "Hi grandma, please be careful around the stove. Turn it off when you're done cooking."
+                   eink_template_id: caution_template
+                   eink_expiry_minutes: 30
+```
+
+The TTS announcement plays from the kitchen PWA tablet; the e-ink display in the kitchen also shows the message. `cool_off_minutes: 60` means subsequent stove sightings within an hour record `EventLog.status = ignored` and do not re-fire.
+
+### Confirm grandma had lunch and send images to a caretaker
+
+The goal: between 12:00 and 14:00, observe the kitchen periodically. If grandma appears to be eating, record a `meal_lunch` activity with the VLM's full reasoning attached, and forward an annotated image to the caretaker on Telegram.
+
+**Rule settings:**
+
+- `trigger_type`: `cron`
+- `schedule_cron`: `*/10 12-13 * * *` (every 10 minutes from 12:00 to 13:50)
+- `cool_off_minutes`: `120` (one lunch confirmation per day is enough)
+
+**Filters:** none beyond cron.
+
+**Pipeline:**
+
+```text
+1. person_identification  include_annotated_image: true, target_persons: ["grandma"]
+2. condition              expression: person_detections.count > 0
+                          on_true → step 3, on_false → end
+3. llm_call (vision)      model_id: cosmos_reason2
+                          image_source: both
+                          additional_room_names: ["Kitchen"]
+                          image_time_filter.since_minutes: 30
+                          sort_by_sensor_then_time: true
+                          response_format: json_schema
+                          response_json_schema: {ate_lunch: bool, evidence: str, confidence: float}
+                          output_key: vision_response
+4. condition              expression: vision_response.ate_lunch == true
+                          on_true → step 5, on_false → end
+5. activity_detection     activity_type: meal_lunch
+                          person_id: "{{person_detections.0.person_id}}"
+                          confidence: "{{vision_response.confidence}}"
+                          capture_scene_description: true
+                          scene_description_key: vision_response
+                          metadata_extra: '{"reasoning": "{{vision_response.evidence}}"}'
+6. notification           channels: [telegram]
+                          telegram_template: "Grandma had lunch. {{vision_response.evidence}}"
+                          telegram_attach_images: true   # forwards annotated_images from step 1
+```
+
+The `activity_detection` step writes a row that downstream rules can read via `verification`. The `cool_off_minutes: 120` plus `meal_lunch` activity record is what stops the next rule (below) from also firing.
+
+### Reminder when grandma has not had lunch by 14:00
+
+The goal: at 14:00, check whether a `meal_lunch` activity was recorded for grandma since 11:00. If not, remind her over the kitchen tablet and e-ink, and notify caregivers.
+
+**Rule settings:**
+
+- `trigger_type`: `cron`
+- `schedule_cron`: `0 14 * * *`
+- `dependencies`: must depend on the lunch-confirmation rule (above) so this rule does not fire on a day where the database write hasn't propagated.
+
+**Pipeline:**
+
+```text
+1. verification           conditions:
+                            - activity_type: meal_lunch
+                              person_id: grandma
+                              window_start: "11:00"
+                              window_end:   "14:00"
+                              min_confidence: 0.6
+                          On at-least-one match → end (status: ignored).
+2. notification           channels: [telegram]
+                          telegram_template: "Reminder: grandma hasn't been recorded as having lunch yet today."
+3. notification           channels: [pwa_tts_announcement, eink]
+                          pwa_tts_announcement_template: "Grandma, it's lunch time. Would you like me to suggest something?"
+                          eink_template_id: lunch_reminder
+```
+
+`verification` returns success and stops the pipeline (`should_continue=false`) when the activity exists, so the notifications never fire on a normal day.
+
+### Unknown person enters when grandma is alone
+
+The goal: if grandma is the only person home and an unidentified face is detected on the entry camera, send an emergency Telegram alert with an annotated image.
+
+**Rule settings:**
+
+- `trigger_type`: `sensor_event`
+- `primary_sensor_id`: entry camera
+- `cool_off_minutes`: `5` (we want quick re-firing if the person stays)
+
+**Filters:**
+
+| Filter | Config | Negate |
+| --- | --- | --- |
+| `home_state` | `person_id: grandma`, gate on `at_home` | no |
+| `person_presence` | `person_id: caregiver_1` | yes |
+| `person_presence` | `person_id: caregiver_2` | yes |
+
+**Pipeline:**
+
+```text
+1. person_identification  include_annotated_image: true
+2. condition              expression: any(person_detections, d -> d.identity == "unknown")
+                          on_true → step 3, on_false → end
+3. notification           channels: [telegram, pwa_popup_text]
+                          alert_level: emergency
+                          telegram_template: "Unknown person at the door while grandma is home alone."
+                          telegram_attach_images: true
+```
+
+This rule has zero LLM calls. It relies entirely on person identification and the `home_state` + `person_presence` filters, which makes it cheap enough to run on every entry-camera frame.
+
+::: tip Composing reminders with `interactive_prompt`
+
+The reminder examples above push notifications and stop. To turn a reminder into a two-way exchange, replace the final `notification` with an `interactive_prompt` step. It pushes the question through the same channels, persists a pending response, and resumes the workflow with the answer in `pipeline_data["interactive_response"]`. A downstream `condition` step can then branch on yes / no / timeout.
+
+:::
+
 ## Workflow Execution
 
 When a rule's pipeline is triggered, a `WorkflowExecution` record tracks the full lifecycle:

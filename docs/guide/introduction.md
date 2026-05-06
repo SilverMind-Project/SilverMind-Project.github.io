@@ -2,97 +2,118 @@
 
 Cognitive Companion is a privacy-first, on-premise AI system designed for senior care in multigenerational households. It processes camera feeds and sensor data through composable rule-based pipelines, using vision and language models running entirely on local hardware, to deliver context-aware reminders and alerts.
 
-## The Problem
+## The problem
 
 Seniors experiencing cognitive decline face a difficult tradeoff: full-time monitoring that strips away independence, or no monitoring at all. Existing solutions tend toward one extreme:
 
-- **Basic motion sensors** trigger too many false alarms and lack context awareness
-- **Cloud-based AI cameras** send private footage off-premises and require internet connectivity
-- **Full automation systems** remove the daily routines that maintain cognitive function
+- **Basic motion sensors** trigger too many false alarms and lack context awareness.
+- **Cloud-based AI cameras** send private footage off-premises and require internet connectivity.
+- **Full automation systems** remove the daily routines that maintain cognitive function.
 
-## The Approach
+## The approach
 
 Cognitive Companion takes a different path:
 
 1. **Understand context, not just motion.** Vision LLMs analyze *what is happening* in camera frames, not just whether something moved. A person standing in the kitchen at noon means something different than at 3 AM.
+2. **Composable rules, not rigid triggers.** Each rule defines its own pipeline of steps assembled in any order. No two rules need to follow the same pattern.
+3. **Gentle reminders, not automation.** The system suggests and reminds rather than acting autonomously. The goal is to preserve agency.
+4. **Privacy by architecture.** All inference runs on-premise via vLLM, llama.cpp, and the sibling AI services. Camera frames are stored in your own MinIO and never leave your network unless you configure an outbound channel.
+5. **Multigenerational by default.** Caregivers receive Telegram or webhook alerts; seniors interact via voice, popup, e-ink display, and TTS.
 
-2. **Composable rules, not rigid triggers.** Each rule defines its own pipeline of steps (person identification, vision analysis, logic reasoning, conditional branching, wait/resume) assembled in any order. No two rules need to follow the same pattern.
-
-3. **Gentle reminders, not automation.** The system suggests and reminds rather than acting autonomously. A lunch reminder is a reminder, not a robot bringing food. The goal is to preserve agency.
-
-4. **Privacy by architecture.** All AI inference runs on-premise via vLLM and Ollama. Camera frames are processed locally and stored in your own MinIO instance. Nothing leaves your network unless you explicitly configure an external notification channel.
-
-## How It Works
+## How it works
 
 ```text
- Edge Devices                         AI Pipeline                              Outputs
- ───────────                         ───────────                              ───────
+            ┌─────────── Edge devices ───────────┐
+            │  reCamera (HTTP push)              │
+            │  reTerminal (e-ink + button)       │
+            │  Home Assistant sensors (poll)     │
+            │  RTSP cameras → continuous-tracking│
+            └──────────────────┬─────────────────┘
+                               │
+                               ▼
+              ┌──────────────────────────────────┐
+              │   Cognitive Companion (FastAPI)  │
+              │                                  │
+              │  EventAggregator → RulesEngine   │
+              │              ↓ matched rules     │
+              │       PipelineExecutor           │
+              │   (19 step types, plugin-based)  │
+              │              ↓                   │
+              │       NotificationDispatcher     │
+              │   (7 channels, plugin-based)     │
+              │                                  │
+              │  CTSRuntime (Redis Streams)      │
+              │  PresenceService (fused)         │
+              │  MCP server (FastMCP, /mcp)      │
+              │  WebSocket audio (Gemini Live)   │
+              └────┬──────────┬──────────┬───────┘
+                   │          │          │
+                   ▼          ▼          ▼
+            person-id    scene-analysis  semantic-memory
+            service       service          service
+            (ArcFace)    (YOLO+Florence-2 (pgvector
+                          +CLIP)            observations)
+                   │
+                   ▼
+            tts-service (svara / fish_speech / edge_tts)
 
- reCamera ──┐                    ┌─► Person ID Service ──┐
-            │    ┌────────────┐  │   (InsightFace/ArcFace) │
- reTerminal─┼──► │   Event    │──┤                         ├─► Rules Engine
-            │    │ Aggregator │  │   ┌──────────────────┐  │   (context/deps/rate-limit)
- HA Sensors─┘    └────────────┘  ├─► │ Vision LLM       │  │        │
-                   MinIO ◄───────┘   │ (Cosmos Reason2) │──┘        ▼
-                  (media)            └──────────────────┘    ┌─────────────┐
-                                           │                 │  Logic LLM  │
-                                           ▼                 │  (Gemma3)   │
-                                  ┌────────────────┐         └──────┬──────┘
-                                  │ Translation    │                │
-                                  │(TranslateGemma)|◄───────────────┘
-                                  └────────┬───────┘
-                                           │
-                ┌──────────────────────────┼──────────────────────────┐
-                ▼              ▼           ▼           ▼              ▼
-           WebSocket      Telegram     eInk Display   TTS      Home Assistant
-           (frontend)     (caregiver)  (reTerminal)  (speaker) (actions + announce)
+            continuous-tracking/  (separate service family)
+            ├── rtsp-ingress (Go) → go2rtc + motion gate + MinIO
+            ├── tracking-orchestrator → YOLO26L + SOLIDER-REID
+            │                             + RTMPose + BoT-SORT
+            │                             + Bayesian identity
+            │                             + dementia signal worker
+            └── Redis Streams → CC subscribers
+                tracking.events / tracking.revisions / tracking.signals
 ```
 
 **Event flow:**
 
-1. **Edge devices** (cameras, sensors) send data to the backend
-2. The **Event Aggregator** batches frames by sensor with configurable windowing and cooldown
-3. The **Rules Engine** matches events against rules using context filters, dependencies, and rate limits
-4. Each matching rule's **composable pipeline** executes independently via the `PipelineExecutor`
-5. Pipeline steps can identify people, analyze scenes, reason about context, branch conditionally, wait and resume, and dispatch notifications
-6. **Outputs** flow to any combination of channels: WebSocket push, Telegram, e-ink displays, TTS speakers, realtime voice prompts, Home Assistant services, and outbound webhooks
+1. Edge devices (cameras, sensors, RTSP streams) send data to the backend or stream into the continuous-tracking service.
+2. The `EventAggregator` batches frames per sensor with windowing and cooldown.
+3. The `RulesEngine` matches each event against enabled rules using context filters, dependencies, and rate limits.
+4. Each matching rule's composable pipeline executes via the `PipelineExecutor`.
+5. Pipeline steps perform person identification, scene analysis, presence queries, LLM reasoning, condition branching, wait and resume, activity recording, daily reports, and so on.
+6. Outputs flow to any combination of channels: PWA popup, Telegram, e-ink display, HA Speaker TTS, PWA TTS announcement, PWA Realtime AI, and outbound webhooks.
 
-## Key Capabilities
+## Key capabilities
 
 | Capability | Description |
-|-----------|-------------|
-| **14 pipeline step types** | Person ID, scene analysis, object trend analysis, activity detection, activity session start/end, daily report, unified LLM call, wait, condition, verification, interactive prompt, notification, HA action |
-| **Person tracking** | ArcFace face recognition + Home Assistant sensor fusion for whole-house location |
-| **Activity tracking** | Detect and record activities (eating, sleeping, medication) for use in downstream rule context filters |
-| **Activity sessions** | Duration-aware open/close sessions with automatic stale cleanup |
-| **Daily reports** | End-of-day wellness scoring with LLM-enriched summaries |
-| **Interactive prompts** | Ask users questions via popup or voice, wait for response, and branch based on their answer or timeout |
-| **Motion direction** | Classify movement direction at doorways (left/right, towards/away) |
-| **Voice companion** | Real-time conversations via Google Gemini Live with WebSocket audio |
-| **E-ink displays** | Per-device notification images with template editor and automatic expiry |
-| **Multi-channel alerts** | PWA popup, Telegram, e-ink, HA Speaker TTS, PWA TTS announcements, PWA Realtime AI, and outbound webhook delivery with escalation policies |
-| **MCP tool server** | 23 tools (22 read-only plus rule triggering and interactive response recording) for AI agent integration via Model Context Protocol |
-| **RBAC authentication** | API keys, device keys, and fnmatch permission patterns |
-| **Tamil language support** | Translation and voice interaction in Tamil |
+| --- | --- |
+| 19 pipeline step types | `llm_call`, `person_identification`, `scene_analysis`, `semantic_memory_query`, `semantic_memory_write`, `object_trend_analysis`, `presence_query`, `home_state`, `notification`, `ha_action`, `activity_detection`, `activity_session_start`, `activity_session_end`, `daily_report`, `verification`, `condition`, `wait`, `interactive_prompt`, plus the deprecated `tracking_query`. |
+| 7 notification channels | `pwa_popup_text`, `pwa_realtime_ai`, `pwa_tts_announcement`, `telegram`, `eink`, `ha_speaker_tts`, `webhook`. |
+| 13 context filters | `room`, `time_range`, `day_of_week`, `person_presence`, `person_activity`, `room_transition`, `person_movement_memory`, `scene_contains`, `scene_trend`, `home_state`, `presence_status`, `presence_dwell`, `dementia_signal`. |
+| 6 trigger types | `sensor_event`, `cron`, `manual`, `webhook` (HMAC), `telegram` (bot command), `occupancy_duration`. |
+| Person tracking | ArcFace face recognition fused with HA presence sensors, with whole-house location. |
+| Multi-camera tracking | Optional `continuous-tracking-service` for BoT-SORT tracking, Bayesian identity resolution, and dementia signal generation. |
+| Activity tracking | Detect and record activities; duration-aware sessions; end-of-day wellness rollup with optional LLM summary. |
+| Voice companion | Realtime conversations via Google Gemini Live with WebSocket audio and tool calling. |
+| E-ink displays | Per-device notification images with template editor and refresh suppression. |
+| MCP tool server | 24 tools (read-only plus rule triggering and interactive response recording). |
+| Plugin systems | Step handlers, channels, and filters auto-discovered as Python files. |
+| RBAC | API keys, hardware device keys, and `fnmatch` permission patterns. |
 
-## Technology Stack
+## Technology stack
 
 | Layer | Technology |
-|-------|-----------|
-| Backend | Python 3.12, FastAPI, SQLAlchemy 2.0, Pydantic 2.0, APScheduler |
-| Frontend | Vue 3, Vuetify 3, Vite, Pinia |
-| Database | SQLite (WAL mode) |
+| --- | --- |
+| Backend | Python 3.12, FastAPI, SQLAlchemy 2.0, Pydantic 2, APScheduler |
+| Frontend | Vue 3, Vuetify 3, Vite |
+| Database | PostgreSQL 17 with Alembic migrations |
 | Vision LLM | Cosmos-Reason2-8B via vLLM |
-| Logic LLM | Gemma3 4B via Ollama |
-| Translation LLM | TranslateGemma-12B via vLLM |
+| General LLM | Gemma 4 26B via llama.cpp `llama-server` |
 | Voice | Google Gemini 2.5 Flash (Live API) |
-| Face Recognition | InsightFace buffalo_l with ArcFace embeddings |
-| Object Storage | MinIO (S3-compatible) |
-| Logging | Python stdlib logging with key=value context |
+| Face recognition | InsightFace `buffalo_l` with ArcFace embeddings |
+| Scene analysis | YOLO11x, Florence-2-large, CLIP ViT-L/14 |
+| Semantic memory | PostgreSQL + pgvector |
+| Multi-camera tracking | YOLO26L + SOLIDER-REID + RTMPose + BoT-SORT (Triton) |
+| Object storage | MinIO (S3-compatible) |
+| Logging | Python stdlib logging via a thin `BoundLogger` |
 
-## Next Steps
+## Next steps
 
-- [Quick Start](/guide/getting-started): Install and run the system
-- [Architecture](/guide/architecture): Deep dive into the system design
-- [Composable Pipelines](/features/pipeline): Understand the pipeline step system
-- [Development Setup](/development/setup): Set up a development environment
+- [Quick Start](/guide/getting-started): install and run the system.
+- [Architecture](/guide/architecture): deep dive into the system design.
+- [Composable Pipelines](/features/pipeline): full pipeline step reference and worked examples.
+- [Continuous Tracking](/features/continuous-tracking): multi-camera tracking and dementia signals.
+- [Development Setup](/development/setup): set up a development environment.
