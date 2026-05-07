@@ -22,7 +22,7 @@ These questions need persistent, multi-camera tracking with stable identity over
 | Multi-camera person tracking with BoT-SORT | `tracking-orchestrator` | Live tracking WebSocket at `/ws/cts`; admin views under `/admin/cts/*`. |
 | Bayesian identity resolution (ArcFace face + SOLIDER-REID body) | `tracking-orchestrator` | Identity corrections and revision log under `/admin/cts/identity-corrections`. |
 | Soft-revisable identity history | `IdentityRevision` on `tracking.revisions` | `IdentityRevisionSubscriber` rewrites `PersonLocationHistory`. The previous row is soft-deleted with `superseded_by_revision_id`; a corrected row is inserted. |
-| Per-room dwell and trajectory storage | TimescaleDB hypertables in CTS Postgres | `cts_dashboard` endpoints (signals, trajectory, dwell summary). |
+| Per-room dwell and trajectory storage | TimescaleDB hypertables in the shared Postgres instance (`continuous_tracking` database) | `cts_dashboard` endpoints (signals, trajectory, dwell summary). |
 | Tagged keyframes (with retention controls) | `OrchestratorClient` | `cts_keyframes` router, `/admin/cts/keyframes` view. |
 | Dementia signal generation | `tracking.signals` Redis stream | `DementiaSignalSubscriber` persists `DementiaSignal` rows; the `dementia_signal` filter and `presence_query` step expose them to rules. |
 | Fused presence | `services/presence/factory.py` chain in `config/presence.yaml` | `PresenceService` powers `presence_query`, `home_state`, and the `presence_status` / `presence_dwell` / `home_state` filters. |

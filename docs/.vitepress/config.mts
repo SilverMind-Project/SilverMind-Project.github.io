@@ -22,7 +22,7 @@ export default defineConfig({
       { text: "Development", link: "/development/setup" },
       { text: "Roadmap", link: "/roadmap" },
       {
-        text: "v2.0.0",
+        text: "v0.6.83",
         items: [
           {
             text: "Changelog",
@@ -54,6 +54,7 @@ export default defineConfig({
           text: "Core Features",
           items: [
             { text: "Composable Pipelines", link: "/features/pipeline" },
+            { text: "Knowledge Repository", link: "/features/knowledge-repository" },
             { text: "Person Tracking", link: "/features/person-tracking" },
             { text: "Continuous Tracking (CTS)", link: "/features/continuous-tracking" },
             { text: "Voice Companion", link: "/features/voice-companion" },

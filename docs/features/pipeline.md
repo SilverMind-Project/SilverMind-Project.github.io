@@ -245,6 +245,83 @@ Queries the [semantic-memory-service](/guide/architecture#semantic-memory-servic
 
 Graceful degradation: if `object_trend_client` is unavailable or the service returns no data, the step writes empty results and continues.
 
+#### `presence_query`
+
+Queries the fused [PresenceService](/guide/architecture#presence-fusion) for the current location and status of a person. Aggregates data from multiple providers (night anchor, HA bed sensor, CTS location, HA device tracker, stale fallback) via the priority chain in `config/presence.yaml`. Also fetches recent dementia signals when `services.signals` is wired.
+
+**Config fields:**
+
+- `person_id`: person to query. Leave blank to resolve from pipeline_data (sightings/persons).
+- `signal_kind`: filter recent dementia signals to this kind (e.g. `bathroom_dwell_anomaly`).
+- `signal_severity_min`: minimum severity for signal match (`info`, `warning`, `emergency`; default `info`).
+- `signal_window_minutes`: lookback for dementia signals in minutes (default `30`).
+- `output_key`: pipeline_data key for the result dict (default `presence`).
+
+**Output keys:**
+
+| Key | Type | Description |
+| --- | ---- | ----------- |
+| `{output_key}_status` | str | Presence status: `present_room`, `present_home`, `asleep`, `away`, `stale`, `unknown` |
+| `{output_key}_room_name` | str | Current room name (or null) |
+| `{output_key}_room_id` | str | Current room ID (or null) |
+| `{output_key}_dwell_minutes` | float | Minutes in current room |
+| `{output_key}_confidence` | float | Provider confidence (0-1) |
+| `{output_key}_signals` | list | Recent dementia signals matching filters |
+| `{output_key}_providers` | list | Active presence providers that contributed |
+| `{output_key}_timestamp` | str | ISO-8601 snapshot timestamp |
+| `presence_at_home` | bool | Convenience flat key: person is at home |
+| `presence_asleep` | bool | Convenience flat key: person is asleep |
+| `presence_away` | bool | Convenience flat key: person is away |
+
+Graceful degradation: when the PresenceService returns `UNKNOWN` or `STALE`, all keys default to empty/null and `presence_at_home` / `presence_asleep` / `presence_away` are all `false`.
+
+#### `home_state`
+
+A thin convenience wrapper around `presence_query` that emits exactly four boolean flags. Designed for use with `condition` steps that react to high-level home-state changes.
+
+**Config fields:**
+
+- `person_id`: person to query. Leave blank to resolve from pipeline_data.
+- `output_key`: pipeline_data key prefix for the result (default `home`).
+
+**Output keys:**
+
+| Key | Type | Description |
+| --- | ---- | ----------- |
+| `{output_key}_at_home` | bool | Person is in a known room or asleep (status `present_room`, `present_home`, or `asleep`) |
+| `{output_key}_asleep` | bool | Person is asleep (status `asleep`) |
+| `{output_key}_away` | bool | Person is away from home (status `away`) |
+| `{output_key}_state_unknown` | bool | Status is `unknown` or `stale` |
+
+These mirror the four boolean outputs of the `home_state` context filter, so the same logic used in rule filters is available inside a pipeline. When the presence service is unavailable, all four flags are `false`.
+
+#### `semantic_memory_query`
+
+Queries the [semantic-memory-service](/guide/architecture#semantic-memory-service) for recent scene observations, object presence, and hazard data in a room. Injects both structured results and a compact LLM-ready summary into `pipeline_data`.
+
+**Config fields:**
+
+- `room_id`: explicit room ID to query. Overrides `use_trigger_room`.
+- `use_trigger_room`: when `true`, uses the trigger's room. Default `true`.
+- `objects_limit`: max object presence records to return (default `10`).
+- `hazards_limit`: max hazard observations (default `5`).
+- `observations_limit`: max observation search hits (default `20`).
+- `within_minutes`: lookback window in minutes (default `60`).
+- `min_confidence`: minimum confidence for returned records (default `0.0`).
+- `output_key`: pipeline_data key for the result dict (default `memory_context`).
+
+**Output keys:**
+
+| Key | Type | Description |
+| --- | ---- | ----------- |
+| `{output_key}.recent_objects` | list | Object presence records with label, confidence, first/last seen timestamps |
+| `{output_key}.recent_hazards` | list | Hazard observations with flags, severity, confidence |
+| `{output_key}.observations` | list | Observation search hits with description, embedding distance |
+| `{output_key}.observations_count` | int | Total matching observations |
+| `{output_key}.summary` | str | Compact single-paragraph text ready for LLM prompt injection |
+
+Graceful degradation: when the semantic-memory-service is unreachable or disabled, the output contains empty lists and a "No memory context available." summary.
+
 #### `vision_analysis` _(deprecated)_
 
 ::: warning Deprecated — use `llm_call` instead

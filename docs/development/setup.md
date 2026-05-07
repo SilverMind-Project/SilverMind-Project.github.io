@@ -75,7 +75,7 @@ cd ..  # back to project root
 uv run --directory backend uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-The `--reload` flag enables hot-reloading on file changes. The SQLite database is auto-created at `data/cognitive_companion.db` on first startup.
+The `--reload` flag enables hot-reloading on file changes. The backend connects to PostgreSQL at the URL specified in `config/settings.yaml`.
 
 ### Lint, Type Check, and Format
 
@@ -123,9 +123,22 @@ npm run build                   # Output in dist/
 
 ## Database
 
-SQLite with SQLAlchemy 2.0 ORM. Tables are auto-created from model definitions on startup.
+PostgreSQL 18 via `timescale/timescaledb-ha:pg18` with SQLAlchemy 2.0 ORM. The shared database instance hosts `cognitive_companion`, `continuous_tracking`, and `semantic_memory` databases. Schema changes go through Alembic:
 
-**For schema changes:** Delete `data/cognitive_companion.db` and restart the backend. There are no migrations. The schema is defined entirely by the ORM models.
+```bash
+make migration        # Autogenerate a new migration from model changes
+make migrate          # Apply pending migrations
+```
+
+For local development, start the shared database:
+
+```bash
+docker compose -f docker-compose.db.yml -p nanai up -d
+```
+
+Or use the `standalone` profile for a self-contained Postgres: `docker compose --profile standalone up -d`.
+
+For tests, use PostgreSQL testcontainers. Do not use SQLite; the production schema uses PostgreSQL features.
 
 ## Person Identification Service
 
@@ -145,7 +158,7 @@ uv sync
 uv sync --extra cpu
 
 # Run
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8100 --reload
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8200 --reload
 ```
 
 Configuration is in `config/settings.yaml`. Override individual values via environment variables (e.g. `CUDA_DEVICE_ID=-1` for CPU fallback). See the service README for the full list.
@@ -165,7 +178,7 @@ uv run pytest                  # Tests
 
 ```bash
 docker compose up -d
-curl http://localhost:8100/health
+curl http://localhost:8200/health
 ```
 
 Requires NVIDIA Container Toolkit. See the person-ID service README for Kubernetes manifests.
@@ -180,7 +193,7 @@ For local development, you need these services running:
 | vLLM (Translate) | `http://localhost:8002/v1` | Language translation |
 | Ollama | `http://localhost:11434` | Logic reasoning |
 | MinIO | `http://localhost:9000` | Media storage |
-| Person ID Service | `http://localhost:8100` | Face recognition |
+| Person ID Service | `http://localhost:8200` | Face recognition |
 | Home Assistant | `http://homeassistant.local:8123` | Sensor integration |
 
 ::: tip
@@ -209,7 +222,7 @@ cognitive-companion/
 │   ├── router/                 # Route definitions
 │   └── stores/                 # Pinia state management
 ├── config/                     # YAML configuration files
-├── data/                       # Runtime data (SQLite DB, media cache)
+├── data/                       # Runtime data, media cache
 ├── backend/pyproject.toml      # Python project metadata
 └── backend/uv.lock             # Locked dependency versions
 ```
@@ -217,7 +230,7 @@ cognitive-companion/
 ## Key Files to Read First
 
 | File | Why |
-|------|-----|
+| ------ | ----- |
 | `backend/main.py` | Lifespan wires all services and shows how everything connects |
 | `backend/services/pipeline_executor.py` | The composable pipeline executor |
 | `backend/models/pipeline.py` | PipelineStep, WorkflowExecution, STEP_TYPES |

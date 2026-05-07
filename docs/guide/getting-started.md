@@ -5,7 +5,7 @@ This guide walks you through getting Cognitive Companion running on your local n
 ## Prerequisites
 
 | Component | Purpose | Notes |
-|-----------|---------|-------|
+| --- | --- | --- |
 | **NVIDIA GPU** (10 GB+ VRAM) | Person-ID service + vLLM + Ollama | RTX 3060 or better |
 | **Docker** + NVIDIA Container Toolkit | Container runtime | For all services |
 | **Home Assistant** | Sensor integration, audio playback, actions | REST API + long-lived token |
@@ -19,7 +19,7 @@ This guide walks you through getting Cognitive Companion running on your local n
 ### Optional Components
 
 | Component | Purpose |
-|-----------|---------|
+| --- | --- |
 | Telegram Bot | Caregiver alert notifications |
 | Google Gemini API | Real-time voice conversations |
 | TTS service | Text-to-speech announcements |
@@ -50,7 +50,7 @@ MINIO_ACCESS_KEY=minioadmin
 MINIO_SECRET_KEY=minioadmin
 
 # Person Identification
-PERSON_ID_SERVICE_URL=http://localhost:8100
+PERSON_ID_SERVICE_URL=http://localhost:8200
 
 # Authentication
 CC_ADMIN_API_KEY=your_admin_key
@@ -62,20 +62,26 @@ Review `config/settings.yaml` for application behavior: event aggregation window
 
 ## Step 2: Start All Services
 
-### Option A: Docker Compose (recommended)
-
-The fastest way to run the full stack. From the parent directory containing both repositories:
+### Option A: Docker Compose
 
 ```bash
-# Start backend, frontend, person-ID (GPU), and MinIO
-docker compose up -d
+# 1. Start the shared PostgreSQL instance first (hosts all 3 project databases)
+docker compose -f docker-compose.db.yml -p nanai up -d
 
-# Verify
+# 2. Start each subproject (pulls in shared DB via include)
+cd cognitive-companion && docker compose up -d
+cd ../continuous-tracking && docker compose --profile app up -d
+cd ../semantic-memory-service && docker compose up -d
+
+# 3. Initialize the cognitive-companion database
+cd ../cognitive-companion && make init-db
+
+# 4. Verify
 curl http://localhost:8000/api/v1/health   # Backend
-curl http://localhost:8100/health           # Person-ID service
+curl http://localhost:8400/health           # Semantic Memory
 ```
 
-Docker Compose handles inter-service networking automatically. The backend connects to `person-id:8100` and `minio:9000` internally.
+Docker Compose handles inter-service networking automatically. The shared `timescale/timescaledb-ha:pg18` container hosts `cognitive_companion`, `continuous_tracking`, and `semantic_memory` databases. Each service connects with its own database user.
 
 ::: tip
 The person-ID service requires GPU access. Ensure the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) is installed.
@@ -90,7 +96,7 @@ See [Deployment](/guide/deployment) for the full Docker Compose and Kubernetes r
 ```bash
 cd ../person-identification-service
 docker build -t person-id-service .
-docker run --gpus all -p 8100:8100 -v ./data:/app/data person-id-service
+docker run --gpus all -p 8200:8200 -v ./data:/app/data person-id-service
 ```
 
 See the [Person Identification Service README](https://github.com/SilverMind-Project/person-identification-service) for enrollment instructions and API documentation.
@@ -159,9 +165,3 @@ person_identification → llm_call (vision) → llm_call (reasoning) → notific
 
 The rule will now execute whenever the bound camera sends an event. You can monitor execution in the **Workflows** view and inspect pipeline data in the **Events** log.
 
-## What's Next
-
-- [Configuration Reference](/guide/configuration): All settings explained
-- [Architecture Deep Dive](/guide/architecture): How the system is designed
-- [Pipeline Step Types](/features/pipeline): All 10 step types explained
-- [Hardware Setup](/hardware/): Setting up cameras and displays

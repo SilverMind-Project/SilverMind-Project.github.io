@@ -9,7 +9,7 @@ Variables are interpolated into YAML config files using `${ENV_VAR}` syntax. Def
 ### Required Variables
 
 | Variable | Description |
-|----------|-------------|
+| ---------- | ------------- |
 | `VISION_MODEL_URL` | Vision model endpoint  -  Cosmos Reason2 (OpenAI-compatible) |
 | `TRANSLATE_MODEL_URL` | Translation model endpoint  -  TranslateGemma (OpenAI-compatible) |
 | `LOGIC_MODEL_URL` | Logic/reasoning model endpoint  -  Gemma3 (OpenAI-compatible) |
@@ -24,7 +24,7 @@ Variables are interpolated into YAML config files using `${ENV_VAR}` syntax. Def
 ### Optional Variables
 
 | Variable | Description |
-|----------|-------------|
+| ---------- | ------------- |
 | `GEMINI_API_KEY` | Google Gemini API key (real-time voice) |
 | `TTS_API_URL` | Text-to-speech service endpoint |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token |
@@ -48,11 +48,11 @@ interval = settings.get("homeassistant.poll_interval_seconds", 30)
 ### Sections
 
 | Section | Controls |
-|---------|----------|
+| --------- | ---------- |
 | `app` | Application name, version, timezone, debug mode |
 | `server` | Host and port binding |
 | `cors` | Allowed origins for frontend access |
-| `database` | SQLite database URL |
+| `database` | PostgreSQL connection URL and pool settings |
 | `llm` | Vision, logic, translation, and realtime LLM provider configs |
 | `tts` | TTS voice and speed settings |
 | `homeassistant` | HA URL, token, polling interval |
@@ -308,10 +308,109 @@ notification_defaults:
 ```
 
 | Level | Default Channels | Escalation |
-|-------|-----------------|------------|
+| ------- | ----------------- | ------------ |
 | `emergency` | PWA Popup Text, Telegram, eInk, HA Speaker TTS | Every 5 min, 3x repeat |
 | `warning` | PWA Popup Text, Telegram, eInk, PWA Realtime AI | Every 10 min |
 | `info` | PWA Popup Text only | None |
 | `reminder` | PWA Popup Text, HA Speaker TTS, eInk | None |
 
 The `webhook` channel is configured globally here but is opt-in by default. Add `webhook` to a level's `channels` list, or set it per `notification` step through the pipeline builder. A step-level `webhook_url` overrides `webhook.url`.
+
+## knowledge_layouts.yaml {#knowledge-layouts}
+
+Defines image layout specs for info cards and quiz questions. See [Knowledge Repository: Info Cards](/features/knowledge-repository#info-cards) for how layouts drive the image pipeline.
+
+```yaml
+layouts:
+  - id: text_only
+    display_name: "Text only"
+    applies_to: [info_card]
+    surfaces: [pwa, eink]
+    min_images: 0
+    max_images: 0
+    image_slots: []
+
+  - id: single_hero
+    display_name: "Single hero image"
+    applies_to: [info_card]
+    surfaces: [pwa, eink]
+    min_images: 1
+    max_images: 1
+    image_slots:
+      - slot_id: hero
+        variants:
+          pwa:
+            target_width: 1280
+            target_height: 720
+            fit_mode: cover
+            color_mode: rgb
+            format: webp
+            quality: 85
+          eink:
+            target_width: 800
+            target_height: 480
+            fit_mode: contain
+            color_mode: bw_dither
+            format: png
+```
+
+Each layout defines: which surfaces it targets (PWA, e-ink), how many images are required, and per-slot variant specs (target dimensions, fit mode, color mode, output format). Layouts are validated at startup — unknown enum values raise immediately.
+
+Five layouts ship by default: `text_only`, `single_hero`, `side_by_side`, `gallery_grid_2x2`, `quiz_with_optional_image`.
+
+## knowledge_voice.yaml {#knowledge-voice}
+
+Default voice instructions for Gemini Live during knowledge delivery. Overridden per-resource when the caregiver sets a custom `voice_instruction` on the info card, quiz, or pipeline step.
+
+```yaml
+interactive_prompt_default: ""
+
+info_card_default: >
+  You are now delivering an information card to the senior. Read the
+  following content aloud in a warm, clear voice. After reading, ask
+  if they have any questions about this information.
+
+quiz_default: >
+  You are now conducting a quiz with the senior. Read each question
+  aloud clearly. Provide brief, encouraging feedback after each answer.
+  Do NOT reveal correct answers during the quiz.
+```
+
+Voice instructions compose in 3 layers: step override → resource column → YAML default → base system instruction from `settings.yaml` (`llm.realtime.system_instruction`). See [Knowledge Repository: Voice Instruction System](/features/knowledge-repository#voice-instruction-system) for the full composition rule.
+
+## Embedding and knowledge settings {#knowledge-settings}
+
+Added to `settings.yaml` under the `embedding:` and `knowledge:` keys:
+
+```yaml
+embedding:
+  triton_url: "triton.nanai.khoofia.com:8001"
+  model_name: "embeddinggemma-300m"
+  tokenizer_path: "/opt/models/embeddinggemma/tokenizer.json"
+  dim: 768
+  max_seq_len: 2048
+  batch_size: 16
+
+knowledge:
+  chunk_size_tokens: 400
+  chunk_overlap_tokens: 60
+  retrieval_top_k: 8
+  min_similarity: 0.55
+  answer_model: "gemma4_26b"
+  paraphrase_model: "gemma4_26b"
+  quiz_generation_model: "gemma4_26b"
+  max_upload_bytes: 15728640
+  max_pixels: 40000000
+  allowed_mime_types: ["image/jpeg", "image/png", "image/webp", "image/heic"]
+  layouts_file: "config/knowledge_layouts.yaml"
+  voice_config_file: "config/knowledge_voice.yaml"
+```
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| `embedding.dim` | 768 | Must match the deployed model. Change requires migration + re-embed. |
+| `knowledge.min_similarity` | 0.55 | Cosine threshold for RAG answers. Lower = more answers, higher = stricter. |
+| `knowledge.chunk_size_tokens` | 400 | Approximated as 4× characters. |
+| `knowledge.retrieval_top_k` | 8 | Chunks retrieved per query. |
+| `knowledge.max_upload_bytes` | 15 MB | Per-image upload limit. |
+| `knowledge.max_pixels` | 40 MP | Decoded image dimension cap. |

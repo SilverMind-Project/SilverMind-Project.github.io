@@ -118,15 +118,13 @@ This pattern ensures:
 
 ## Core Foundation Layer
 
-Every other backend package depends on a small, deliberately boring layer at
-`backend/core/`. It is the part of the codebase most tightly held to the
-quality bar you would expect from a company shipping medical-adjacent
-infrastructure.
+`backend/core/` is the foundation layer every other backend package depends on.
+It is the most tightly tested and typed package in the codebase.
 
 | Module | Responsibility | Public surface |
 | --- | --- | --- |
 | `config.py` | YAML configuration with `${ENV_VAR}` interpolation | `Settings` class, `settings` singleton |
-| `database.py` | SQLAlchemy engine, session factory, SQLite pragma wiring | `Database` class, `Base`, `init_db`, `get_db`, `get_session` |
+| `database.py` | SQLAlchemy engine, session factory, PostgreSQL pool | `Database` class, `Base`, `init_db`, `get_db`, `get_session` |
 | `auth.py` | API + device key resolution, fnmatch permission checks | `KeyStore` class, `AuthContext`, `get_auth_context`, `require_permission` |
 | `exceptions.py` | HTTP-aware error hierarchy and FastAPI handler | `AppError`, `NotFoundError`, `ConflictError`, `AuthenticationError`, `PermissionDeniedError`, `ValidationError` |
 | `logging.py` | Structured stdlib logging wrapper | `BoundLogger`, `get_logger`, `setup_logging` |
@@ -186,19 +184,18 @@ orchestration, conversation management, RAG lookup, and media processing.
 | Build | `make test-services` or `make check-all` (adds services to the pre-commit gate) |
 
 The remaining services (person tracking, sensor polling, telegram trigger) are
-integration-heavy and are on a separate pass with substantial HTTP mocking
-investment.
+integration-heavy and use extensive HTTP mocking in their test suites.
 
 ## Database
 
-PostgreSQL 17 with SQLAlchemy 2.0 ORM. Schema changes go through Alembic via `make migration` (autogenerate) and `make migrate` (apply). Tests use a PostgreSQL testcontainer started by the shared `db_engine` / `db_session` / `db_factory` fixtures in `backend/tests/conftest.py`.
+PostgreSQL 18 via `timescale/timescaledb-ha:pg18` with TimescaleDB, PostGIS, pgvector, and pgvectorscale (StreamingDiskANN) extensions. The shared instance hosts three databases: `cognitive_companion`, `continuous_tracking`, and `semantic_memory`. SQLAlchemy 2.0 ORM. Schema changes go through Alembic via `make migration` (autogenerate) and `make migrate` (apply). Tests use a PostgreSQL testcontainer started by the shared `db_engine` / `db_session` / `db_factory` fixtures in `backend/tests/conftest.py`.
 
 `Database.create_all()` is used only in development and tests; it is not the production schema path.
 
 Key models:
 
 | Model | Purpose |
-|-------|---------|
+| ------- | --------- |
 | `Rule` | Automation rule with trigger type, schedule, and rate limits |
 | `PipelineStep` | One step in a rule's pipeline with type, config, and ordering |
 | `WorkflowExecution` | Tracks a single pipeline run including paused/waiting state |
@@ -217,7 +214,7 @@ Key models:
 Three key types with different resolution methods:
 
 | Type | Format | Resolution |
-|------|--------|-----------|
+| ------ | -------- | ----------- |
 | API Key | Arbitrary string | `X-API-Key` header or `?api_key` query param |
 | Device Key | 8-char uppercase alphanumeric | `device_key` in JSON body |
 | MCP Key | Arbitrary string | `X-API-Key` header |

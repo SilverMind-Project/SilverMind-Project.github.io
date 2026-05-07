@@ -26,13 +26,13 @@ docker compose up -d
 
 # 3. Verify
 curl http://localhost:8000/api/v1/health
-curl http://localhost:8100/health
+curl http://localhost:8200/health
 ```
 
 ### Cognitive Companion (`cognitive-companion/docker-compose.yml`)
 
 | Service    | Container     | Port | Notes               |
-|------------|---------------|------|---------------------|
+| ------------ | --------------- | ------ | --------------------- |
 | `backend`  | `cc-backend`  | 8000 | FastAPI backend     |
 | `frontend` | `cc-frontend` | 80   | Vue 3 SPA via nginx |
 
@@ -41,8 +41,8 @@ The backend Dockerfile lives at `backend/Dockerfile` and uses the repository roo
 ### Person Identification Service (`person-identification-service/docker-compose.yml`)
 
 | Service     | Container   | Port | Notes                |
-|-------------|-------------|------|----------------------|
-| `person-id` | `person-id` | 8100 | GPU face recognition |
+| ------------- | ------------- | ------ | ---------------------- |
+| `person-id` | `person-id` | 8200 | GPU face recognition |
 
 Requires the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) for GPU access.
 
@@ -72,7 +72,7 @@ MINIO_ACCESS_KEY=minioadmin
 MINIO_SECRET_KEY=minioadmin
 
 # Person Identification Service
-PERSON_ID_SERVICE_URL=http://localhost:8100
+PERSON_ID_SERVICE_URL=http://localhost:8200
 
 # Telegram notifications
 TELEGRAM_BOT_TOKEN=
@@ -93,8 +93,8 @@ When running inside Docker, use `host.docker.internal` instead of `localhost` to
 The following services run **outside** Docker Compose and must be accessible from the backend container:
 
 | Service                       | Purpose                             | Default URL                       |
-|-------------------------------|-------------------------------------|-----------------------------------|
-| **Person ID Service**         | Face recognition + motion detection | `http://localhost:8100`           |
+| ------------------------------- | ------------------------------------- | ----------------------------------- |
+| **Person ID Service**         | Face recognition + motion detection | `http://localhost:8200`           |
 | **vLLM** (Cosmos-Reason2-8B)  | Vision analysis                     | `http://localhost:8001/v1`        |
 | **vLLM** (TranslateGemma-12b) | Translation                         | `http://localhost:8002/v1`        |
 | **Ollama** (gemma3:4b)        | Logic reasoning                     | `http://localhost:11434`          |
@@ -105,8 +105,8 @@ The following services run **outside** Docker Compose and must be accessible fro
 ### Persistent Volumes
 
 | Volume           | Compose File                  | Container Path | Contents                                     |
-|------------------|-------------------------------|----------------|----------------------------------------------|
-| `backend-data`   | cognitive-companion           | `/app/data`    | SQLite database, media cache                 |
+| ------------------ | ------------------------------- | ---------------- | ---------------------------------------------- |
+| `backend-data`   | cognitive-companion           | `/app/data`    | PostgreSQL data, media cache                 |
 | `person-id-data` | person-identification-service | `/app/data`    | Face embeddings, enrollment DB, guest images |
 
 ### Frontend Image
@@ -132,20 +132,24 @@ Internet / LAN
        ▼
 ┌──────────────────────────────────────────────┐
 │  nginx ingress (single LoadBalancer IP)      │
-│  ├─ nanai.khoofia.com     → cc-ui-svc:80    │
-│  ├─ api.nanai.khoofia.com → cc-backend:8000 │
+│  ├─ nanai.khoofia.com     → ai-api-gateway-frontend-svc:80 │
+│  ├─ api.nanai.khoofia.com → ai-api-gateway-svc:8000        │
 │  ├─ :8000-8002 (TCP)      → vllm-svc        │
-│  └─ :5432 (TCP)           → pgedge-n1-rw    │
+│  └─ :5432 (TCP)           → postgres-0.postgres.nanai    │
 └──────────────────────────────────────────────┘
        │
        ▼
 ┌──────────────────────────────────────────────┐
-│  default namespace                           │
+│  nanai namespace                             │
 │  ├─ ai-api-gateway (backend, port 8000)      │
-│  ├─ cognitive-companion-ui (frontend, :80)   │
-│  ├─ person-id (GPU, port 8100)               │
-│  ├─ vllm-svc (GPU, ports 8000-8002)         │
-│  └─ pgedge-n1-rw (postgres, port 5432)      │
+│  ├─ ai-api-gateway-frontend (frontend, :80)  │
+│  ├─ person-id (GPU, port 8200)               │
+│  ├─ tracking-orchestrator (port 8000)        │
+│  ├─ rtsp-ingress (port 8090) + go2rtc       │
+│  ├─ triton (GPU, ports 8000-8002)           │
+│  ├─ tts-service (GPU, port 8600)            │
+│  ├─ postgres (shared, port 5432)             │
+│  └─ redis (port 6379)                        │
 ├──────────────────────────────────────────────┤
 │  minio-operator namespace                    │
 │  └─ minio (S3, port 80)                     │
@@ -154,90 +158,93 @@ Internet / LAN
 
 ### Design Principles
 
+- **Single namespace (`nanai`)**: all application workloads, databases, and shared infrastructure run in the same namespace for simplified DNS (`postgres.nanai.svc.cluster.local`) and RBAC.
 - **ClusterIP services**: all services use ClusterIP, routed through a single nginx ingress. No unnecessary LoadBalancer IPs.
 - **Secrets separated from ConfigMaps**: sensitive values (API keys, tokens) in Kubernetes Secrets; service URLs and non-sensitive config in ConfigMaps.
 - **Health probes**: readiness and liveness probes on all pods for automatic restart and traffic routing.
-- **Base + overlay**: environment-agnostic manifests in `base/`, cluster-specific values in `local/` (or your own overlay directory).
+- **Kustomize base + overlay**: portable base manifests in `kubernetes/` use `IMAGE_PLACEHOLDER`; the `overlays/local/` directory patches in registry images and cluster-specific values.
 
 ### Manifest Structure
 
-**cognitive-companion/kubernetes/**
+All subproject manifests are consolidated under `kubernetes/` at the monorepo root, organized by service and infrastructure layer.
 
 ```text
 kubernetes/
-├── base/
-│   ├── deployment.yaml          # Backend deployment
-│   ├── service.yaml             # Backend ClusterIP (port 8000)
-│   ├── pvc.yaml                 # 10Gi volume for SQLite/data
-│   ├── configmap.yaml           # Non-sensitive env vars
-│   ├── configmap-files.yaml     # settings.yaml, auth.yaml, notifications.yaml
-│   ├── secret.yaml              # Sensitive env vars (fill before use)
-│   ├── frontend-deployment.yaml # Frontend deployment
-│   └── frontend-service.yaml    # Frontend ClusterIP (port 80)
-├── local/
-│   ├── deployment.yaml          # Backend with localhost:32000 image
-│   ├── frontend-deployment.yaml # Frontend with localhost:32000 image
-│   ├── configmap.yaml           # Cluster-internal service URLs
-│   ├── secret.yaml              # Local secrets (fill with base64)
-│   ├── ingress.yaml             # TLS ingress rules
-│   └── build-and-deploy.sh      # Build + apply helper script
-└── README.md
-```
-
-**person-identification-service/kubernetes/**
-
-```text
-kubernetes/
-├── base/
-│   ├── deployment.yaml    # GPU deployment (nvidia.com/gpu: 1)
-│   ├── service.yaml       # ClusterIP on port 8100
-│   └── pvc.yaml           # 5Gi volume for embeddings/guests
-└── local/
-    └── deployment.yaml    # localhost:32000 registry image
+├── namespace.yaml                   # nanai namespace (restricted PodSecurity)
+├── kustomization.yaml               # Root aggregator
+├── infrastructure/
+│   ├── postgres.yaml                # Shared TimescaleDB StatefulSet + headless Service
+│   ├── postgres-configmap.yaml      # Database init script (creates 3 databases)
+│   └── redis.yaml                   # Redis StatefulSet + Service
+├── cognitive-companion/
+│   ├── deployment.yaml              # Backend deployment (PostgreSQL env vars)
+│   ├── frontend-deployment.yaml     # Vue 3 frontend deployment
+│   ├── services.yaml                # Backend + frontend ClusterIP services
+│   ├── configmap.yaml               # settings.yaml, auth.yaml, notifications.yaml
+│   ├── pvc.yaml                     # Backend data PVC
+│   └── secrets.yaml                 # cc-secrets + nanai-postgres credentials
+├── continuous-tracking/
+│   ├── orchestrator.yaml            # Deployment + Service + HPA + PDB + SA
+│   ├── rtsp-ingress.yaml            # Deployment + go2rtc sidecar + NetworkPolicy
+│   ├── triton.yaml                  # Triton Inference Server + PVC
+│   ├── configmap.yaml               # Orchestrator + ingress + go2rtc configs
+│   └── secrets.yaml                 # cts-minio + cc-service-tokens
+├── person-identification/
+│   ├── deployment.yaml              # GPU deployment (nvidia.com/gpu: 1)
+│   ├── service.yaml                 # ClusterIP on port 8200
+│   └── pvc.yaml                     # Data PVC
+├── tts-service/
+│   ├── deployment.yaml              # GPU deployment
+│   ├── service.yaml                 # ClusterIP on port 8600
+│   └── pvc.yaml                     # Data PVC
+└── overlays/
+    └── local/
+        ├── kustomization.yaml       # localhost:32000 image patches
+        └── patches/                 # Per-service image + ingress patches
 ```
 
 ### Services
 
 | Service | Name | Port | Type |
-|---------|------|------|------|
+| --------- | ------ | ------ | ------ |
 | Backend API | `ai-api-gateway-svc` | 8000 | ClusterIP |
-| Frontend | `cognitive-companion-ui-svc` | 80 | ClusterIP |
-| Person ID | `person-id-svc` | 8100 | ClusterIP |
+| Frontend | `ai-api-gateway-frontend-svc` | 80 | ClusterIP |
+| Person ID | `person-id-svc` | 8200 | ClusterIP |
+| TTS | `tts-svc` | 8600 | ClusterIP |
+| Tracking Orchestrator | `tracking-orchestrator` | 8000 | ClusterIP |
+| Triton | `triton` | 8001 (gRPC) | ClusterIP |
+| RTSP Ingress | `rtsp-ingress` | 8090 | ClusterIP |
+| **Infrastructure** | | | |
+| PostgreSQL (shared) | `postgres` | 5432 | Headless |
+| Redis | `redis` | 6379 | Headless |
 
 ### Deploying to a Local Cluster
 
 ```bash
-# 1. Fill in secrets (base64-encoded values)
+# 1. Create the namespace
+kubectl apply -f kubernetes/namespace.yaml
+
+# 2. Fill in secrets (base64-encoded values)
 #    echo -n "your-value" | base64
-vi cognitive-companion/kubernetes/local/secret.yaml
+vi kubernetes/cognitive-companion/secrets.yaml
+vi kubernetes/continuous-tracking/secrets.yaml
 
-# 2. Build images and deploy everything
-cd cognitive-companion/kubernetes/local
-./build-and-deploy.sh all
+# 3. Deploy everything via Kustomize
+kubectl apply -k kubernetes/overlays/local/
 
-# 3. Check status
-microk8s kubectl get pods
-microk8s kubectl get svc
-microk8s kubectl get ingress
-```
-
-The `build-and-deploy.sh` script supports deploying individual components:
-
-```bash
-./build-and-deploy.sh backend    # Backend only
-./build-and-deploy.sh frontend   # Frontend only
-./build-and-deploy.sh person-id  # Person-ID service only
-./build-and-deploy.sh ingress    # Ingress rules only
+# 4. Check status
+kubectl -n nanai get pods
+kubectl -n nanai get svc
+kubectl -n nanai get ingress
 ```
 
 ### Ingress Configuration
 
-The local overlay includes TLS ingress rules for two hostnames:
+The local overlay includes a TLS ingress for the API:
 
 | Host | Backend |
-|------|---------|
+| ------ | --------- |
 | `api.nanai.khoofia.com` | `ai-api-gateway-svc:8000` |
-| `nanai.khoofia.com` | `cognitive-companion-ui-svc:80` |
 
 TLS certificates are provisioned automatically by cert-manager with the `letsencrypt-prod` ClusterIssuer.
 
@@ -258,30 +265,27 @@ This requires the [NVIDIA GPU Operator](https://docs.nvidia.com/datacenter/cloud
 ### Persistent Volumes
 
 | PVC | Size | Contents |
-|-----|------|----------|
-| `cc-backend-data` | 10Gi | SQLite database, media cache |
+| ----- | ------ | ---------- |
+| `data-postgres-0` | 100Gi | PostgreSQL data (3 databases, all extensions) |
+| `data-redis-0` | 20Gi | Redis AOF persistence |
+| `cc-backend-data` | 5Gi | Backend runtime data |
 | `person-id-data` | 5Gi | Face embeddings, enrollment DB, guest images |
+| `tts-service-data` | 20Gi | TTS model cache |
+| `triton-models` | 50Gi | Triton ONNX models |
 
-Both use the `microk8s-hostpath` storage class. Adjust the `storageClassName` in the PVC manifests for other environments.
+For production, use a cloud-provider storage class. For local microk8s, use `microk8s-hostpath`.
 
-### Migrating from v1
+### Migrating from previous deployments
 
-If you're replacing the original `cognitive-companion` (v1) deployment:
+If you're replacing older per-service Kubernetes manifests:
 
-| Change | v1 | v2 |
-|--------|----|----|
-| Backend port | 8100 | 8000 |
-| Service type | LoadBalancer | ClusterIP (behind ingress) |
-| Person-ID | External | In-cluster GPU pod |
+| Change | Previous | Current |
+| -------- | ---------- | --------- |
+| Namespace | `default` / `cts` (split) | `nanai` (unified) |
+| PostgreSQL | 3 separate containers | 1 shared `timescale/timescaledb-ha:pg18` |
+| Manifest location | `subproject/kubernetes/` | `kubernetes/<service>/` (consolidated) |
 | Config | Inline env vars in deployment | ConfigMap + Secret |
-| Health probes | None | Readiness + liveness |
+| Health probes | Varies | Readiness + liveness on all pods |
+| Manifest format | Individual YAML files | Kustomize base + overlays |
 
-The v2 deployment uses the same service names (`ai-api-gateway-svc`, `cognitive-companion-ui-svc`), so applying the v2 manifests replaces v1 in-place. Verify the new pods are healthy before removing any v1-specific resources.
-
----
-
-## What's Next
-
-- [Configuration Reference](/guide/configuration): all settings explained
-- [Architecture](/guide/architecture): how the system is designed
-- [Development Setup](/development/setup): local development environment
+The unified deployment uses the same service names (`ai-api-gateway-svc`, `person-id-svc`), so applying the new manifests replaces old ones in-place. Verify the new pods are healthy before removing any old resources.

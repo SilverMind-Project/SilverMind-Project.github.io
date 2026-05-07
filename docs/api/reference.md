@@ -242,6 +242,90 @@ Device endpoints accept authentication via `device_key` in the JSON body.
 |--------|------|-------------|
 | `GET` | `/occupancy` | Room occupancy from presence sensors |
 
+## Knowledge Repository
+
+See [Knowledge Repository](/features/knowledge-repository) for full feature documentation.
+
+### Documents
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/knowledge/documents` | Create document (multipart: title, source_text, tags, images[]) |
+| `GET` | `/api/v1/knowledge/documents` | List documents (filters: status, tag, q) |
+| `GET` | `/api/v1/knowledge/documents/{id}` | Get document with images and chunk count |
+| `PATCH` | `/api/v1/knowledge/documents/{id}` | Update title, source_text, tags |
+| `DELETE` | `/api/v1/knowledge/documents/{id}` | Hard delete (409 if active artifacts reference it) |
+| `POST` | `/api/v1/knowledge/documents/{id}/approve` | Approve document for use |
+| `POST` | `/api/v1/knowledge/documents/{id}/archive` | Soft-delete (restorable) |
+| `POST` | `/api/v1/knowledge/documents/{id}/restore` | Restore from archive |
+| `POST` | `/api/v1/knowledge/documents/{id}/reembed` | Force re-chunk and re-embed |
+| `POST` | `/api/v1/knowledge/documents/{id}/images` | Attach image to document |
+| `PATCH` | `/api/v1/knowledge/documents/{id}/images/{img_id}` | Update image alt_text, ord |
+| `DELETE` | `/api/v1/knowledge/documents/{id}/images/{img_id}` | Delete image from document |
+
+### Info Cards
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/info-cards` | Create info card (layout_id, title, body_text, voice_instruction) |
+| `POST` | `/api/v1/info-cards/suggest` | LLM-generated paraphrase from document |
+| `GET` | `/api/v1/info-cards` | List info cards (filters: status, tag, document_id) |
+| `GET` | `/api/v1/info-cards/{id}` | Get info card with resolved slot manifest |
+| `PATCH` | `/api/v1/info-cards/{id}` | Update fields; layout change re-renders variants |
+| `DELETE` | `/api/v1/info-cards/{id}` | Hard delete (409 if referenced by active step) |
+| `POST` | `/api/v1/info-cards/{id}/approve` | Approve card (validates min_images for layout) |
+| `POST` | `/api/v1/info-cards/{id}/archive` | Soft-delete |
+| `POST` | `/api/v1/info-cards/{id}/restore` | Restore from archive |
+| `PUT` | `/api/v1/info-cards/{id}/slots/{i}` | Set/replace slot image (triggers variant render) |
+| `PATCH` | `/api/v1/info-cards/{id}/slots/{i}` | Update slot alt_text, crop_hints |
+| `DELETE` | `/api/v1/info-cards/{id}/slots/{i}` | Clear slot and purge variants |
+| `POST` | `/api/v1/info-cards/{id}/rerender` | Force re-render all slot variants |
+
+### Quizzes
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/quizzes` | Create quiz (title, question_layout_id, intro_voice_template, voice_instruction) |
+| `POST` | `/api/v1/quizzes/suggest` | LLM-generated quiz draft from document |
+| `POST` | `/api/v1/quizzes/voice-instruction-suggest` | LLM-generated voice instruction |
+| `GET` | `/api/v1/quizzes` | List quizzes (filters: status, tag) |
+| `GET` | `/api/v1/quizzes/{id}` | Get quiz with ordered questions |
+| `PATCH` | `/api/v1/quizzes/{id}` | Update quiz fields |
+| `DELETE` | `/api/v1/quizzes/{id}` | Hard delete (409 if referenced by active step) |
+| `POST` | `/api/v1/quizzes/{id}/approve` | Approve quiz |
+| `POST` | `/api/v1/quizzes/{id}/archive` | Soft-delete |
+| `POST` | `/api/v1/quizzes/{id}/restore` | Restore from archive |
+| `POST` | `/api/v1/quizzes/{id}/questions` | Create question |
+| `PATCH` | `/api/v1/quizzes/{id}/questions/{qid}` | Update question |
+| `DELETE` | `/api/v1/quizzes/{id}/questions/{qid}` | Delete question |
+| `POST` | `/api/v1/quizzes/{id}/questions/reorder` | Bulk reorder (items: [{id, ord}]) |
+| `POST` | `/api/v1/quizzes/{id}/questions/{qid}/regenerate` | LLM-regenerate single question |
+| `PUT` | `/api/v1/quizzes/{id}/questions/{qid}/image` | Set question image |
+| `DELETE` | `/api/v1/quizzes/{id}/questions/{qid}/image` | Remove question image |
+
+### Layouts and Voice Defaults
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/knowledge/layouts` | List all layouts (filter: applies_to) |
+| `GET` | `/api/v1/knowledge/layouts/{id}` | Single layout detail |
+| `GET` | `/api/v1/knowledge/voice-defaults` | Default voice instructions per type |
+
+### Interactions
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/knowledge-interactions/queries` | Senior knowledge queries (filters: date, answered_via, q) |
+| `GET` | `/api/v1/knowledge-interactions/quiz-sessions` | Quiz sessions (filters: date, status) |
+| `GET` | `/api/v1/knowledge-interactions/quiz-sessions/{id}` | Session detail with responses |
+| `GET` | `/api/v1/knowledge-interactions/info-card-deliveries` | Info card deliveries (filters: date) |
+
+### Analytics
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/knowledge/analytics/tags` | Per-tag stats (doc count, quiz count, avg score) |
+
 ## MCP Tools
 
 | Method | Path | Description |
@@ -249,7 +333,7 @@ Device endpoints accept authentication via `device_key` in the JSON body.
 | `GET` | `/mcp/tools` | List available MCP tools with schemas |
 | `POST` | `/mcp/tools/{name}` | Execute an MCP tool |
 
-See [MCP Integration](/features/mcp-integration) for the full tool reference.
+The knowledge repository adds 3 MCP tools: `query_knowledge_base`, `submit_quiz_answer`, `complete_quiz_session`. See [MCP Integration](/features/mcp-integration) for the full tool reference.
 
 ## Interactive Responses
 

@@ -37,7 +37,7 @@ Cognitive Companion takes a different path:
               │  EventAggregator → RulesEngine   │
               │              ↓ matched rules     │
               │       PipelineExecutor           │
-              │   (19 step types, plugin-based)  │
+              │   (18 step types, plugin-based)  │
               │              ↓                   │
               │       NotificationDispatcher     │
               │   (7 channels, plugin-based)     │
@@ -80,7 +80,7 @@ Cognitive Companion takes a different path:
 
 | Capability | Description |
 | --- | --- |
-| 19 pipeline step types | `llm_call`, `person_identification`, `scene_analysis`, `semantic_memory_query`, `semantic_memory_write`, `object_trend_analysis`, `presence_query`, `home_state`, `notification`, `ha_action`, `activity_detection`, `activity_session_start`, `activity_session_end`, `daily_report`, `verification`, `condition`, `wait`, `interactive_prompt`, plus the deprecated `tracking_query`. |
+| 18 pipeline step types | `llm_call`, `person_identification`, `scene_analysis`, `semantic_memory_query`, `semantic_memory_write`, `object_trend_analysis`, `presence_query`, `home_state`, `notification`, `ha_action`, `activity_detection`, `activity_session_start`, `activity_session_end`, `daily_report`, `verification`, `condition`, `wait`, `interactive_prompt`. |
 | 7 notification channels | `pwa_popup_text`, `pwa_realtime_ai`, `pwa_tts_announcement`, `telegram`, `eink`, `ha_speaker_tts`, `webhook`. |
 | 13 context filters | `room`, `time_range`, `day_of_week`, `person_presence`, `person_activity`, `room_transition`, `person_movement_memory`, `scene_contains`, `scene_trend`, `home_state`, `presence_status`, `presence_dwell`, `dementia_signal`. |
 | 6 trigger types | `sensor_event`, `cron`, `manual`, `webhook` (HMAC), `telegram` (bot command), `occupancy_duration`. |

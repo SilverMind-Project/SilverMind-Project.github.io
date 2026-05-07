@@ -209,13 +209,21 @@ body {
   transform: translateY(-1px);
 }
 
+/* ----- Home page width — match nav bar container (layout-max-width - 64px) ----- */
+
+.VPFeatures .container,
+.VPHomeContent .container {
+  max-width: calc(var(--vp-layout-max-width) - 64px) !important;
+}
+
 /* ----- Feature grid ----- */
+
 
 .VPFeature {
   border: 1px solid var(--vp-c-divider);
   border-radius: 18px;
   background-color: var(--vp-c-bg-alt);
-  padding: 28px;
+  padding: 20px;
   transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
 

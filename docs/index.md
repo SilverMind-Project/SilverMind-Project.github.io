@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: Cognitive Companion
-  text: Privacy-First AI for Senior Care
-  tagline: An on-premise system that watches for moments where a gentle reminder might help, without automating away the daily routines that give seniors agency.
+  text: On-Premise AI for Senior Care
+  tagline: Safety monitoring and cognitive care, working together. Keep family members safe with computer vision, keep their memories alive with a personal knowledge repository, and stay connected through a natural voice interface — all running on your hardware.
   image:
     src: /logo.svg
     alt: Cognitive Companion
@@ -20,54 +20,54 @@ hero:
       link: https://github.com/SilverMind-Project/cognitive-companion/issues
 
 features:
+  - icon: 📚
+    title: Knowledge Repository
+    details: Build a personal knowledge base for the senior. Caregivers upload facts about family, biography, medications, and routines. The system converts them into voice-narrated info cards, review-gated quizzes, and a voice Q&A interface that answers questions like "how many grandchildren do I have?" using on-device RAG.
+    link: /features/knowledge-repository
+
+  - icon: 🗣️
+    title: Voice Companion
+    details: Natural conversation powered by Google Gemini Live. Real-time WebSocket audio streaming, MCP tool calling for live system queries, bilingual Tamil and English support, and per-delivery voice instructions that adapt the assistant's behaviour to each interaction.
+    link: /features/voice-companion
+
   - icon: 🧩
     title: Composable Pipelines
-    details: 19 registered step types assembled in any order per rule, including unified LLM calls, scene analysis, semantic memory query/write, presence and home-state queries, interactive prompts, conditional branching, and wait/resume workflows. Each rule defines its own pipeline.
+    details: 20 step types assembled in any order per rule. Combine knowledge delivery, LLM reasoning, scene analysis, interactive prompts, conditional branching, and wait/resume workflows. Each rule defines its own pipeline — no code required.
     link: /features/pipeline
 
   - icon: 🛰️
     title: Continuous Tracking
-    details: Optional multi-camera tracking via the continuous-tracking-service (BoT-SORT + Bayesian identity resolution + dementia signal worker). Pacing, sundowning, bathroom anomalies, and absence are surfaced through the dementia_signal filter and presence_query step.
+    details: Multi-camera person tracking with BoT-SORT and Bayesian identity resolution. Detects dementia-relevant behavioural patterns — pacing, sundowning, bathroom anomalies, prolonged stillness — and surfaces them through configurable rules and alerts.
     link: /features/continuous-tracking
-
-  - icon: 👁️
-    title: Scene Analysis
-    details: Integrated scene-analysis-service runs YOLO11x object detection, Florence-2-large structured descriptions, and CLIP ViT-L/14 image embeddings entirely on your hardware. YAML-configured hazard rules fire alerts automatically.
-    link: /features/pipeline#scene-analysis
 
   - icon: 👤
     title: Person Identification
-    details: GPU-accelerated face recognition via ArcFace embeddings with whole-house location tracking, camera topology for semantic room transitions, and Home Assistant integration.
+    details: GPU-accelerated face recognition via ArcFace embeddings. Whole-house location tracking with camera topology for semantic room transitions. Home Assistant integration pushes locations to input helpers for cross-system awareness.
     link: /features/person-tracking
 
-  - icon: 🗣️
-    title: Voice Companion
-    details: Real-time conversational AI powered by Google Gemini Live with WebSocket audio streaming, voice tool calling via the MCP registry, and Tamil language support.
-    link: /features/voice-companion
-
-  - icon: 🖼️
-    title: E-Ink Display Pipeline
-    details: Per-device notification images for color e-ink displays with a visual template editor, configurable text regions, and automatic expiry management.
-    link: /features/eink-display
+  - icon: 👁️
+    title: Scene Understanding
+    details: On-device scene analysis with YOLO11x object detection, Florence-2-large structured descriptions, and CLIP ViT-L/14 image embeddings. Hazard rules trigger automatic alerts. Semantic memory enables natural-language queries about past observations.
+    link: /features/pipeline#scene-analysis
 
   - icon: 📡
-    title: Multi-Channel Notifications
-    details: Route alerts by severity across WebSocket, Telegram, e-ink displays, TTS, realtime voice, Home Assistant, and outbound webhooks. Per-channel templates and escalation policies.
+    title: Multi-Channel Delivery
+    details: Route information across WebSocket popups, Telegram, e-ink displays, TTS announcements, realtime voice, Home Assistant media players, and outbound webhooks. Seven channels with per-channel templates, escalation policies, and repeat schedules.
     link: /features/notifications
+
+  - icon: 🖼️
+    title: E-Ink Displays
+    details: Color e-ink display support with a visual template editor, configurable text regions, automatic expiry management, and per-device image state tracking. Info cards render directly to e-ink with dithered image variants.
+    link: /features/eink-display
 
   - icon: 🤖
     title: MCP Tool Server
-    details: Expose system state to AI agents via the Model Context Protocol. 24 tools including rule triggering, semantic memory queries, person locations, activity history, and real-time sensor data. A configurable subset is mirrored to Gemini Live for voice tool calling.
+    details: 27 tools exposed via the Model Context Protocol for AI agent integration. Includes knowledge base queries, quiz answer submission, rule triggering, person location, semantic memory search, activity history, and real-time sensor data.
     link: /features/mcp-integration
-
-  - icon: 🏠
-    title: Home Assistant Native
-    details: Deep HA integration. Poll sensors, call services, sync rooms and areas, announce via media players, and push person locations to HA input helpers.
-    link: /guide/configuration#home-assistant
 
   - icon: 🔒
     title: Fully On-Premise
-    details: All vision, reasoning, and recognition models run locally via vLLM, llama.cpp, and the scene-analysis-service. No cloud dependency for core functionality. Your data stays on your network.
+    details: All models run on your hardware. Vision, reasoning, recognition, and embedding inference execute locally via vLLM, llama.cpp, and Triton. Camera frames never leave your network. No cloud dependency for any core capability.
     link: /guide/architecture
 
 
@@ -81,13 +81,21 @@ features:
 
 ## Why Cognitive Companion?
 
-Cognitive decline doesn't have to mean loss of independence. Most monitoring systems either do too little (basic motion alerts) or too much (full automation that removes the daily routines giving seniors agency). Cognitive Companion occupies a different position: it understands context through vision and language models, then delivers gentle reminders only when they're actually warranted.
+Caring for a family member with cognitive decline presents two distinct challenges. The first is safety: knowing where they are, whether they have fallen, whether patterns are changing. The second is connection: keeping their memories accessible, maintaining cognitive engagement, and preserving the stories that define who they are.
 
-**Built for real families.** Designed for multigenerational households where a senior lives with family members who want to help but can't watch 24/7. The system tracks who is where, what activities have happened, and applies rules written in natural language to decide when a nudge is appropriate.
+Most systems address only the first. Cognitive Companion addresses both.
 
-**Built for privacy.** Every model runs on your hardware. Camera frames are processed locally and never leave your network. The system is designed from the ground up to operate entirely within your home.
+**Safety monitoring.** Computer vision and sensor fusion track presence, activity, and behaviour across the home. Configurable rules evaluate context — who is where, what has happened, what has changed — and deliver alerts only when warranted. Dementia-relevant signals are detected, scored, and surfaced for clinical review. No false alarms. No unnecessary automation.
 
-**Built to be extended.** Each pipeline step, notification channel, and context filter is a self-contained plugin. Drop a Python file in the right directory and the system discovers it at startup. No fork required.
+**Cognitive care.** A personal knowledge repository stores facts about the senior's life, curated by the people who know them best. The system converts these facts into narrated info cards, interactive quizzes, and a natural voice Q&A interface. The senior can ask "what medication do I take in the morning?" or "tell me about my grandchildren" and receive accurate, personal answers — not generic web results.
+
+**Voice-first interaction.** Every feature is accessible through natural conversation. The senior speaks; the system responds. Info cards are read aloud. Quizzes are conducted by voice. Questions are answered from the knowledge repository. Behind the scenes, Gemini Live orchestrates tool calls, retrieves data, and synthesizes responses in real time.
+
+**Privacy by design.** Every model — vision, language, embedding, recognition — runs on your hardware. Camera frames, personal facts, conversation transcripts, and activity logs never leave your network. The system is engineered from the ground up to operate entirely within your home.
+
+**Built for real families.** Designed for multigenerational households where a senior lives with family members who share caregiving responsibilities. The system adapts to your home, your routines, and your language. English, Tamil, and Tanglish are supported out of the box.
+
+**Built to be extended.** Each pipeline step, notification channel, and context filter is a self-contained plugin. Drop a Python file in the right directory and the system discovers it at startup. The MCP server exposes 27 tools for integration with external AI agents, home automation systems, and custom workflows.
 
 ---
 

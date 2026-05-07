@@ -24,6 +24,23 @@ The voice companion supports function calling via the Gemini Live session. Tool 
 
 Configure which tools are available to the voice companion via `mcp.gemini_tools` in `settings.yaml`. See [MCP Integration](/features/mcp-integration) for the full tool list.
 
+## ~~Knowledge Repository~~ :white_check_mark:
+
+**Status:** Implemented
+
+Caregivers can upload structured pieces of knowledge about the senior's life and convert them into two delivery artifacts: info cards (paraphrased text + images shown as PWA popup or e-ink) and quizzes (multiple-choice or open-ended, delivered via voice + tappable buttons). The senior can ask voice questions ("how many grandchildren do I have?") and the companion answers from the repository via RAG.
+
+Key capabilities:
+
+- **Documents:** upload source text + images → chunk + embed via embeddinggemma-300m on Triton → lifecycle (uploaded → chunked → approved → archived)
+- **Info cards:** 5 layout types (text_only, single_hero, side_by_side, gallery_grid_2x2), per-surface image variants (PWA WebP, e-ink dithered PNG), voice delivery via Gemini Live
+- **Quizzes:** multiple-choice + open-ended, voice + button dual input, LLM grader for open-ended answers, quiz session lifecycle with timeout, LLM-assisted generation
+- **Senior Q&A:** voice questions → embed → pgvector cosine search → LLM synthesis → logged for caregiver review
+- **Voice instruction system:** 3-layer composition (step override → resource column → yaml default → base) for per-delivery Gemini Live behavioural guardrails
+- **LLM-assisted content generation:** paraphrase, quiz, and voice instruction suggestions with caregiver review gate
+
+See [Knowledge Repository](/features/knowledge-repository) for full documentation.
+
 ## Pipeline Templates / Presets
 
 **Status:** Proposed
