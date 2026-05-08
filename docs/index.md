@@ -37,7 +37,7 @@ features:
 
   - icon: 🛰️
     title: Continuous Tracking
-    details: Multi-camera person tracking with BoT-SORT and Bayesian identity resolution. Detects dementia-relevant behavioural patterns: pacing, sundowning, bathroom anomalies, and prolonged stillness. Surfaces them through configurable rules and alerts.
+    details: "Multi-camera person tracking with BoT-SORT and Bayesian identity resolution. Detects dementia-relevant behavioural patterns: pacing, sundowning, bathroom anomalies, and prolonged stillness. Surfaces them through configurable rules and alerts."
     link: /features/continuous-tracking
 
   - icon: 👤
