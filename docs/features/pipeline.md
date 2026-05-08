@@ -119,7 +119,7 @@ Record a single activity to the PersonActivity table. All fields support [prompt
 
 ::: tip Detecting long-duration activities (meals, extended occupancy)
 
-The VLM window in an `llm_call` step is bounded by the EventAggregator batch (typically 10 s -- 1 min). To detect activities that unfold over a longer duration such as a meal, extend the temporal window on the **upstream** step:
+The VLM window in an `llm_call` step is bounded by the EventAggregator batch (typically 10 s to 1 min). To detect activities that unfold over a longer duration such as a meal, extend the temporal window on the **upstream** step:
 
 ```yaml
 step_type: llm_call
@@ -324,7 +324,7 @@ Graceful degradation: when the semantic-memory-service is unreachable or disable
 
 #### `vision_analysis` _(deprecated)_
 
-::: warning Deprecated — use `llm_call` instead
+::: warning Deprecated: use `llm_call` instead
 The `llm_call` step with `output_key: vision_response` is a superset of `vision_analysis`. It supports the same image-source options plus model selection, sensor-ordered image assembly for inter-frame analysis, and a configurable output key.
 :::
 
@@ -833,7 +833,7 @@ Rules with `trigger_type: telegram` fire when a matching Telegram bot command is
 - `telegram_trigger_config.allowed_chat_ids`: list of Telegram chat IDs that may fire the rule. Falls back to `notifications.telegram.trigger_allowed_chat_ids` in settings. **An absent or empty whitelist blocks the command (fail-closed).**
 - `telegram_trigger_config.respond_with_ack`: send a brief reply confirming the rule was triggered (default `true`).
 
-**Dispatch path:** identical to webhook triggers -- a `TriggerContext(trigger_type="telegram")` is built and executed by `PipelineExecutor`. The command payload is available via `trigger_input` keys.
+**Dispatch path:** identical to webhook triggers. A `TriggerContext(trigger_type="telegram")` is built and executed by `PipelineExecutor`. The command payload is available via `trigger_input` keys.
 
 ::: details Example: medication reminder on demand
 

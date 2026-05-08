@@ -146,7 +146,7 @@ Internet / LAN
 │  ├─ person-id (GPU, port 8200)               │
 │  ├─ tracking-orchestrator (port 8000)        │
 │  ├─ rtsp-ingress (port 8090) + go2rtc       │
-│  ├─ triton (GPU, ports 8000-8002)           │
+│  ├─ triton (GPU, ports 8700-8702)           │
 │  ├─ tts-service (GPU, port 8600)            │
 │  ├─ postgres (shared, port 5432)             │
 │  └─ redis (port 6379)                        │
@@ -212,7 +212,7 @@ kubernetes/
 | Person ID | `person-id-svc` | 8200 | ClusterIP |
 | TTS | `tts-svc` | 8600 | ClusterIP |
 | Tracking Orchestrator | `tracking-orchestrator` | 8000 | ClusterIP |
-| Triton | `triton` | 8001 (gRPC) | ClusterIP |
+| Triton | `triton` | 8701 (gRPC) | ClusterIP |
 | RTSP Ingress | `rtsp-ingress` | 8090 | ClusterIP |
 | **Infrastructure** | | | |
 | PostgreSQL (shared) | `postgres` | 5432 | Headless |

@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for your interest in contributing to Cognitive Companion. This project aims to be a beacon of excellence in the open source community, and contributions of all kinds are welcome.
+Thank you for your interest in contributing to Cognitive Companion. Contributions of all kinds are welcome.
 
 ## Ways to Contribute
 

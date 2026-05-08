@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Cognitive Companion
   text: On-Premise AI for Senior Care
-  tagline: Safety monitoring and cognitive care, working together. Keep family members safe with computer vision, keep their memories alive with a personal knowledge repository, and stay connected through a natural voice interface — all running on your hardware.
+  tagline: On-premise AI for safety monitoring and cognitive care. Computer vision tracks presence and behavior across the home. A personal knowledge repository keeps memories accessible. A voice companion provides natural conversation. All inference runs on your hardware.
   image:
     src: /logo.svg
     alt: Cognitive Companion
@@ -32,12 +32,12 @@ features:
 
   - icon: 🧩
     title: Composable Pipelines
-    details: 20 step types assembled in any order per rule. Combine knowledge delivery, LLM reasoning, scene analysis, interactive prompts, conditional branching, and wait/resume workflows. Each rule defines its own pipeline — no code required.
+    details: 20 step types assembled in any order per rule. Combine knowledge delivery, LLM reasoning, scene analysis, interactive prompts, conditional branching, and wait/resume workflows. Each rule defines its own pipeline. No code required.
     link: /features/pipeline
 
   - icon: 🛰️
     title: Continuous Tracking
-    details: Multi-camera person tracking with BoT-SORT and Bayesian identity resolution. Detects dementia-relevant behavioural patterns — pacing, sundowning, bathroom anomalies, prolonged stillness — and surfaces them through configurable rules and alerts.
+    details: Multi-camera person tracking with BoT-SORT and Bayesian identity resolution. Detects dementia-relevant behavioural patterns: pacing, sundowning, bathroom anomalies, and prolonged stillness. Surfaces them through configurable rules and alerts.
     link: /features/continuous-tracking
 
   - icon: 👤
@@ -81,21 +81,21 @@ features:
 
 ## Why Cognitive Companion?
 
-Caring for a family member with cognitive decline presents two distinct challenges. The first is safety: knowing where they are, whether they have fallen, whether patterns are changing. The second is connection: keeping their memories accessible, maintaining cognitive engagement, and preserving the stories that define who they are.
+Caring for a family member with cognitive decline involves two distinct challenges. The first is safety: knowing where they are, whether patterns are changing, whether something is wrong. The second is connection: keeping memories accessible, maintaining cognitive engagement, and preserving a sense of identity.
 
-Most systems address only the first. Cognitive Companion addresses both.
+Most care systems address only the first. Cognitive Companion addresses both.
 
-**Safety monitoring.** Computer vision and sensor fusion track presence, activity, and behaviour across the home. Configurable rules evaluate context — who is where, what has happened, what has changed — and deliver alerts only when warranted. Dementia-relevant signals are detected, scored, and surfaced for clinical review. No false alarms. No unnecessary automation.
+**Safety monitoring.** Computer vision and sensor fusion track presence, activity, and behavior across the home. Configurable rules evaluate context (who is where, what has happened, what has changed) and deliver alerts only when warranted. Dementia-relevant signals are detected, scored, and surfaced for caregiver review. No false alarms. No unnecessary automation.
 
-**Cognitive care.** A personal knowledge repository stores facts about the senior's life, curated by the people who know them best. The system converts these facts into narrated info cards, interactive quizzes, and a natural voice Q&A interface. The senior can ask "what medication do I take in the morning?" or "tell me about my grandchildren" and receive accurate, personal answers — not generic web results.
+**Cognitive care.** A personal knowledge repository stores facts about the senior's life, curated by the caregivers who know them. The system converts those facts into narrated info cards, interactive quizzes, and a voice Q&A interface. The senior can ask "what medication do I take in the morning?" or "tell me about my grandchildren" and receive accurate answers from the repository, not generic web results.
 
-**Voice-first interaction.** Every feature is accessible through natural conversation. The senior speaks; the system responds. Info cards are read aloud. Quizzes are conducted by voice. Questions are answered from the knowledge repository. Behind the scenes, Gemini Live orchestrates tool calls, retrieves data, and synthesizes responses in real time.
+**Voice-first interaction.** Every feature is accessible through natural conversation. The senior speaks and the system responds. Info cards are read aloud. Quizzes are conducted by voice. Questions are answered from the knowledge repository. Gemini Live orchestrates tool calls, retrieves data, and synthesizes responses in real time.
 
-**Privacy by design.** Every model — vision, language, embedding, recognition — runs on your hardware. Camera frames, personal facts, conversation transcripts, and activity logs never leave your network. The system is engineered from the ground up to operate entirely within your home.
+**Privacy by design.** Every model runs on your hardware: vision, language, embedding, and recognition. Camera frames, personal facts, conversation transcripts, and activity logs never leave your network. There are no cloud dependencies for any core capability.
 
-**Built for real families.** Designed for multigenerational households where a senior lives with family members who share caregiving responsibilities. The system adapts to your home, your routines, and your language. English, Tamil, and Tanglish are supported out of the box.
+**Multigenerational by default.** Cognitive Companion is built for households where a senior lives with family members who share caregiving responsibilities. The system adapts to your home layout, your routines, and your language. English, Tamil, and Tanglish are supported out of the box.
 
-**Built to be extended.** Each pipeline step, notification channel, and context filter is a self-contained plugin. Drop a Python file in the right directory and the system discovers it at startup. The MCP server exposes 27 tools for integration with external AI agents, home automation systems, and custom workflows.
+**Extensible by design.** Each pipeline step, notification channel, and context filter is a self-contained plugin. Drop a Python file in the right directory and the system discovers it at startup. The MCP server exposes 27 tools for integration with external AI agents, home automation systems, and custom workflows.
 
 ---
 

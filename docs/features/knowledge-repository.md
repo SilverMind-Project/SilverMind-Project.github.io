@@ -1,6 +1,6 @@
 # Knowledge Repository
 
-The Knowledge Repository is a caregiver-curated store of stable facts about the senior's life. It captures what matters most: family relationships, personal biography, medications, daily preferences, and routines. The repository produces two kinds of delivery artifacts for the senior -- **info cards** (paraphrased text with images) and **quizzes** (multiple-choice or open-ended questions) -- each delivered through PWA popups, e-ink displays, or Gemini Live voice. The senior can also ask voice questions at any time and receive answers retrieved from the repository via RAG.
+The Knowledge Repository is a caregiver-curated store of stable facts about the senior's life. It captures what matters most: family relationships, personal biography, medications, daily preferences, and routines. The repository produces two types of delivery artifacts: **info cards** (paraphrased text with images) and **quizzes** (multiple-choice or open-ended questions). Both are delivered through PWA popups, e-ink displays, or Gemini Live voice. The senior can also ask voice questions at any time and receive answers retrieved from the repository via RAG.
 
 Every piece of content passes through a review gate. Nothing reaches the senior until a caregiver approves it. Source documents are uploaded by the caregiver, chunked and embedded via a Triton inference server, and used as the foundation for LLM-assisted content generation. The caregiver reviews drafts, edits where needed, and explicitly approves before delivery rules are activated.
 
@@ -86,7 +86,7 @@ After upload, the system automatically chunks the source text and embeds each ch
 ```yaml
 # config/settings.yaml
 embedding:
-  triton_url: "triton.nanai.khoofia.com:8001"
+  triton_url: "triton.nanai.khoofia.com:8701"
   model_name: "embeddinggemma-300m"
   dim: 768
   max_seq_len: 2048
@@ -611,7 +611,7 @@ Key settings for the knowledge repository:
 ```yaml
 # Embedding inference (Triton)
 embedding:
-  triton_url: "triton.nanai.khoofia.com:8001"
+  triton_url: "triton.nanai.khoofia.com:8701"
   model_name: "embeddinggemma-300m"
   dim: 768
   max_seq_len: 2048
@@ -647,9 +647,9 @@ knowledge:
 
 ## Related Pages
 
-- [Composable Pipelines](/features/pipeline) -- step system, pipeline builder, condition expressions, and prompt templates
-- [Voice Companion](/features/voice-companion) -- Gemini Live voice delivery, WebSocket lifecycle, and tool calling
-- [E-Ink Display Pipeline](/features/eink-display) -- e-ink template editor, rendering, and device management
-- [MCP Integration](/features/mcp-integration) -- MCP tool reference and Gemini Live function calling
-- [Configuration](/guide/configuration) -- all config file details including `settings.yaml`, `auth.yaml`, and `notifications.yaml`
-- [API Reference](/api/reference) -- REST endpoint reference for documents, info cards, quizzes, and knowledge queries
+- [Composable Pipelines](/features/pipeline): step system, pipeline builder, condition expressions, and prompt templates
+- [Voice Companion](/features/voice-companion): Gemini Live voice delivery, WebSocket lifecycle, and tool calling
+- [E-Ink Display Pipeline](/features/eink-display): e-ink template editor, rendering, and device management
+- [MCP Integration](/features/mcp-integration): MCP tool reference and Gemini Live function calling
+- [Configuration](/guide/configuration): all config file details including `settings.yaml`, `auth.yaml`, and `notifications.yaml`
+- [API Reference](/api/reference): REST endpoint reference for documents, info cards, quizzes, and knowledge queries

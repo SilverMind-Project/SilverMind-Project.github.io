@@ -54,7 +54,7 @@ docker compose up -d postgres redis minio    # infra
 docker compose up -d                          # services
 ```
 
-The services are: `go2rtc` (RTSP proxy, port 1984), `rtsp-ingress` (Go, port 8090), `tracking-orchestrator` (Python, port 8000), `triton` (gRPC 8001), `redis` (6379), `postgres` (5432), `minio` (9000).
+The services are: `go2rtc` (RTSP proxy, port 1984), `rtsp-ingress` (Go, port 8090), `tracking-orchestrator` (Python, port 8000), `triton` (gRPC 8701), `redis` (6379), `postgres` (5432), `minio` (9000).
 
 ### 2. Enable the CC feature flag
 

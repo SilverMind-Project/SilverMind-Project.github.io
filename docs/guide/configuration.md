@@ -354,7 +354,7 @@ layouts:
             format: png
 ```
 
-Each layout defines: which surfaces it targets (PWA, e-ink), how many images are required, and per-slot variant specs (target dimensions, fit mode, color mode, output format). Layouts are validated at startup — unknown enum values raise immediately.
+Each layout defines: which surfaces it targets (PWA, e-ink), how many images are required, and per-slot variant specs (target dimensions, fit mode, color mode, output format). Layouts are validated at startup; unknown enum values raise immediately.
 
 Five layouts ship by default: `text_only`, `single_hero`, `side_by_side`, `gallery_grid_2x2`, `quiz_with_optional_image`.
 
@@ -384,7 +384,7 @@ Added to `settings.yaml` under the `embedding:` and `knowledge:` keys:
 
 ```yaml
 embedding:
-  triton_url: "triton.nanai.khoofia.com:8001"
+  triton_url: "triton.nanai.khoofia.com:8701"
   model_name: "embeddinggemma-300m"
   tokenizer_path: "/opt/models/embeddinggemma/tokenizer.json"
   dim: 768

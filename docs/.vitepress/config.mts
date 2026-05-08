@@ -25,8 +25,8 @@ export default defineConfig({
         text: "v0.6.83",
         items: [
           {
-            text: "Changelog",
-            link: "https://github.com/SilverMind-Project/cognitive-companion/releases",
+            text: "Code",
+            link: "https://github.com/SilverMind-Project/cognitive-companion",
           },
           {
             text: "Contributing",
