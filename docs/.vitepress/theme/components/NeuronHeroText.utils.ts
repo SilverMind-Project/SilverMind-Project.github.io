@@ -266,7 +266,7 @@ export function spawnBorderNodes(
  *
  * Validates: Requirements 3.1
  */
-export const GRADIENT_PERIOD_MS = 30_000
+export const GRADIENT_PERIOD_MS = 60_000
 
 /**
  * Fraction of one gradient cycle that separates the left edge from the right

@@ -50,25 +50,25 @@ import type { FilledPixel, Node, Edge, CharPosition } from './NeuronHeroText.uti
 // ---------------------------------------------------------------------------
 
 /** Base distance (physical px at 80px CSS reference font) for interior→border connections. Scaled by font size in rebuildMask. */
-const INTERIOR_TO_BORDER_THRESHOLD_BASE = 35
+const INTERIOR_TO_BORDER_THRESHOLD_BASE = 48
 /** Max border-node connections per interior node (K-nearest). */
-const MAX_EDGES_PER_INTERIOR = 48
+const MAX_EDGES_PER_INTERIOR = 32
 
 // Border node / outline rendering
 /** Minimum physical-pixel spacing between border nodes along the outline. Scaled by DPR in rebuildMask. */
 const BORDER_NODE_SPACING_CSS = 1.0   // dense outline: ~2px between nodes
 /** Connection threshold for border-to-border outline edges. Scaled by DPR in rebuildMask. */
-const BORDER_EDGE_THRESHOLD_CSS = 7  // visual px; catches all physically adjacent nodes at 2px spacing
+const BORDER_EDGE_THRESHOLD_CSS = 7.5  // visual px; catches all physically adjacent nodes at 2px spacing
 /** Half-width of border outline edges in CSS pixels. Rendered as geometry (triangles) so
  *  the thickness is reliable across all WebGL implementations. Scaled by DPR in drawFrame. */
-const BORDER_EDGE_HALF_WIDTH_CSS = 0.5
+const BORDER_EDGE_HALF_WIDTH_CSS = 0.6
 
 // Per-node rendering sizes (gl_PointSize in physical pixels)
 const INTERIOR_NODE_SIZE = 2.5
-const BORDER_NODE_SIZE   = 0.1   // smaller than before; outline shape comes from edges not dots
+const BORDER_NODE_SIZE   = 0.5   // smaller than before; outline shape comes from edges not dots
 
 // Per-node alpha
-const INTERIOR_NODE_ALPHA = 0.9
+const INTERIOR_NODE_ALPHA = 1.0
 const BORDER_NODE_ALPHA   = 0.0
 
 // ---------------------------------------------------------------------------
@@ -399,7 +399,7 @@ function drawFrame(
 
   // In light mode the brand colours need to be darker to read against white.
   // 0.55 brings the saturated blues/purples down to a clearly visible, non-harsh value.
-  const cs = isDarkMode ? 1.0 : 1.0
+  const cs = isDarkMode ? .25 : 1.0
 
   // --- Interior nodes ---
   for (let i = 0; i < iCount; i++) {
