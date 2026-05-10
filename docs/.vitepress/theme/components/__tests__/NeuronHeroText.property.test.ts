@@ -455,12 +455,12 @@ describe('NeuronHeroText property tests', () => {
         fc.property(
           fc.integer({ min: 0, max: 2000 }),
           (viewportWidth: number) => {
-            const count = viewportWidth < 768 ? MOBILE_NODE_COUNT : DESKTOP_NODE_COUNT
+            const count = viewportWidth < 640 ? MOBILE_NODE_COUNT : DESKTOP_NODE_COUNT
             // Values are set in NeuronHeroText.utils.ts
-            const expectedMobile = 100
-            const expectedDesktop = 250
+            const expectedMobile = 120
+            const expectedDesktop = 300
 
-            if (viewportWidth < 768) {
+            if (viewportWidth < 640) {
               expect(count).toBe(expectedMobile)
             } else {
               expect(count).toBe(expectedDesktop)

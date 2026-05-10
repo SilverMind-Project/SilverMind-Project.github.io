@@ -50,18 +50,18 @@ import type { FilledPixel, Node, Edge, CharPosition } from './NeuronHeroText.uti
 // ---------------------------------------------------------------------------
 
 /** Base distance (physical px at 80px CSS reference font) for interior→border connections. Scaled by font size in rebuildMask. */
-const INTERIOR_TO_BORDER_THRESHOLD_BASE = 33
+const INTERIOR_TO_BORDER_THRESHOLD_BASE = 35
 /** Max border-node connections per interior node (K-nearest). */
 const MAX_EDGES_PER_INTERIOR = 48
 
 // Border node / outline rendering
 /** Minimum physical-pixel spacing between border nodes along the outline. Scaled by DPR in rebuildMask. */
-const BORDER_NODE_SPACING_CSS = 1.2   // dense outline: ~2px between nodes
+const BORDER_NODE_SPACING_CSS = 1.0   // dense outline: ~2px between nodes
 /** Connection threshold for border-to-border outline edges. Scaled by DPR in rebuildMask. */
-const BORDER_EDGE_THRESHOLD_CSS = 6  // visual px; catches all physically adjacent nodes at 2px spacing
+const BORDER_EDGE_THRESHOLD_CSS = 7  // visual px; catches all physically adjacent nodes at 2px spacing
 /** Half-width of border outline edges in CSS pixels. Rendered as geometry (triangles) so
  *  the thickness is reliable across all WebGL implementations. Scaled by DPR in drawFrame. */
-const BORDER_EDGE_HALF_WIDTH_CSS = .6
+const BORDER_EDGE_HALF_WIDTH_CSS = 0.5
 
 // Per-node rendering sizes (gl_PointSize in physical pixels)
 const INTERIOR_NODE_SIZE = 2.5
@@ -155,16 +155,16 @@ void main() {
 }
 `
 
-/** GLSL source for the node fragment shader (radial glow). */
+/** GLSL source for the node fragment shader (soft circular point). */
 const NODE_FRAG_SRC = `
 precision mediump float;
 varying float v_alpha;
 varying vec3  v_color;
 void main() {
   float dist  = length(gl_PointCoord - vec2(0.5));
-  float glow  = 1.0 - smoothstep(0.0, 0.5, dist);
-  float alpha = v_alpha * glow;
-  gl_FragColor = vec4(v_color * glow, alpha);
+  float mask  = 1.0 - smoothstep(0.4, 0.5, dist);
+  float alpha = v_alpha * mask;
+  gl_FragColor = vec4(v_color, alpha);
 }
 `
 
@@ -536,8 +536,8 @@ function rebuildMask(canvas: HTMLCanvasElement): void {
   // All threshold distances scale proportionally to font size relative to the 80px CSS
   // reference so the visual density stays consistent across mobile / tablet / desktop.
   // At 44px mobile: fontScaleCSS ≈ 0.55 → thresholds roughly halved vs desktop.
-  fontScaleCSS = Math.min(1.2, Math.max(0.4, cssFontTarget / 80))
-
+  //fontScaleCSS = Math.min(1.2, Math.max(0.7, cssFontTarget / 80))
+  fontScaleCSS = 1.0
   const borderSpacing = Math.max(1, Math.round(BORDER_NODE_SPACING_CSS * dpr * fontScaleCSS))
   borderEdgeThreshold = Math.round(BORDER_EDGE_THRESHOLD_CSS * dpr * fontScaleCSS)
   interiorToBorderThreshold = Math.max(5, Math.round(INTERIOR_TO_BORDER_THRESHOLD_BASE * fontScaleCSS))

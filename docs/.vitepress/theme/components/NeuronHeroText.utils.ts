@@ -266,7 +266,7 @@ export function spawnBorderNodes(
  *
  * Validates: Requirements 3.1
  */
-export const GRADIENT_PERIOD_MS = 18_000
+export const GRADIENT_PERIOD_MS = 30_000
 
 /**
  * Fraction of one gradient cycle that separates the left edge from the right
@@ -276,7 +276,7 @@ export const GRADIENT_PERIOD_MS = 18_000
  *
  * Validates: Requirements 3.2
  */
-export const SPATIAL_PHASE_SCALE = 0.7
+export const SPATIAL_PHASE_SCALE = 1.0
 
 /**
  * Brand colour stops as normalised RGB triples, matching the CSS gradient:
@@ -337,10 +337,13 @@ export function nodeColour(
   // creating a left→right travelling wave rather than a synchronised sweep.
   const spatialPhase = canvasWidth > 0 ? (x / canvasWidth) * SPATIAL_PHASE_SCALE : 0
 
-  // Temporal phase advances linearly; subtracting spatialPhase makes the wave
-  // travel from left to right (higher x = lower effective phase = earlier colour).
+  // Unidirectional continuous cycle. The temporal phase advances linearly,
+  // and the spatial phase spreads one full gradient cycle across the text
+  // width (SPATIAL_PHASE_SCALE = 1.0). Because the gradient wraps seamlessly
+  // (blue at both ends), the % 1.0 wrap is invisible — colours simply scroll
+  // left→right forever without any ping-pong or boundary jump.
   const temporalPhase = reducedMotion ? 0.5 : (timeMs / GRADIENT_PERIOD_MS) % 1.0
-  const t = ((temporalPhase - spatialPhase + 2.0) % 1.0)
+  const t = (temporalPhase + spatialPhase) % 1.0
 
   // Piecewise-linear sampling matching CSS stop positions
   let r: number, g: number, b: number
