@@ -262,7 +262,6 @@ body {
 .neuron-hero-fallback {
   display: inline-block;
   font-weight: 600;
-  letter-spacing: -0.025em;
   font-size: 32px;
   line-height: 1.2;
   background: var(--cc-brand-gradient);
