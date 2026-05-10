@@ -10,6 +10,13 @@ const numParticles = 80
 const maxDist = 140
 const mouseDist = 200
 
+function getParticleColor(): [number, number, number] {
+  const isDark = document.documentElement.classList.contains('dark')
+  return isDark
+    ? [10 / 255, 132 / 255, 255 / 255]   // blue for dark mode
+    : [60 / 255, 60 / 255, 67 / 255]       // dark grey for light mode
+}
+
 const vShaderSrc = `
 attribute vec2 a_position;
 attribute float a_alpha;
@@ -129,8 +136,8 @@ onMounted(() => {
     gl.useProgram(program)
     gl.uniform2f(resolutionLocation, canvas.width, canvas.height)
     
-    // Cognitive Companion Brand Color #0a84ff
-    gl.uniform3f(colorLocation, 10 / 255, 132 / 255, 255 / 255)
+    const [cr, cg, cb] = getParticleColor()
+    gl.uniform3f(colorLocation, cr, cg, cb)
 
     const vertexData: number[] = []
 

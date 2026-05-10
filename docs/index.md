@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: Cognitive Companion
-  text: On-Premise AI for Senior Care
-  tagline: On-premise AI for safety monitoring and cognitive care. Computer vision tracks presence and behavior across the home. A personal knowledge repository keeps memories accessible. A voice companion provides natural conversation. All inference runs on your hardware.
+  text: AI for Senior Care
+  tagline: On-premise AI for safety monitoring and cognitive care. Computer vision tracks presence and behavior across the home. A personal knowledge repository keeps memories accessible. A voice companion provides natural conversation.
   image:
     src: /logo.svg
     alt: Cognitive Companion
@@ -66,7 +66,7 @@ features:
     link: /features/mcp-integration
 
   - icon: 🔒
-    title: Fully On-Premise
+    title: On-Premise Storage and Inference
     details: All models run on your hardware. Vision, reasoning, recognition, and embedding inference execute locally via vLLM, llama.cpp, and Triton. Camera frames never leave your network. No cloud dependency for any core capability.
     link: /guide/architecture
 
