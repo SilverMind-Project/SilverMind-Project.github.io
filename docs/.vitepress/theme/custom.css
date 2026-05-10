@@ -157,6 +157,102 @@ body {
   font-weight: 400;
 }
 
+/* Hide the default .VPHero .name gradient text when NeuronHeroText is active */
+.VPHero .name:has(.neuron-hero-canvas) {
+  background: none;
+  -webkit-text-fill-color: unset;
+  color: transparent;
+}
+
+/* NeuronHeroText canvas. Heights are sized so that the fitted neuron font
+   (constrained by canvas width) is at least as large as the vh-text below:
+   vh-text is 32 px (mobile) / 48 px (640+) / 56 px (960+).
+   The canvas must be tall enough that height is never the binding constraint
+   when the fitted font equals the vh-text size. */
+.neuron-hero-canvas {
+  display: block;
+  height: 72px;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .neuron-hero-canvas {
+    height: 100px;
+  }
+}
+
+@media (min-width: 960px) {
+  .neuron-hero-canvas {
+    height: 120px;
+  }
+}
+
+/* Styles for slot-rendered hero content — mirrors VPHero's scoped styles
+   since slot content is compiled in the parent scope and won't receive them */
+.vh-heading {
+  display: flex;
+  flex-direction: column;
+}
+
+.vh-text {
+  width: fit-content;
+  max-width: 392px;
+  letter-spacing: -0.4px;
+  line-height: 40px;
+  font-size: 32px;
+  font-weight: 700;
+  white-space: pre-wrap;
+  color: var(--vp-c-text-1);
+}
+
+.vh-tagline {
+  padding-top: 8px;
+  max-width: 392px;
+  line-height: 28px;
+  font-size: 18px;
+  font-weight: 500;
+  white-space: pre-wrap;
+  color: var(--vp-c-text-2);
+}
+
+@media (min-width: 640px) {
+  .vh-text {
+    max-width: 576px;
+    line-height: 56px;
+    font-size: 48px;
+  }
+
+  .vh-tagline {
+    padding-top: 12px;
+    max-width: 576px;
+    line-height: 32px;
+    font-size: 20px;
+  }
+}
+
+@media (min-width: 960px) {
+  .vh-text {
+    line-height: 64px;
+    font-size: 56px;
+  }
+
+  .vh-tagline {
+    line-height: 36px;
+    font-size: 24px;
+  }
+}
+
+/* CSS fallback when WebGL is unavailable — matches the default VPHero .name gradient */
+.neuron-hero-fallback {
+  background: var(--cc-brand-gradient);
+  background-size: var(--cc-brand-gradient-size);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: cc-gradient-drift var(--cc-brand-gradient-duration) ease-in-out infinite;
+}
+
 @keyframes cc-gradient-drift {
   0% {
     background-position: 0% 50%;
