@@ -167,8 +167,8 @@ describe('NeuronHeroText property tests', () => {
           fc.float({ min: 0, max: 1000, noNaN: true }),
           fc.float({ min: 0, max: 100_000, noNaN: true }),
           (x: number, t: number) => {
-            const [r1, g1, b1] = nodeColour(x, 1000, t, false)
-            const [r2, g2, b2] = nodeColour(x, 1000, t + GRADIENT_PERIOD_MS, false)
+            const [r1, g1, b1] = nodeColour(x, 500, 1000, 1000, t, false)
+            const [r2, g2, b2] = nodeColour(x, 500, 1000, 1000, t + GRADIENT_PERIOD_MS, false)
 
             expect(Math.abs(r1 - r2)).toBeLessThan(1e-6)
             expect(Math.abs(g1 - g2)).toBeLessThan(1e-6)
@@ -225,8 +225,8 @@ describe('NeuronHeroText property tests', () => {
 
             // Advancing time by phaseDiff * GRADIENT_PERIOD_MS at x1 should
             // produce the same colour as x2 at time t
-            const [r1, g1, b1] = nodeColour(x2, canvasWidth, t, false)
-            const [r2, g2, b2] = nodeColour(x1, canvasWidth, t + phaseDiff * GRADIENT_PERIOD_MS, false)
+            const [r1, g1, b1] = nodeColour(x2, canvasWidth / 2, canvasWidth, canvasWidth, t, false)
+            const [r2, g2, b2] = nodeColour(x1, canvasWidth / 2, canvasWidth, canvasWidth, t + phaseDiff * GRADIENT_PERIOD_MS, false)
 
             expect(Math.abs(r1 - r2)).toBeLessThan(1e-6)
             expect(Math.abs(g1 - g2)).toBeLessThan(1e-6)

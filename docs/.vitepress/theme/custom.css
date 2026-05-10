@@ -173,6 +173,17 @@ body {
   display: block;
   height: 72px;
   width: 100%;
+  /* Soft brand-coloured glow — visible on both light and dark backgrounds.
+     Two stacked drop-shadows give a tight inner halo + a wider diffuse aura. */
+  filter:
+    drop-shadow(0 0 6px rgba(94, 92, 230, 0.55))
+    drop-shadow(0 0 14px rgba(191, 90, 242, 0.30));
+}
+
+.dark .neuron-hero-canvas {
+  filter:
+    drop-shadow(0 0 8px rgba(10, 132, 255, 0.55))
+    drop-shadow(0 0 18px rgba(94, 92, 230, 0.35));
 }
 
 @media (min-width: 640px) {
@@ -247,8 +258,13 @@ body {
   }
 }
 
-/* CSS fallback when WebGL is unavailable — matches the default VPHero .name gradient */
+/* CSS fallback when WebGL is unavailable or in light mode — matches the default VPHero .name gradient */
 .neuron-hero-fallback {
+  display: inline-block;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  font-size: 32px;
+  line-height: 1.2;
   background: var(--cc-brand-gradient);
   background-size: var(--cc-brand-gradient-size);
   -webkit-background-clip: text;
@@ -256,6 +272,18 @@ body {
   -webkit-text-fill-color: transparent;
   color: transparent;
   animation: cc-gradient-drift var(--cc-brand-gradient-duration) ease-in-out infinite;
+}
+
+@media (min-width: 640px) {
+  .neuron-hero-fallback {
+    font-size: 40px;
+  }
+}
+
+@media (min-width: 960px) {
+  .neuron-hero-fallback {
+    font-size: 60px;
+  }
 }
 
 @keyframes cc-gradient-drift {
@@ -274,7 +302,8 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .VPHero .name,
-  .VPNavBar .title {
+  .VPNavBar .title,
+  .neuron-hero-fallback {
     animation: none;
     background-position: 50% 50%;
   }
@@ -363,6 +392,23 @@ body {
   background-color: rgba(251, 251, 253, 0.75) !important;
   border-bottom: 1px solid rgba(0, 0, 0, 0.07);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+}
+
+/* Prevent Safari from miscalculating the backdrop-filter paint area when
+   the navbar becomes position:fixed at ≥960 px (iPad landscape). */
+@media (min-width: 960px) {
+  .VPNavBar {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+}
+
+/* Reduce wrapper padding at intermediate widths so the 6 nav items + Extra
+   (3-dot menu) fit without pushing past the viewport edge on landscape phones. */
+@media (min-width: 768px) and (max-width: 959px) {
+  .VPNavBar .wrapper {
+    padding: 0 16px;
+  }
 }
 
 .VPNavBar .title {

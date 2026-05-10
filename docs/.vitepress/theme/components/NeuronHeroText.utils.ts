@@ -329,31 +329,57 @@ function lerp(a: number, b: number, t: number): number {
  */
 export function nodeColour(
   x: number,
+  y: number,
   canvasWidth: number,
+  canvasHeight: number,
   timeMs: number,
   reducedMotion: boolean,
 ): [number, number, number] {
-  // Spatial phase: right side lags behind left by SPATIAL_PHASE_SCALE cycles,
-  // creating a left→right travelling wave rather than a synchronised sweep.
-  const spatialPhase = canvasWidth > 0 ? (x / canvasWidth) * SPATIAL_PHASE_SCALE : 0
+  // Normalised coordinates (centre y = 0)
+  const u = canvasWidth  > 0 ? x / canvasWidth                       : 0
+  const v = canvasHeight > 0 ? (y - canvasHeight / 2) / canvasHeight : 0
 
-  // Unidirectional continuous cycle. The temporal phase advances linearly,
-  // and the spatial phase spreads one full gradient cycle across the text
-  // width (SPATIAL_PHASE_SCALE = 1.0). Because the gradient wraps seamlessly
-  // (blue at both ends), the % 1.0 wrap is invisible — colours simply scroll
-  // left→right forever without any ping-pong or boundary jump.
-  const temporalPhase = reducedMotion ? 0.5 : (timeMs / GRADIENT_PERIOD_MS) % 1.0
-  const t = (temporalPhase + spatialPhase) % 1.0
+  // Subtle multi-harmonic wobbles. Periods are integer fractions of
+  // GRADIENT_PERIOD_MS (PERIOD/3, /5, /7) so the function still strictly
+  // cycles every PERIOD — but within a cycle the harmonics interact to
+  // bend the iso-lines and ease the sweep, giving an organic, fluid feel
+  // instead of a rigid metronome.
+  const wob1 = reducedMotion ? 0 : Math.sin((timeMs / GRADIENT_PERIOD_MS) * 2 * Math.PI * 3)
+  const wob2 = reducedMotion ? 0 : Math.sin((timeMs / GRADIENT_PERIOD_MS) * 2 * Math.PI * 5)
+  const wob3 = reducedMotion ? 0 : Math.sin((timeMs / GRADIENT_PERIOD_MS) * 2 * Math.PI * 7)
 
-  // Piecewise-linear sampling matching CSS stop positions
+  // Spatial phase: horizontal sweep + a y-dependent skew that breathes
+  // slowly, bending the colour iso-lines into soft curves rather than
+  // rigid vertical bands. Magnitudes kept small so the change reads as
+  // a smooth wave, not as a colour swap.
+  const horizontalPhase = u * SPATIAL_PHASE_SCALE
+  const skew            = v * 0.12 * wob1
+  const breath          = 0.02 * wob2
+  const spatialPhase    = horizontalPhase + skew + breath
+
+  // Temporal phase: base linear advance + a tiny ease so the sweep
+  // imperceptibly speeds up and slows down instead of ticking.
+  const baseT          = reducedMotion ? 0.5 : (timeMs / GRADIENT_PERIOD_MS) % 1.0
+  const temporalWobble = 0.025 * wob3
+  const temporalPhase  = baseT + temporalWobble
+
+  const t = ((spatialPhase + temporalPhase) % 1.0 + 1.0) % 1.0
+
+  // Smoothstep eases each segment at its endpoints — replaces the
+  // piecewise-linear sampling whose slope kink at the indigo stop (t=0.6)
+  // made the colour change read as a hard "swap" rather than a smooth
+  // gradient. With smoothstep the derivative is continuous through every
+  // stop, so the wave glides between hues.
+  const smooth = (k: number) => k * k * (3 - 2 * k)
+
   let r: number, g: number, b: number
   if (t <= BRAND_STOP_T[1]) {
-    const localT = t / BRAND_STOP_T[1]
+    const localT = smooth(t / BRAND_STOP_T[1])
     r = lerp(BRAND_STOPS[0][0], BRAND_STOPS[1][0], localT)
     g = lerp(BRAND_STOPS[0][1], BRAND_STOPS[1][1], localT)
     b = lerp(BRAND_STOPS[0][2], BRAND_STOPS[1][2], localT)
   } else {
-    const localT = (t - BRAND_STOP_T[1]) / (BRAND_STOP_T[2] - BRAND_STOP_T[1])
+    const localT = smooth((t - BRAND_STOP_T[1]) / (BRAND_STOP_T[2] - BRAND_STOP_T[1]))
     r = lerp(BRAND_STOPS[1][0], BRAND_STOPS[2][0], localT)
     g = lerp(BRAND_STOPS[1][1], BRAND_STOPS[2][1], localT)
     b = lerp(BRAND_STOPS[1][2], BRAND_STOPS[2][2], localT)
@@ -495,12 +521,12 @@ export function buildEdges(
 
   for (let i = 0; i < nodes.length - 1; i++) {
     for (let j = i + 1; j < nodes.length; j++) {
-      if (
-        nodeChar.length > 0 &&
-        nodeChar[i] >= 0 &&
-        nodeChar[j] >= 0 &&
-        nodeChar[i] !== nodeChar[j]
-      ) continue
+      // When charPositions is supplied, both endpoints must be classified into
+      // the *same* character. Unclassified nodes (x outside any char box) are
+      // excluded entirely so kerning gaps never leak into outline edges.
+      if (nodeChar.length > 0) {
+        if (nodeChar[i] < 0 || nodeChar[j] < 0 || nodeChar[i] !== nodeChar[j]) continue
+      }
 
       const dx = nodes[j].x - nodes[i].x
       const dy = nodes[j].y - nodes[i].y
@@ -804,11 +830,20 @@ export function buildIntraToBorderEdges(
       const dist = Math.sqrt(dx * dx + dy * dy)
       if (dist > threshold) continue
 
-      // Midpoint must be inside the mask — rejects edges crossing open counters
-      // (the void inside 'e', the gap between 'i' dot and stem, etc.).
-      const mx = Math.round((ni.x + nb.x) / 2)
-      const my = Math.round((ni.y + nb.y) / 2)
-      if (!maskSet.has(my * canvasWidth + mx)) continue
+      // Sample several points along the edge — every sample must lie inside
+      // the mask. The single-midpoint check was insufficient at small fonts:
+      // an edge could skip across a narrow counter (the void inside 'e', 'o',
+      // 'a') while its midpoint still happened to fall in the surrounding
+      // stroke. Sampling at t = 0.2, 0.4, 0.6, 0.8 makes those crossings
+      // reliably detectable.
+      let crosses = false
+      for (let t = 1; t <= 4; t++) {
+        const f = t * 0.2  // 0.2, 0.4, 0.6, 0.8
+        const sx = Math.round(ni.x + (nb.x - ni.x) * f)
+        const sy = Math.round(ni.y + (nb.y - ni.y) * f)
+        if (!maskSet.has(sy * canvasWidth + sx)) { crosses = true; break }
+      }
+      if (crosses) continue
 
       candidates.push({ j, dist, alpha: 1 - dist / threshold })
     }
@@ -817,6 +852,90 @@ export function buildIntraToBorderEdges(
     candidates.sort((a, b) => a.dist - b.dist)
     for (const { j, alpha } of candidates.slice(0, maxEdgesPerNode)) {
       edges.push({ i, j: iOffset + j, alpha })
+    }
+  }
+
+  return edges
+}
+
+/**
+ * Builds a small, controlled set of edges that connect adjacent characters at
+ * their nearest border-node pairs. Inside a word, `inWordCount` edges connect
+ * each pair of adjacent letters (typically 1) so the silhouette doesn't smear.
+ * Across a word boundary (one or more spaces between two letters), a random
+ * count in [crossWordMin, crossWordMax] edges is drawn so word groups still
+ * feel networked without bleeding into each other.
+ *
+ * Bridges are picked from the rightmost zone of the left character and the
+ * leftmost zone of the right character, then sorted by Euclidean distance and
+ * taken without reusing endpoints. This guarantees clean, character-respecting
+ * inter-glyph connections — critical at small font sizes where automatic
+ * proximity-based bridging would merge letters into an unreadable blob.
+ */
+export function buildBorderBridges(
+  borderNodes: Node[],
+  charPositions: CharPosition[],
+  inWordCount: number,
+  crossWordMin: number,
+  crossWordMax: number,
+): Edge[] {
+  if (borderNodes.length < 2 || charPositions.length === 0) return []
+
+  const byChar: number[][] = charPositions.map(() => [])
+  for (let i = 0; i < borderNodes.length; i++) {
+    const ci = getCharIndex(borderNodes[i].x, charPositions)
+    if (ci >= 0) byChar[ci].push(i)
+  }
+
+  const edges: Edge[] = []
+
+  for (let ci = 0; ci < charPositions.length - 1; ci++) {
+    if (charPositions[ci].char === ' ') continue
+
+    let nextCi = ci + 1
+    while (nextCi < charPositions.length && charPositions[nextCi].char === ' ') nextCi++
+    if (nextCi >= charPositions.length) continue
+
+    const leftAll  = byChar[ci]
+    const rightAll = byChar[nextCi]
+    if (leftAll.length === 0 || rightAll.length === 0) continue
+
+    const crossesWord = nextCi > ci + 1
+    const target = crossesWord
+      ? crossWordMin + Math.floor(Math.random() * (crossWordMax - crossWordMin + 1))
+      : inWordCount
+    if (target <= 0) continue
+
+    // Restrict candidates to the inner edges of each glyph for fast pairing
+    const leftCands  = leftAll
+      .slice()
+      .sort((a, b) => borderNodes[b].x - borderNodes[a].x)
+      .slice(0, Math.max(target * 4, 12))
+    const rightCands = rightAll
+      .slice()
+      .sort((a, b) => borderNodes[a].x - borderNodes[b].x)
+      .slice(0, Math.max(target * 4, 12))
+
+    type P = { i: number; j: number; d: number }
+    const pairs: P[] = []
+    for (const i of leftCands) {
+      for (const j of rightCands) {
+        const dx = borderNodes[j].x - borderNodes[i].x
+        const dy = borderNodes[j].y - borderNodes[i].y
+        pairs.push({ i, j, d: Math.sqrt(dx * dx + dy * dy) })
+      }
+    }
+    pairs.sort((a, b) => a.d - b.d)
+
+    const used = new Set<number>()
+    const refDist = Math.max(charPositions[ci].charWidth, charPositions[nextCi].charWidth)
+    let added = 0
+    for (const p of pairs) {
+      if (added >= target) break
+      if (used.has(p.i) || used.has(p.j)) continue
+      used.add(p.i); used.add(p.j)
+      edges.push({ i: p.i, j: p.j, alpha: Math.max(0.4, 1 - p.d / (refDist * 1.5)) })
+      added++
     }
   }
 

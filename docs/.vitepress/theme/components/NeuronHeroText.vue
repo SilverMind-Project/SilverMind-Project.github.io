@@ -9,6 +9,7 @@ export {
   spawnNodes,
   spawnBorderNodes,
   buildEdges,
+  buildBorderBridges,
   getCharPositions,
   buildIntraToBorderEdges,
   buildIntraCharEdges,
@@ -25,7 +26,7 @@ export type { FilledPixel, Node, Edge, CharPosition } from './NeuronHeroText.uti
 </script>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import {
   heroFontSize,
   computeFittedFontSize,
@@ -34,42 +35,82 @@ import {
   spawnNodes,
   spawnBorderNodes,
   buildEdges,
+  buildBorderBridges,
   getCharPositions,
   buildIntraToBorderEdges,
   nodeColour,
   updateNodes,
-  DESKTOP_NODE_COUNT,
-  MOBILE_NODE_COUNT,
-  GRADIENT_PERIOD_MS,
-  SPATIAL_PHASE_SCALE,
 } from './NeuronHeroText.utils'
 import type { FilledPixel, Node, Edge, CharPosition } from './NeuronHeroText.utils'
 
 // ---------------------------------------------------------------------------
-// Internal constants
+// Internal constants — two independent control sets
+// ---------------------------------------------------------------------------
+// The mesh has two parts that need to scale differently:
+//
+//   1. INTERIOR mesh — drifting nodes inside the letterform. Scales with the
+//      actual rasterised font size (in physical pixels). This single number
+//      already combines viewport breakpoint + device pixel ratio, so it's the
+//      right ruler for "how big does each character look on this screen."
+//
+//   2. BORDER ring — fixed nodes tracing the silhouette. Scales with CSS-px
+//      units only (×DPR). The outline stays at a constant *visual* density
+//      and minimum thickness so characters are always legible — even on
+//      small-font portrait phones where the interior mesh is necessarily
+//      tighter, or large-font landscape where the interior is loose.
 // ---------------------------------------------------------------------------
 
-/** Base distance (physical px at 80px CSS reference font) for interior→border connections. Scaled by font size in rebuildMask. */
-const INTERIOR_TO_BORDER_THRESHOLD_BASE = 48
-/** Max border-node connections per interior node (K-nearest). */
-const MAX_EDGES_PER_INTERIOR = 32
+/** Reference physical-pixel font size against which all density / threshold
+ *  defaults are calibrated (matches desktop 80 CSS px @ DPR 1). */
+const REFERENCE_FONT_PHYSICAL_PX = 80
 
-// Border node / outline rendering
-/** Minimum physical-pixel spacing between border nodes along the outline. Scaled by DPR in rebuildMask. */
-const BORDER_NODE_SPACING_CSS = 1.0   // dense outline: ~2px between nodes
-/** Connection threshold for border-to-border outline edges. Scaled by DPR in rebuildMask. */
-const BORDER_EDGE_THRESHOLD_CSS = 7.5  // visual px; catches all physically adjacent nodes at 2px spacing
-/** Half-width of border outline edges in CSS pixels. Rendered as geometry (triangles) so
- *  the thickness is reliable across all WebGL implementations. Scaled by DPR in drawFrame. */
-const BORDER_EDGE_HALF_WIDTH_CSS = 0.6
+// === Interior mesh (font-scaled) =====================================
+/** Target one interior node per N filled mask pixels. Constant density
+ *  across viewports → portrait phones get more nodes (their tight mask
+ *  was sparse before), landscape phones get many more (their wide mask
+ *  used to feel empty with the old hardcoded 120). */
+const FILLED_PIXELS_PER_INTERIOR_NODE = 40
+const MIN_INTERIOR_NODES = 450
+const MAX_INTERIOR_NODES = 900
 
-// Per-node rendering sizes (gl_PointSize in physical pixels)
-const INTERIOR_NODE_SIZE = 2.5
-const BORDER_NODE_SIZE   = 0.5   // smaller than before; outline shape comes from edges not dots
+/** Reach for interior→border edges, as a fraction of the rasterised font
+ *  size. 0.5 ≈ half a cap-height of reach in every direction. */
+const INTERIOR_REACH_RATIO = .69
 
-// Per-node alpha
-const INTERIOR_NODE_ALPHA = 1.0
-const BORDER_NODE_ALPHA   = 0.0
+/** Inter-glyph bridges (capped to keep small fonts readable):
+ *  one edge between letters within a word, a small handful between words. */
+const IN_WORD_BRIDGES        = 0
+const CROSS_WORD_BRIDGES_MIN = 0
+const CROSS_WORD_BRIDGES_MAX = 0
+/** Max border-node connections per interior node (K-nearest). Lower than
+ *  before because node *count* now scales with area — each node only needs
+ *  a handful of links to keep the mesh visually continuous. */
+const MAX_EDGES_PER_INTERIOR = 550
+
+/** Per-interior-node rendering size, in CSS pixels (multiplied by DPR in
+ *  drawFrame). Was 2.5 *physical* px → invisible on retina; now ~1 CSS px. */
+const INTERIOR_NODE_SIZE_CSS = 1.0
+const INTERIOR_NODE_ALPHA    = 0.8
+
+// === Border ring (CSS-px-scaled, font-independent) ===================
+/** Spacing between border nodes along the outline (CSS px × DPR). */
+const BORDER_NODE_SPACING_CSS = 1.0
+/** Connection threshold for border-to-border edges (CSS px × DPR). */
+const BORDER_EDGE_THRESHOLD_CSS = 10
+
+/** FLOOR for border edge half-width: 0.5 CSS px → 1 CSS px full width.
+ *  This is the readability guarantee — outlines never render sub-pixel,
+ *  even when the interior mesh is sparse. */
+const BORDER_EDGE_HALF_WIDTH_CSS_FLOOR = 0.1
+/** Half-width at the reference font size; scaled by font so big desktop
+ *  hero text gets a slightly bolder outline. The floor above always wins
+ *  on small fonts. */
+const BORDER_EDGE_HALF_WIDTH_CSS_AT_REF = 0.1
+
+/** Per-border-node rendering size (CSS px × DPR). Outline shape comes from
+ *  the edges, not the dots, so this stays small. */
+const BORDER_NODE_SIZE_CSS = 0.5
+const BORDER_NODE_ALPHA    = 0.5
 
 // ---------------------------------------------------------------------------
 // Reactive state (controls template branching)
@@ -78,6 +119,7 @@ const BORDER_NODE_ALPHA   = 0.0
 const canvasRef      = ref<HTMLCanvasElement | null>(null)
 const webglSupported = ref(true)
 const reducedMotion  = ref(false)
+const darkMode       = ref(false)
 
 // ---------------------------------------------------------------------------
 // Non-reactive animation state (mutated directly to avoid reactivity overhead)
@@ -90,7 +132,7 @@ let borderNodes:          Node[] = []       // fixed outline nodes
 let cachedBorderEdges:    Edge[] = []       // precomputed; border nodes never move
 let borderEdgeThreshold:           number = 10      // physical px; updated in rebuildMask
 let interiorToBorderThreshold:     number = 25      // physical px; scaled by font size in rebuildMask
-let fontScaleCSS:                  number = 1.0     // cssFontSize / 80; updated in rebuildMask
+let fontPhysicalScale:             number = 1.0     // fittedFontSize / REFERENCE_FONT_PHYSICAL_PX; updated in rebuildMask
 let currentDpr:                    number = 1       // device pixel ratio; updated in rebuildMask
 let isDarkMode:                    boolean = false  // updated by MutationObserver
 let filledPixels:        FilledPixel[] = []
@@ -105,24 +147,10 @@ let motionChangeHandler: ((e: MediaQueryListEvent) => void) | null = null
 let resizeObserver:      ResizeObserver | null = null
 let darkModeObserver:    MutationObserver | null = null
 
-// ---------------------------------------------------------------------------
-// Task 4.2 — detectWebGL and detectReducedMotion helpers
-// Validates: Requirements 3.3, 7.2
-// ---------------------------------------------------------------------------
-
-/**
- * Attempts to obtain a WebGL rendering context from the given canvas.
- * Returns the context on success, or null if WebGL is unavailable.
- */
 function detectWebGL(canvas: HTMLCanvasElement): WebGLRenderingContext | null {
   return canvas.getContext('webgl', { alpha: true, premultipliedAlpha: false }) as WebGLRenderingContext | null
 }
 
-/**
- * Reads the initial `prefers-reduced-motion` state and attaches a change
- * listener that keeps the `reducedMotion` ref in sync.
- * Returns the initial `matches` value.
- */
 function detectReducedMotion(): boolean {
   motionMediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
   motionChangeHandler = (e: MediaQueryListEvent) => {
@@ -133,8 +161,7 @@ function detectReducedMotion(): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Task 4.3 — initWebGL: compile shaders and create GPU buffers
-// Validates: Requirements 2.1, 2.2, 2.3, 7.2
+// WebGL setup
 // ---------------------------------------------------------------------------
 
 /** GLSL source for the node vertex shader. */
@@ -283,8 +310,7 @@ function initWebGL(glCtx: WebGLRenderingContext): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Task 4.4 — drawFrame: per-frame draw call
-// Validates: Requirements 1.1, 2.1, 2.2, 2.3, 3.1, 3.2
+// Per-frame rendering
 // ---------------------------------------------------------------------------
 
 /**
@@ -397,22 +423,30 @@ function drawFrame(
 
   const data = new Float32Array(total * FLOATS_PER_VERTEX)
 
-  // In light mode the brand colours need to be darker to read against white.
-  // 0.55 brings the saturated blues/purples down to a clearly visible, non-harsh value.
+  // Identical brand colours in both modes — the canvas drop-shadow glow
+  // (custom.css) provides the contrast needed for legibility on light backgrounds.
+  // Dark mode uses additive blending, so the per-particle multiplier stays
+  // low to prevent overlap saturation; light mode uses standard alpha and can
+  // run at full saturation.
   const cs = isDarkMode ? .25 : 1.0
+
+  // Per-node sizes are authored in CSS px and scaled to physical px here so
+  // dots remain visible (and not chunky) across the full DPR range.
+  const interiorNodeSize = INTERIOR_NODE_SIZE_CSS * currentDpr
+  const borderNodeSize   = BORDER_NODE_SIZE_CSS   * currentDpr
 
   // --- Interior nodes ---
   for (let i = 0; i < iCount; i++) {
     const n = iNodes[i]
-    const [r, g, b] = nodeColour(n.x, canvasWidth, timeMs, reducedMotion.value)
-    packVertex(data, i * FLOATS_PER_VERTEX, n.x, n.y, INTERIOR_NODE_ALPHA, r * cs, g * cs, b * cs, INTERIOR_NODE_SIZE)
+    const [r, g, b] = nodeColour(n.x, n.y, canvasWidth, ch, timeMs, reducedMotion.value)
+    packVertex(data, i * FLOATS_PER_VERTEX, n.x, n.y, INTERIOR_NODE_ALPHA, r * cs, g * cs, b * cs, interiorNodeSize)
   }
 
   // --- Border nodes ---
   for (let i = 0; i < bCount; i++) {
     const n = bNodes[i]
-    const [r, g, b] = nodeColour(n.x, canvasWidth, timeMs, reducedMotion.value)
-    packVertex(data, (iCount + i) * FLOATS_PER_VERTEX, n.x, n.y, BORDER_NODE_ALPHA, r * cs, g * cs, b * cs, BORDER_NODE_SIZE)
+    const [r, g, b] = nodeColour(n.x, n.y, canvasWidth, ch, timeMs, reducedMotion.value)
+    packVertex(data, (iCount + i) * FLOATS_PER_VERTEX, n.x, n.y, BORDER_NODE_ALPHA, r * cs, g * cs, b * cs, borderNodeSize)
   }
 
   // --- Interior edge vertices (two per edge) ---
@@ -421,8 +455,8 @@ function drawFrame(
     const edge = iEdges[e]
     const nA = iNodes[edge.i]
     const nB = edge.j < iCount ? iNodes[edge.j] : bNodes[edge.j - iCount]
-    const [rA, gA, bA] = nodeColour(nA.x, canvasWidth, timeMs, reducedMotion.value)
-    const [rB, gB, bB] = nodeColour(nB.x, canvasWidth, timeMs, reducedMotion.value)
+    const [rA, gA, bA] = nodeColour(nA.x, nA.y, canvasWidth, ch, timeMs, reducedMotion.value)
+    const [rB, gB, bB] = nodeColour(nB.x, nB.y, canvasWidth, ch, timeMs, reducedMotion.value)
     const baseA = (totalNodes + e * 2) * FLOATS_PER_VERTEX
     packVertex(data, baseA,                    nA.x, nA.y, edge.alpha, rA * cs, gA * cs, bA * cs, 0)
     packVertex(data, baseA + FLOATS_PER_VERTEX, nB.x, nB.y, edge.alpha, rB * cs, gB * cs, bB * cs, 0)
@@ -432,14 +466,18 @@ function drawFrame(
   // Each edge is a screen-aligned rectangle perpendicular to the edge direction,
   // giving reliable sub-pixel-accurate thickness on all WebGL 1 implementations
   // (gl.lineWidth is capped at 1 on most GPUs/browsers).
-  // Scale edge thickness by font size so borders look proportional at all breakpoints
-  const halfW = BORDER_EDGE_HALF_WIDTH_CSS * currentDpr * fontScaleCSS
+  // Border edge thickness: scales gently with font (so big desktop hero looks
+  // bolder), with a hard floor at 1 CSS px full width so the silhouette
+  // always reads — even on small portrait fonts where the interior mesh is tight.
+  const halfWFromFont = BORDER_EDGE_HALF_WIDTH_CSS_AT_REF * currentDpr * fontPhysicalScale
+  const halfWFloor    = BORDER_EDGE_HALF_WIDTH_CSS_FLOOR  * currentDpr
+  const halfW = Math.max(halfWFloor, halfWFromFont)
   const bEdgeStart = totalNodes + iEdgeV
   for (let e = 0; e < bEdges.length; e++) {
     const edge = bEdges[e]
     const nA = bNodes[edge.i], nB = bNodes[edge.j]
-    const [rA, gA, bA] = nodeColour(nA.x, canvasWidth, timeMs, reducedMotion.value)
-    const [rB, gB, bB] = nodeColour(nB.x, canvasWidth, timeMs, reducedMotion.value)
+    const [rA, gA, bA] = nodeColour(nA.x, nA.y, canvasWidth, ch, timeMs, reducedMotion.value)
+    const [rB, gB, bB] = nodeColour(nB.x, nB.y, canvasWidth, ch, timeMs, reducedMotion.value)
     const alpha = Math.max(0.8, edge.alpha)
 
     // Perpendicular unit vector scaled to half-width
@@ -518,9 +556,19 @@ function startAnimationLoop(): void {
 }
 
 // ---------------------------------------------------------------------------
-// Task 4.5 — onMounted: full initialisation sequence
-// Validates: Requirements 1.1, 1.2, 6.1, 7.1, 7.2
+// Mask rebuild + lifecycle
 // ---------------------------------------------------------------------------
+
+/** Number of interior drifting nodes to spawn for a mask of `filledPixelCount`
+ *  filled pixels. Constant density across viewports / DPRs — the same look
+ *  whether the text is rasterised at 80 phys px (desktop) or 100 phys px
+ *  (high-DPR phone portrait) or 180 phys px (high-DPR phone landscape). */
+function computeInteriorNodeCount(filledPixelCount: number): number {
+  return Math.max(
+    MIN_INTERIOR_NODES,
+    Math.min(MAX_INTERIOR_NODES, Math.round(filledPixelCount / FILLED_PIXELS_PER_INTERIOR_NODE)),
+  )
+}
 
 /** Rebuilds text mask, char positions, and border nodes using a DPR-scaled, width-fitted font. */
 function rebuildMask(canvas: HTMLCanvasElement): void {
@@ -533,31 +581,40 @@ function rebuildMask(canvas: HTMLCanvasElement): void {
   maskSet = new Set(filledPixels.map(p => p.y * canvas.width + p.x))
   charPositions = getCharPositions(fontSize, canvas.width)
 
-  // All threshold distances scale proportionally to font size relative to the 80px CSS
-  // reference so the visual density stays consistent across mobile / tablet / desktop.
-  // At 44px mobile: fontScaleCSS ≈ 0.55 → thresholds roughly halved vs desktop.
-  //fontScaleCSS = Math.min(1.2, Math.max(0.7, cssFontTarget / 80))
-  fontScaleCSS = 1.0
-  const borderSpacing = Math.max(1, Math.round(BORDER_NODE_SPACING_CSS * dpr * fontScaleCSS))
-  borderEdgeThreshold = Math.round(BORDER_EDGE_THRESHOLD_CSS * dpr * fontScaleCSS)
-  interiorToBorderThreshold = Math.max(5, Math.round(INTERIOR_TO_BORDER_THRESHOLD_BASE * fontScaleCSS))
-  const borderPixels  = buildBorderPixels(filledPixels, maskSet, canvas.width)
-  borderNodes         = spawnBorderNodes(borderPixels, borderSpacing)
-  // Threshold-based edges connect all physically adjacent border nodes.
-  // Cross-character suppression is handled by the midpoint mask check (pass maskSet):
-  // if an edge's midpoint falls in the empty gap between two letters it is rejected.
-  // This is more reliable than zone-based charPositions filtering, which misclassifies
-  // bottom-corner nodes due to kerning and causes missing edges at the base of 'n', 'm', 'i'.
-  cachedBorderEdges = buildEdges(borderNodes, borderEdgeThreshold, [], maskSet, canvas.width)
+  // The actual rasterised font size (in physical pixels) is the single number
+  // that combines viewport breakpoint + DPR — perfect ruler for the interior
+  // mesh. The border ring stays in CSS-px units (×DPR) so the outline keeps
+  // a constant *visual* density at all sizes.
+  fontPhysicalScale = fontSize / REFERENCE_FONT_PHYSICAL_PX
+
+  // Border ring: independent of font size — outline must read at any scale.
+  const borderSpacing = Math.max(1, Math.round(BORDER_NODE_SPACING_CSS * dpr))
+  borderEdgeThreshold = Math.max(2, Math.round(BORDER_EDGE_THRESHOLD_CSS * dpr))
+
+  // Interior reach: scales with the actual rasterised font size so each node's
+  // reach is a constant fraction of cap-height regardless of viewport / DPR.
+  interiorToBorderThreshold = Math.max(8, Math.round(INTERIOR_REACH_RATIO * fontSize))
+  const borderPixels = buildBorderPixels(filledPixels, maskSet, canvas.width)
+  borderNodes        = spawnBorderNodes(borderPixels, borderSpacing)
+
+  // Outline edges are character-strict: cross-character connections via the
+  // borderEdgeThreshold are forbidden. Inter-character connections come from
+  // a separate, capped `buildBorderBridges` pass — exactly 1 edge between
+  // adjacent letters in a word, 2–5 across word boundaries. At small font
+  // sizes this stops the kerning-tight glyphs from merging into a blob.
+  const outlineEdges = buildEdges(borderNodes, borderEdgeThreshold, charPositions, maskSet, canvas.width)
+  const bridgeEdges  = buildBorderBridges(borderNodes, charPositions, IN_WORD_BRIDGES, CROSS_WORD_BRIDGES_MIN, CROSS_WORD_BRIDGES_MAX)
+  cachedBorderEdges  = [...outlineEdges, ...bridgeEdges]
 }
 
-onMounted(() => {
-  // Guard against SSR
-  if (!canvasRef.value) return
+// ---------------------------------------------------------------------------
+// WebGL lifecycle (start / stop — called from onMounted, watcher, and cleanup)
+// ---------------------------------------------------------------------------
 
-  const canvas = canvasRef.value
-
-  // Detect WebGL support
+/** Full WebGL initialisation: compile shaders, size canvas, build mask, spawn
+ *  nodes, and start the rAF loop. Only called when the canvas exists and we are
+ *  in dark mode. */
+function startWebGL(canvas: HTMLCanvasElement): void {
   const glCtx = detectWebGL(canvas)
   if (!glCtx) {
     webglSupported.value = false
@@ -565,31 +622,16 @@ onMounted(() => {
   }
   gl = glCtx
 
-  // Detect reduced motion preference
-  reducedMotion.value = detectReducedMotion()
-
-  // Track VitePress dark/light mode (toggles .dark class on <html>)
-  isDarkMode = document.documentElement.classList.contains('dark')
-  darkModeObserver = new MutationObserver(() => {
-    isDarkMode = document.documentElement.classList.contains('dark')
-  })
-  darkModeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-
-  // Compile shaders and create GPU buffers
   if (!initWebGL(gl)) return
 
-  // Size the canvas to its parent element (physical pixels = CSS pixels × DPR)
   const dpr = window.devicePixelRatio || 1
   canvas.width  = Math.round(canvas.offsetWidth  * dpr)
   canvas.height = Math.round(canvas.offsetHeight * dpr)
   gl.viewport(0, 0, canvas.width, canvas.height)
 
-  // Wait for web fonts (Inter) to load before building the text mask so
-  // measureText returns correct widths for character-position classification.
   const initAfterFonts = () => {
     rebuildMask(canvas)
-    const nodeCount = window.innerWidth < 640 ? MOBILE_NODE_COUNT : DESKTOP_NODE_COUNT
-    nodes = spawnNodes(filledPixels, nodeCount)
+    nodes = spawnNodes(filledPixels, computeInteriorNodeCount(filledPixels.length))
     startAnimationLoop()
   }
 
@@ -599,7 +641,6 @@ onMounted(() => {
     initAfterFonts()
   }
 
-  // Handle WebGL context loss / restoration
   canvas.addEventListener('webglcontextlost', (e: Event) => {
     e.preventDefault()
     cancelAnimationFrame(frameId)
@@ -611,16 +652,10 @@ onMounted(() => {
     gl = restoredCtx
     if (!initWebGL(gl)) return
     rebuildMask(canvas)
-    const nc = window.innerWidth < 640 ? MOBILE_NODE_COUNT : DESKTOP_NODE_COUNT
-    nodes = spawnNodes(filledPixels, nc)
+    nodes = spawnNodes(filledPixels, computeInteriorNodeCount(filledPixels.length))
     startTime = 0
     startAnimationLoop()
   })
-
-  // ---------------------------------------------------------------------------
-  // Task 4.6 — ResizeObserver callback
-  // Validates: Requirements 5.1, 5.2, 5.3, 5.4
-  // ---------------------------------------------------------------------------
 
   resizeObserver = new ResizeObserver(() => {
     const pixelRatio = window.devicePixelRatio || 1
@@ -632,39 +667,73 @@ onMounted(() => {
     }
 
     rebuildMask(canvas)
-    const newNodeCount = window.innerWidth < 640 ? MOBILE_NODE_COUNT : DESKTOP_NODE_COUNT
-    nodes = spawnNodes(filledPixels, newNodeCount)
+    nodes = spawnNodes(filledPixels, computeInteriorNodeCount(filledPixels.length))
   })
 
   resizeObserver.observe(canvas)
-})
+}
 
-// ---------------------------------------------------------------------------
-// Task 4.7 — onUnmounted cleanup
-// Validates: Requirements 7.1
-// ---------------------------------------------------------------------------
-
-onUnmounted(() => {
-  // Cancel the animation loop
+/** Tear down the WebGL pipeline (canvas stays in the DOM, but animation and
+ *  observers are released). The dark-mode observer and motion-query listener
+ *  are kept alive for a potential re-entry into dark mode. */
+function stopWebGL(): void {
   cancelAnimationFrame(frameId)
 
-  // Release the WebGL context
   if (gl) {
     gl.getExtension('WEBGL_lose_context')?.loseContext()
     gl = null
   }
+
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    resizeObserver = null
+  }
+}
+
+onMounted(() => {
+  // Set up dark-mode detection — always, even if the canvas isn't rendered
+  // yet (light mode), so switching to dark mode triggers the watcher.
+  darkMode.value = document.documentElement.classList.contains('dark')
+  isDarkMode = darkMode.value
+  darkModeObserver = new MutationObserver(() => {
+    const isDark = document.documentElement.classList.contains('dark')
+    isDarkMode = isDark
+    darkMode.value = isDark
+  })
+  darkModeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+
+  // Detect reduced motion preference
+  reducedMotion.value = detectReducedMotion()
+
+  // Only initialise WebGL if the canvas is already visible (dark mode on first load)
+  if (canvasRef.value && darkMode.value) {
+    startWebGL(canvasRef.value)
+  }
+})
+
+// When the user toggles the theme, start or stop the WebGL animation.
+// nextTick ensures the v-if canvas element is in the DOM before we touch it.
+watch(darkMode, async (isDark) => {
+  if (isDark && webglSupported.value && !gl) {
+    await nextTick()
+    if (canvasRef.value) startWebGL(canvasRef.value)
+  } else if (!isDark && gl) {
+    stopWebGL()
+  }
+})
+
+// ---------------------------------------------------------------------------
+// Cleanup
+// ---------------------------------------------------------------------------
+
+onUnmounted(() => {
+  stopWebGL()
 
   // Remove the reduced-motion change listener
   if (motionMediaQuery && motionChangeHandler) {
     motionMediaQuery.removeEventListener('change', motionChangeHandler)
     motionMediaQuery = null
     motionChangeHandler = null
-  }
-
-  // Disconnect the ResizeObserver
-  if (resizeObserver) {
-    resizeObserver.disconnect()
-    resizeObserver = null
   }
 
   // Disconnect the dark mode observer
@@ -675,11 +744,9 @@ onUnmounted(() => {
 })
 </script>
 
-<!-- Task 4.8 — Template and scoped styles
-     Validates: Requirements 6.1, 7.2, 7.3 -->
 <template>
   <canvas
-    v-if="webglSupported"
+    v-if="webglSupported && darkMode"
     ref="canvasRef"
     class="neuron-hero-canvas"
     aria-label="Cognitive Companion"

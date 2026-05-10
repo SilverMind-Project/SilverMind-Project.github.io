@@ -157,7 +157,7 @@ describe('nodeColour', () => {
    * At t=0 (x=0, timeMs=0, no reduced motion) the colour should equal BRAND_STOPS[0].
    */
   it('returns BRAND_STOPS[0] at phase 0', () => {
-    const [r, g, b] = nodeColour(0, 1000, 0, false)
+    const [r, g, b] = nodeColour(0, 500, 1000, 1000, 0, false)
     expect(r).toBeCloseTo(BRAND_STOPS[0][0], 6)
     expect(g).toBeCloseTo(BRAND_STOPS[0][1], 6)
     expect(b).toBeCloseTo(BRAND_STOPS[0][2], 6)
@@ -170,7 +170,7 @@ describe('nodeColour', () => {
    */
   it('returns BRAND_STOPS[1] at phase 0.5', () => {
     const timeAtHalf = GRADIENT_PERIOD_MS * 0.5
-    const [r, g, b] = nodeColour(0, 1000, timeAtHalf, false)
+    const [r, g, b] = nodeColour(0, 500, 1000, 1000, timeAtHalf, false)
     expect(r).toBeCloseTo(BRAND_STOPS[1][0], 6)
     expect(g).toBeCloseTo(BRAND_STOPS[1][1], 6)
     expect(b).toBeCloseTo(BRAND_STOPS[1][2], 6)
@@ -181,7 +181,7 @@ describe('nodeColour', () => {
    * At t=1.0 (wraps to 0) the colour should equal BRAND_STOPS[0] again (periodicity).
    */
   it('wraps back to BRAND_STOPS[0] at phase 1.0', () => {
-    const [r, g, b] = nodeColour(0, 1000, GRADIENT_PERIOD_MS, false)
+    const [r, g, b] = nodeColour(0, 500, 1000, 1000, GRADIENT_PERIOD_MS, false)
     expect(r).toBeCloseTo(BRAND_STOPS[0][0], 6)
     expect(g).toBeCloseTo(BRAND_STOPS[0][1], 6)
     expect(b).toBeCloseTo(BRAND_STOPS[0][2], 6)
@@ -193,9 +193,9 @@ describe('nodeColour', () => {
    * Two calls with different timeMs values must return the same colour.
    */
   it('freezes colour when reducedMotion is true', () => {
-    const colour1 = nodeColour(0, 1000, 0, true)
-    const colour2 = nodeColour(0, 1000, 5000, true)
-    const colour3 = nodeColour(0, 1000, 12345, true)
+    const colour1 = nodeColour(0, 500, 1000, 1000, 0, true)
+    const colour2 = nodeColour(0, 500, 1000, 1000, 5000, true)
+    const colour3 = nodeColour(0, 500, 1000, 1000, 12345, true)
     expect(colour1).toEqual(colour2)
     expect(colour1).toEqual(colour3)
   })
@@ -205,7 +205,7 @@ describe('nodeColour', () => {
    * When reducedMotion is true, temporal phase is 0.5, so colour equals BRAND_STOPS[1].
    */
   it('returns BRAND_STOPS[1] when reducedMotion is true and x=0', () => {
-    const [r, g, b] = nodeColour(0, 1000, 0, true)
+    const [r, g, b] = nodeColour(0, 500, 1000, 1000, 0, true)
     expect(r).toBeCloseTo(BRAND_STOPS[1][0], 6)
     expect(g).toBeCloseTo(BRAND_STOPS[1][1], 6)
     expect(b).toBeCloseTo(BRAND_STOPS[1][2], 6)
@@ -216,8 +216,8 @@ describe('nodeColour', () => {
    * When canvasWidth is 0, spatial phase is treated as 0 (no division by zero).
    */
   it('handles canvasWidth=0 without throwing (spatial phase treated as 0)', () => {
-    expect(() => nodeColour(100, 0, 0, false)).not.toThrow()
-    const [r, g, b] = nodeColour(100, 0, 0, false)
+    expect(() => nodeColour(100, 0, 0, 0, 0, false)).not.toThrow()
+    const [r, g, b] = nodeColour(100, 0, 0, 0, 0, false)
     // With canvasWidth=0 and timeMs=0, phase=0, t=0 → BRAND_STOPS[0]
     expect(r).toBeCloseTo(BRAND_STOPS[0][0], 6)
     expect(g).toBeCloseTo(BRAND_STOPS[0][1], 6)
@@ -231,8 +231,8 @@ describe('nodeColour', () => {
    */
   it('spatial phase wraps correctly: x=canvasWidth gives same colour as x=0 at t=0', () => {
     const canvasWidth = 1000
-    const colour0 = nodeColour(0, canvasWidth, 0, false)
-    const colourFull = nodeColour(canvasWidth, canvasWidth, 0, false)
+    const colour0 = nodeColour(0, canvasWidth / 2, canvasWidth, canvasWidth, 0, false)
+    const colourFull = nodeColour(canvasWidth, canvasWidth / 2, canvasWidth, canvasWidth, 0, false)
     // phase at x=canvasWidth = 1.0 * SPATIAL_PHASE_SCALE = 2.0, t = 2.0 % 1.0 = 0.0
     expect(colourFull[0]).toBeCloseTo(colour0[0], 6)
     expect(colourFull[1]).toBeCloseTo(colour0[1], 6)
@@ -254,7 +254,7 @@ describe('nodeColour', () => {
     ] as const
 
     for (const [x, cw, t, rm] of testCases) {
-      const [r, g, b] = nodeColour(x, cw, t, rm)
+      const [r, g, b] = nodeColour(x, cw / 2, cw, cw, t, rm)
       expect(r).toBeGreaterThanOrEqual(0)
       expect(r).toBeLessThanOrEqual(1)
       expect(g).toBeGreaterThanOrEqual(0)
