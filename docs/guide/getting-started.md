@@ -6,15 +6,16 @@ This guide walks you through getting Cognitive Companion running on your local n
 
 | Component | Purpose | Notes |
 | --- | --- | --- |
-| **NVIDIA GPU** (10 GB+ VRAM) | Person-ID service + vLLM + Ollama | RTX 3060 or better |
+| **NVIDIA GPU** (10 GB+ VRAM) | Person-ID service + vLLM + llama.cpp + Triton | RTX 3060 or better |
 | **Docker** + NVIDIA Container Toolkit | Container runtime | For all services |
 | **Home Assistant** | Sensor integration, audio playback, actions | REST API + long-lived token |
 | **MinIO** (or S3-compatible) | Media object storage | Pre-signed URL support required |
-| **vLLM** | Vision + translation model serving | Cosmos-Reason2-8B, TranslateGemma-12b |
-| **Ollama** | Logic reasoning model | gemma3:4b |
-| **Python 3.11+** | Backend runtime | 3.12 recommended |
+| **vLLM** | Vision model serving | Cosmos-Reason2 via OpenAI-compatible API |
+| **llama.cpp** `llama-server` | General reasoning model | Gemma 4 via OpenAI-compatible API |
+| **Triton Inference Server** | Embedding model for RAG | embeddinggemma-300m for knowledge repository |
+| **Python 3.14** | Backend runtime | |
 | **[uv](https://docs.astral.sh/uv/)** | Python package manager | For local development |
-| **Node.js 18+** | Frontend build | For admin console, websocket audio interface |
+| **Node.js 18+** | Frontend build | For admin console, WebSocket audio interface |
 
 ### Optional Components
 
@@ -36,9 +37,8 @@ Edit `.env` with your service URLs and API keys:
 
 ```bash
 # LLM Providers
-VISION_MODEL_URL=http://localhost:8001/v1
-TRANSLATE_MODEL_URL=http://localhost:8002/v1
-LOGIC_MODEL_URL=http://localhost:11434
+VISION_MODEL_URL=http://localhost:8001/v1       # vLLM (Cosmos Reason2)
+GEMMA_MODEL_URL=http://localhost:8080/v1        # llama.cpp (Gemma 4)
 
 # Home Assistant
 HOME_ASSISTANT_URL=http://homeassistant.local:8123
@@ -156,9 +156,8 @@ person_identification → llm_call (vision) → llm_call (reasoning) → notific
 2. On the **Settings** tab, set the trigger type to `sensor_event` and bind it to a camera sensor
 3. Switch to the **Pipeline** tab and add steps from the palette in order:
    - **Person Identification**: identify who is in the frame
-   - **LLM Call** (vision): describe what is happening
-   - **LLM Call** (reasoning): decide if a notification is warranted
-   - **Translation**: translate the message to Tamil (or your target language)
+   - **LLM Call** (vision, e.g. Cosmos Reason2): describe what is happening
+   - **LLM Call** (reasoning, e.g. Gemma 4): decide if a notification is warranted
    - **Notification**: send the alert to configured channels
 4. Configure each step's settings in its config dialog
 5. Enable the rule and save

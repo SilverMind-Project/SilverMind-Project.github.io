@@ -18,16 +18,21 @@ class YourStepHandler(StepHandler):
     def metadata(cls) -> StepMetadata:
         return StepMetadata(
             type_name="your_step",
-            name="Your Step",
-            description="What this step does",
+            display_name="Your Step",
+            category="action",        # perception | reasoning | action | state | flow
             icon="mdi-icon-name",
+            description="What this step does.",
             config_schema={
-                "some_field": {
-                    "type": "string",
-                    "default": "",
-                    "description": "Field description",
+                "type": "object",
+                "properties": {
+                    "some_field": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Field description",
+                    },
                 },
             },
+            default_config={"some_field": ""},
         )
 
     async def execute(self, step, execution, pipeline_data, trigger, services):
@@ -40,8 +45,8 @@ class YourStepHandler(StepHandler):
         threshold = config.get("threshold", 0.5)
 
         # Access shared services via the ServiceContainer
-        # services.vision_llm, services.logic_llm, services.ha_client, etc.
-        result = await services.logic_llm.generate(prompt)
+        # services.llm_model_registry, services.ha_client, etc.
+        result = await some_service.do_thing(prompt)
 
         # Keys in data={} are merged into pipeline_data for downstream steps
         return StepResult(
@@ -75,7 +80,7 @@ All core types live in `backend/steps/base.py`:
   - `next_step_id`: for conditional branching (jump to a specific step)
   - `wait_until`: for delayed resume (pause and resume later)
 - **`TriggerContext`**: trigger metadata:
-  - `trigger_type`: `"sensor_event"`, `"cron"`, `"manual"`, or `"webhook"`
+  - `trigger_type`: `"sensor_event"`, `"cron"`, `"manual"`, `"webhook"`, `"telegram"`, `"occupancy_duration"`, or `"resume"`
   - `sensor_id`, `room_name`: where the event came from
   - `media_paths`: list of media file paths
   - `media_type`: type of media

@@ -363,7 +363,13 @@ export function nodeColour(
   const temporalWobble = 0.025 * wob3
   const temporalPhase  = baseT + temporalWobble
 
-  const t = ((spatialPhase + temporalPhase) % 1.0 + 1.0) % 1.0
+  // When Math.sin(k*2*PI) returns ~1e-16 instead of 0, the wobble terms
+  // can push the phase slightly below zero. The double-mod wraps a tiny
+  // negative to 0.9999... instead of 0, breaking periodicity. Clamping
+  // both ends of the [0, 1) interval restores exact periodicity at integer
+  // multiples of the gradient period.
+  const tRaw = ((spatialPhase + temporalPhase) % 1.0 + 1.0) % 1.0
+  const t = tRaw < 1e-10 || tRaw > 1 - 1e-10 ? 0 : tRaw
 
   // Smoothstep eases each segment at its endpoints — replaces the
   // piecewise-linear sampling whose slope kink at the indigo stop (t=0.6)

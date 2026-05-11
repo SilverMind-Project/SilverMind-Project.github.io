@@ -562,6 +562,21 @@ Generate end-of-day activity reports for one or all household members. Aggregate
 
 **Output keys:** `pipeline_data[output_key]` (list of report results with `person_id`, `report_date`, `report_id`, `wellness_score`)
 
+#### `info_card`
+
+Delivers a curated info card to the senior via PWA popup, e-ink display, or both. Loads an approved `InfoCard` by ID from the knowledge repository, resolves its image slots through the image pipeline, and dispatches via the knowledge delivery service. A voice instruction override allows per-delivery Gemini Live behavioural guardrails.
+
+**Config fields:**
+
+- `info_card_id` (required): ID of an approved `InfoCard` to deliver
+- `channels`: list of delivery channels: `pwa`, `eink`, or both (default `["pwa"]`)
+- `pwa_dismiss_seconds`: auto-dismiss timeout for the PWA popup (default 60)
+- `eink_expiry_minutes`: how long the e-ink image stays active before refresh (default 30)
+- `voice_instruction`: override the default Gemini Live voice instruction for this delivery
+- `trigger_cooloff`: whether successful delivery consumes the rule cool-off (default `true`)
+
+**Output keys:** `info_card_delivery` with `info_card_id`, `layout_id`, `delivered_channels`, `delivery_id`
+
 ### Flow
 
 #### `wait`
@@ -600,6 +615,48 @@ At least one of `voice_prompt_template` or `popup_message_template` must be conf
 **Workflow status:** The execution status is set to `"waiting_for_response"` while the prompt is active. When a response arrives or timeout fires, the status transitions to `"running"` and the pipeline resumes from the next step.
 
 ::: details Example: bathroom safety check-in
+
+#### `quiz_start`
+
+Starts an interactive quiz session via the companion PWA. Loads an approved `Quiz` by ID from the knowledge repository, creates a `QuizSession`, and opens the quiz dialog on the senior's PWA. Supports question randomization, per-senior deduplication, configurable session timeout, and voice instruction overrides.
+
+**Config fields:**
+
+- `quiz_id` (required): ID of an approved `Quiz` to deliver
+- `max_questions`: limit the number of questions delivered (default 5)
+- `randomize_order`: randomize question order (default `false`)
+- `session_timeout_minutes`: max session duration before auto-complete (default 10)
+- `per_senior_dedupe_hours`: skip delivery if the same senior completed this quiz within N hours (default 12)
+- `voice_instruction`: override the default Gemini Live voice instruction for this quiz session
+- `trigger_cooloff`: whether successful delivery consumes the rule cool-off (default `true`)
+
+**Output keys:** `quiz_session` with `quiz_id`, `session_id`, `question_count`, `status`, `questions`
+
+::: details Example: daily medication knowledge quiz
+
+A cron rule fires at 10 AM every day and delivers a medication knowledge quiz:
+
+```yaml
+# 1. Check home state to make sure the senior is awake and at home
+step_type: home_state
+config:
+  output_key: home
+
+# 2. Only proceed if the senior is home and awake
+step_type: condition
+config:
+  expression: "home.home_at_home and not home.home_asleep"
+
+# 3. Deliver the medication quiz
+step_type: quiz_start
+config:
+  quiz_id: 3
+  max_questions: 5
+  randomize_order: false
+  session_timeout_minutes: 15
+```
+
+:::
 
 A rule with `trigger_type: occupancy_duration` fires when the bathroom presence sensor has been on for 40 minutes. The pipeline sends a bilingual check-in prompt and waits for a response:
 

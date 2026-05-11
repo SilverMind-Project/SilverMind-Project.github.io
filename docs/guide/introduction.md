@@ -23,49 +23,46 @@ Cognitive Companion addresses this through six design choices:
 
 ## How it works
 
-```text
-            ┌─────────── Edge devices ───────────┐
-            │  reCamera (HTTP push)              │
-            │  reTerminal (e-ink + button)       │
-            │  Home Assistant sensors (poll)     │
-            │  RTSP cameras → continuous-tracking│
-            └──────────────────┬─────────────────┘
-                               │
-                               ▼
-              ┌──────────────────────────────────┐
-              │   Cognitive Companion (FastAPI)  │
-              │                                  │
-              │  EventAggregator → RulesEngine   │
-              │              ↓ matched rules     │
-              │       PipelineExecutor           │
-              │   (20 step types, plugin-based)  │
-              │              ↓                   │
-              │       NotificationDispatcher     │
-              │   (7 channels, plugin-based)     │
-              │                                  │
-              │  CTSRuntime (Redis Streams)      │
-              │  PresenceService (fused)         │
-              │  MCP server (FastMCP, /mcp)      │
-              │  WebSocket audio (Gemini Live)   │
-              └────┬──────────┬──────────┬───────┘
-                   │          │          │
-                   ▼          ▼          ▼
-            person-id    scene-analysis  semantic-memory
-            service       service          service
-            (ArcFace)    (YOLO+Florence-2 (pgvectorscale
-                          +CLIP)            observations)
-                   │
-                   ▼
-            tts-service (svara / fish_speech / edge_tts)
+```mermaid
+flowchart TB
+    subgraph Edge["Edge Devices"]
+        reCamera["reCamera<br/>(HTTP push)"]
+        reTerminal["reTerminal<br/>(e-ink + button)"]
+        HA["Home Assistant sensors<br/>(polled)"]
+        RTSP["RTSP cameras<br/>→ continuous-tracking"]
+    end
 
-            continuous-tracking/  (separate service family)
-            ├── rtsp-ingress (Go) → go2rtc + motion gate + MinIO
-            ├── tracking-orchestrator → YOLO26L + SOLIDER-REID
-            │                             + RTMPose + BoT-SORT
-            │                             + Bayesian identity
-            │                             + dementia signal worker
-            └── Redis Streams → CC subscribers
-                tracking.events / tracking.revisions / tracking.signals
+    subgraph CC["Cognitive Companion (FastAPI)"]
+        direction TB
+        Aggregator["EventAggregator"]
+        RulesEngine["RulesEngine"]
+        Executor["PipelineExecutor<br/>(20 step types)"]
+        Dispatcher["NotificationDispatcher<br/>(7 channels)"]
+        CTS["CTSRuntime<br/>(Redis Streams)"]
+        Presence["PresenceService<br/>(fused)"]
+        MCP["MCP server<br/>(FastMCP, /mcp)"]
+        WS["WebSocket audio<br/>(Gemini Live)"]
+        Aggregator --> RulesEngine --> Executor --> Dispatcher
+    end
+
+    subgraph Services["AI Services"]
+        PersonID["person-id service<br/>(ArcFace)<br/>&nbsp;"]
+        SceneAnalysis["scene-analysis service<br/>(YOLO + Florence-2 + CLIP)<br/>&nbsp;"]
+        SemanticMemory["semantic-memory service<br/>(pgvectorscale)<br/>&nbsp;"]
+        TTS["tts-service<br/>(svara / fish_speech / edge_tts)<br/>&nbsp;"]
+    end
+
+    subgraph CTS_["continuous-tracking/"]
+        Ingress["rtsp-ingress (Go)<br/>→ go2rtc + motion gate + MinIO<br/>&nbsp;"]
+        Orchestrator["tracking-orchestrator<br/>→ YOLO + SOLIDER-REID + RTMPose<br/>+ BoT-SORT + Bayesian identity<br/>+ dementia signal worker<br/>&nbsp;"]
+        Redis["Redis Streams<br/>→ CC subscribers<br/>(events / revisions / signals)<br/>&nbsp;"]
+        Ingress --> Orchestrator --> Redis
+    end
+
+    Edge --> CC
+    CC --> Services
+    CC --> CTS_
+    Redis --> CC
 ```
 
 **Event flow:**

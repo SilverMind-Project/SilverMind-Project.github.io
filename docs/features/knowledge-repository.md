@@ -6,53 +6,29 @@ Every piece of content passes through a review gate. Nothing reaches the senior 
 
 ## How It Works
 
-```text
-                         +-------------------+
-                         |   Caregiver UI    |
-                         +--------+----------+
-                                  |
-                    Upload documents (text + images)
-                                  |
-                                  v
-                    +-----------------------------+
-                    |  Triton Embedding Service   |
-                    |  embeddinggemma-300m        |
-                    |  chunk + embed via pgvector |
-                    +-----------------------------+
-                                  |
-                    +-------------+--------------+
-                    |                            |
-                    v                            v
-          +------------------+          +------------------+
-          |  Info Card Draft |          |  Quiz Draft      |
-          |  (LLM paraphrase)|          |  (LLM generate)  |
-          +--------+---------+          +--------+---------+
-                   |                             |
-                   |      Caregiver Review       |
-                   +----------+    Gate    +-----+
-                              |            |
-                              v            v
-                     +--------+------------+--------+
-                     |      Approved Content        |
-                     +--------+------------+--------+
-                              |            |
-               +--------------+    +-------+-----------+
-               | (pipeline rule)    | (pipeline rule)  |
-               v                    v                   v
-        +-----------+       +-----------+       +--------------+
-        | Info Card |       |   Quiz    |       | Senior Voice |
-        | Delivery  |       |  Session  |       | Query (RAG)  |
-        +-----+-----+       +-----+-----+       +------+-------+
-              |                   |                      |
-     +--------+--------+   +-----+------+        +------+------+
-     | PWA  | E-Ink |  |   | PWA | Voice |       | pgvector   |
-     |Popup |       |  |   |     | (Gemini|      | cosine sim |
-     +------+-------+--+   +-----+-------+       +------+------+
-     | Voice (Gemini Live) |                           |
-     +---------------------+                  +--------+--------+
-                                              | LLM synthesis  |
-                                              | or "no_answer"  |
-                                              +-----------------+
+```mermaid
+flowchart TB
+    Caregiver["Caregiver UI"] --> Upload["Upload documents<br/>(text + images)"]
+    Upload --> Triton["Triton Embedding Service<br/>embeddinggemma-300m<br/>(chunk + embed via pgvector)"]
+    Triton --> InfoCardDraft["Info Card Draft<br/>(LLM paraphrase)"]
+    Triton --> QuizDraft["Quiz Draft<br/>(LLM generate)"]
+    InfoCardDraft --> ReviewGate["Caregiver Review Gate"]
+    QuizDraft --> ReviewGate
+    ReviewGate --> Approved["Approved Content"]
+
+    Approved --> ICCardRule["pipeline rule<br/>(info_card step)"]
+    Approved --> QuizRule["pipeline rule<br/>(quiz_start step)"]
+    Approved --> RAG["Senior Voice Query<br/>(RAG)"]
+
+    ICCardRule --> PWA["PWA Popup"]
+    ICCardRule --> EInk["E-Ink Display"]
+    ICCardRule --> VoiceCard["Voice (Gemini Live)"]
+
+    QuizRule --> QuizPWA["PWA Dialog"]
+    QuizRule --> QuizVoice["Voice (Gemini Live)"]
+
+    RAG --> PGVector["pgvector<br/>cosine similarity"]
+    PGVector --> Synthesis["LLM Synthesis<br/>or no_answer"]
 ```
 
 Every interaction is logged for caregiver review. Info card deliveries record view and dismiss events. Quiz responses are graded and persisted. Voice queries record the question, answer, and source documents.

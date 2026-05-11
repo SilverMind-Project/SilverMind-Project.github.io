@@ -52,9 +52,8 @@ Each repository has its own `.env.example`. The Cognitive Companion `.env` confi
 
 ```bash
 # LLM Endpoints
-VISION_MODEL_URL=http://localhost:8001/v1
-TRANSLATE_MODEL_URL=http://localhost:8002/v1
-LOGIC_MODEL_URL=http://localhost:11434
+VISION_MODEL_URL=http://localhost:8001/v1       # vLLM (Cosmos Reason2)
+GEMMA_MODEL_URL=http://localhost:8080/v1        # llama.cpp (Gemma 4)
 
 # Google Gemini (optional, for realtime voice)
 GEMINI_API_KEY=
@@ -95,9 +94,8 @@ The following services run **outside** Docker Compose and must be accessible fro
 | Service                       | Purpose                             | Default URL                       |
 | ------------------------------- | ------------------------------------- | ----------------------------------- |
 | **Person ID Service**         | Face recognition + motion detection | `http://localhost:8200`           |
-| **vLLM** (Cosmos-Reason2-8B)  | Vision analysis                     | `http://localhost:8001/v1`        |
-| **vLLM** (TranslateGemma-12b) | Translation                         | `http://localhost:8002/v1`        |
-| **Ollama** (gemma3:4b)        | Logic reasoning                     | `http://localhost:11434`          |
+| **vLLM** (Cosmos-Reason2)     | Vision model serving                | `http://localhost:8001/v1`        |
+| **llama.cpp** (Gemma 4)       | General reasoning                   | `http://localhost:8080/v1`        |
 | **MinIO**                     | S3-compatible object storage        | `http://localhost:9000`           |
 | **Home Assistant**            | Sensor integration                  | `http://homeassistant.local:8123` |
 | **TTS service**               | Text-to-speech                      | `http://localhost:8200/v1`        |
@@ -126,34 +124,35 @@ For cluster deployments, Kubernetes manifests are provided in each repository's 
 
 ### Architecture
 
-```text
-Internet / LAN
-       │
-       ▼
-┌──────────────────────────────────────────────┐
-│  nginx ingress (single LoadBalancer IP)      │
-│  ├─ nanai.khoofia.com     → ai-api-gateway-frontend-svc:80 │
-│  ├─ api.nanai.khoofia.com → ai-api-gateway-svc:8000        │
-│  ├─ :8000-8002 (TCP)      → vllm-svc        │
-│  └─ :5432 (TCP)           → postgres-0.postgres.nanai    │
-└──────────────────────────────────────────────┘
-       │
-       ▼
-┌──────────────────────────────────────────────┐
-│  nanai namespace                             │
-│  ├─ ai-api-gateway (backend, port 8000)      │
-│  ├─ ai-api-gateway-frontend (frontend, :80)  │
-│  ├─ person-id (GPU, port 8200)               │
-│  ├─ tracking-orchestrator (port 8000)        │
-│  ├─ rtsp-ingress (port 8090) + go2rtc       │
-│  ├─ triton (GPU, ports 8700-8702)           │
-│  ├─ tts-service (GPU, port 8600)            │
-│  ├─ postgres (shared, port 5432)             │
-│  └─ redis (port 6379)                        │
-├──────────────────────────────────────────────┤
-│  minio-operator namespace                    │
-│  └─ minio (S3, port 80)                     │
-└──────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    Internet["Internet / LAN"] --> Ingress
+
+    subgraph Ingress["nginx ingress (LoadBalancer)"]
+        FrontendRoute["nanai.khoofia.com → frontend-svc:80"]
+        APIRoute["api.nanai.khoofia.com → backend-svc:8000"]
+        VLLMRoute[":8000-8002 TCP → vllm-svc"]
+        PGRoute[":5432 TCP → postgres"]
+    end
+
+    subgraph NanaiNS["nanai namespace"]
+        Backend["ai-api-gateway<br/>(backend, port 8000)"]
+        Frontend["ai-api-gateway-frontend<br/>(:80)"]
+        PersonID["person-id<br/>(GPU, port 8200)"]
+        Orchestrator["tracking-orchestrator<br/>(port 8000)"]
+        IngressSvc["rtsp-ingress<br/>(port 8090) + go2rtc"]
+        Triton["triton<br/>(GPU, ports 8700-8702)"]
+        TTS["tts-service<br/>(GPU, port 8600)"]
+        Postgres["postgres<br/>(shared, port 5432)"]
+        Redis["redis<br/>(port 6379)"]
+    end
+
+    subgraph MinioNS["minio-operator namespace"]
+        MinIO["minio<br/>(S3, port 80)"]
+    end
+
+    Ingress --> NanaiNS
+    Ingress --> MinioNS
 ```
 
 ### Design Principles

@@ -1,6 +1,18 @@
 import { defineConfig } from "vitepress";
 
 export default defineConfig({
+  markdown: {
+    config: (md) => {
+      const defaultRender = md.renderer.rules.fence?.bind(md.renderer.rules);
+      md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+        const token = tokens[idx];
+        if (token.info.trim() === "mermaid") {
+          return `<ClientOnly><Mermaid id="mermaid-${idx}" code="${encodeURIComponent(token.content)}" /></ClientOnly>`;
+        }
+        return defaultRender ? defaultRender(tokens, idx, options, env, self) : self.renderToken(tokens, idx, options);
+      };
+    },
+  },
   title: "Cognitive Companion",
   description:
     "Privacy-first, on-premise AI system for senior care in multigenerational households",
@@ -22,7 +34,7 @@ export default defineConfig({
       { text: "Development", link: "/development/setup" },
       { text: "Roadmap", link: "/roadmap" },
       {
-        text: "v0.6.93",
+        text: "v0.6.97",
         items: [
           {
             text: "Code",

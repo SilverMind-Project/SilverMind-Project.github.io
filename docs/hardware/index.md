@@ -165,16 +165,12 @@ Smart speakers, tablets, and other audio devices used for:
 
 All devices must be on the same local network as the Cognitive Companion backend. There is no cloud relay; communication is direct.
 
-```text
-┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
-│  reCamera   │────►│              │     │ Home Assistant   │
-│  (WiFi)     │     │  Cognitive   │◄───►│ (REST API)      │
-└─────────────┘     │  Companion   │     └─────────────────┘
-                    │  Backend     │
-┌─────────────┐     │  (port 8000) │     ┌─────────────────┐
-│ reTerminal  │◄───►│              │     │ MinIO           │
-│ (Ethernet)  │     │              │◄───►│ (S3 Storage)    │
-└─────────────┘     └──────────────┘     └─────────────────┘
+```mermaid
+flowchart LR
+    reCamera["reCamera<br/>(WiFi)"] --> Backend["Cognitive Companion<br/>Backend (port 8000)"]
+    reTerminal["reTerminal<br/>(Ethernet)"] <--> Backend
+    HA["Home Assistant<br/>(REST API)"] <--> Backend
+    MinIO["MinIO<br/>(S3 Storage)"] <--> Backend
 ```
 
 **Recommended network setup:**

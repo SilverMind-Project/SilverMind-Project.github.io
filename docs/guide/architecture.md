@@ -4,28 +4,61 @@ Cognitive Companion follows a layered architecture with clear separation between
 
 ## System Overview
 
-```text
- Edge Devices                         AI Pipeline                              Outputs
- ───────────                         ───────────                              ───────
+```mermaid
+flowchart TB
+    subgraph Edge["Edge Devices"]
+        reCamera["reCamera<br/>(HTTP push)"]
+        reTerminal["reTerminal<br/>(e-ink + button)"]
+        HA["HA Sensors<br/>(polled)"]
+    end
 
- reCamera ──┐                    ┌─► Person ID Service   ──┐
-            │    ┌────────────┐  │   (InsightFace/ArcFace) │
- reTerminal─┼──► │   Event    │──┤                         ├─► Rules Engine
-            │    │ Aggregator │  │   ┌──────────────────┐  │   (context/deps/rate-limit)
- HA Sensors─┘    └────────────┘  ├─► │ Vision LLM       │  │        │
-                   MinIO ◄───────┘   │ (Cosmos Reason2) │──┘        ▼
-                  (media)            └──────────────────┘    ┌─────────────┐
-                                           │                 │  Logic LLM  │
-                                           ▼                 │  (Gemma3)   │
-                                  ┌────────────────┐         └──────┬──────┘
-                                  │ Translation    │                │
-                                  │(TranslateGemma)|◄───────────────┘
-                                  └────────┬───────┘
-                                           │
-                ┌──────────────────────────┼──────────────────────────┐
-                ▼              ▼           ▼           ▼              ▼
-           WebSocket      Telegram     eInk Display   TTS      Home Assistant
-           (frontend)     (caregiver)  (reTerminal)  (speaker) (actions + announce)
+    subgraph Core["Cognitive Companion Core"]
+        Aggregator["Event<br/>Aggregator"]
+        MinIO["MinIO<br/>(media cache)"]
+        RulesEngine["Rules Engine<br/>(context, deps, rate limits)"]
+        Executor["Pipeline<br/>Executor"]
+        Dispatcher["Notification<br/>Dispatcher"]
+    end
+
+    subgraph AI["AI Services"]
+        PersonID["Person ID Service<br/>(InsightFace ArcFace)"]
+        VisionLLM["Vision LLM<br/>(Cosmos Reason2 via vLLM)"]
+        LogicLLM["Reasoning LLM<br/>(Gemma 4 via llama.cpp)"]
+        SceneAnalysis["Scene Analysis<br/>(YOLO + Florence-2 + CLIP)"]
+        SemanticMemory["Semantic Memory<br/>(pgvectorscale)"]
+    end
+
+    subgraph Outputs["Output Channels"]
+        WebSocket["PWA WebSocket<br/>(popups + TTS audio)"]
+        Telegram["Telegram<br/>(caregiver alerts)"]
+        EInk["E-Ink Display<br/>(reTerminal)"]
+        HASpeaker["HA Speaker<br/>(TTS announcements)"]
+        HAAction["HA Actions<br/>(lights, locks, etc.)"]
+        Webhook["Webhook<br/>(outbound HTTP)"]
+        Voice["PWA Realtime AI<br/>(Gemini Live voice)"]
+    end
+
+    reCamera --> Aggregator
+    reTerminal --> Aggregator
+    HA --> Aggregator
+    Aggregator --> MinIO
+
+    Aggregator --> RulesEngine
+    RulesEngine --> Executor
+    Executor --> PersonID
+    Executor --> VisionLLM
+    Executor --> LogicLLM
+    Executor --> SceneAnalysis
+    Executor --> SemanticMemory
+
+    Executor --> Dispatcher
+    Dispatcher --> WebSocket
+    Dispatcher --> Telegram
+    Dispatcher --> EInk
+    Dispatcher --> HASpeaker
+    Dispatcher --> HAAction
+    Dispatcher --> Webhook
+    Dispatcher --> Voice
 ```
 
 ## Data Flow

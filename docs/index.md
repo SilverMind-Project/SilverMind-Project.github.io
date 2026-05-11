@@ -32,7 +32,7 @@ features:
 
   - icon: 🧩
     title: Composable Pipelines
-    details: 20 step types assembled in any order per rule. Combine knowledge delivery, LLM reasoning, scene analysis, interactive prompts, conditional branching, and wait/resume workflows. Each rule defines its own pipeline. No code required.
+    details: 20 step types assembled in any order per rule. Combine knowledge delivery, LLM reasoning, scene analysis, quiz delivery, info cards, interactive prompts, conditional branching, and wait/resume workflows. Each rule defines its own pipeline. No code required.
     link: /features/pipeline
 
   - icon: 🛰️

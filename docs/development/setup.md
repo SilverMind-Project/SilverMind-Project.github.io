@@ -4,7 +4,7 @@ This guide covers setting up a development environment for contributing to Cogni
 
 ## Prerequisites
 
-- **Python 3.11+** (3.12 recommended)
+- **Python 3.14** (required by backend)
 - **[uv](https://docs.astral.sh/uv/)** (Python package manager)
 - **Node.js 18+** with npm
 - **Git**
@@ -64,7 +64,7 @@ cp .env.example .env
 
 At minimum, you need:
 - A vLLM instance serving Cosmos-Reason2-8B
-- An Ollama instance with gemma3:4b
+- A llama.cpp `llama-server` instance with Gemma 4
 - A MinIO instance for media storage
 - The person-ID service running (or mock it for UI development)
 
@@ -189,9 +189,8 @@ For local development, you need these services running:
 
 | Service | Default URL | Purpose |
 | --- | --- | --- |
-| vLLM (Cosmos) | `http://localhost:8001/v1` | Vision analysis |
-| vLLM (Translate) | `http://localhost:8002/v1` | Language translation |
-| Ollama | `http://localhost:11434` | Logic reasoning |
+| vLLM (Cosmos Reason2) | `http://localhost:8001/v1` | Vision model serving |
+| llama.cpp (Gemma 4) | `http://localhost:8080/v1` | General reasoning |
 | MinIO | `http://localhost:9000` | Media storage |
 | Person ID Service | `http://localhost:8200` | Face recognition |
 | Home Assistant | `http://homeassistant.local:8123` | Sensor integration |

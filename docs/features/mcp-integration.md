@@ -1,6 +1,6 @@
 # MCP Integration
 
-Cognitive Companion includes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, that exposes 22 tools for AI agent integration. Agents can discover system state, query sensor data, inspect enrollment and e-ink status, check person locations, review activity timelines and daily reports, and trigger rule executions. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
+Cognitive Companion includes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, that exposes 27 tools for AI agent integration. Agents can discover system state, query sensor data, inspect enrollment and e-ink status, check person locations, review activity timelines and daily reports, explore semantic memory, and trigger rule executions. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
 
 ## What is MCP?
 
@@ -16,17 +16,16 @@ Cognitive Companion's MCP server allows external AI agents (Claude, GPT, custom 
 
 The MCP server is implemented using the official `mcp` Python SDK's `FastMCP` class. Tools are defined as decorated async functions with type hints that auto-generate JSON schemas. The server is mounted as an ASGI sub-application on FastAPI at `/mcp`, serving the standard MCP protocol via streamable HTTP transport.
 
-```text
-MCP Clients (Claude Desktop, custom agents)
-    │
-    ▼
-POST /mcp (streamable HTTP, JSON-RPC)
-    │
-    ├── MCPAuthMiddleware (validates X-API-Key)
-    │
-    └── FastMCP Server
-        ├── tools/list     → discover available tools
-        └── tools/call     → execute a tool by name
+```mermaid
+flowchart TB
+    Clients["MCP Clients<br/>(Claude Desktop, custom agents,<br/>Gemini Live voice companion)"]
+    Clients --> Post["POST /mcp<br/>(streamable HTTP, JSON-RPC)"]
+    Post --> Middleware["MCPAuthMiddleware<br/>(validates X-API-Key)"]
+    Middleware --> FastMCP["FastMCP Server"]
+    FastMCP --> Discover["tools/list → discover available tools"]
+    FastMCP --> Call["tools/call → execute a tool by name"]
+    Discover --> Adapter["GeminiToolAdapter<br/>(converts tools to Gemini FunctionDeclaration)"]
+    Call --> Adapter
 ```
 
 A `GeminiToolAdapter` reads the same tool definitions and converts them to Gemini `FunctionDeclaration` format, so the voice companion can call tools during conversations without duplicating implementations.
