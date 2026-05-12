@@ -4,7 +4,15 @@ Cognitive Companion uses a plugin architecture for pipeline steps, notification 
 
 ## Adding a Pipeline Step
 
-Create a single file in `backend/steps/builtin/` (or `backend/steps/contrib/` for third-party plugins):
+Use the scaffolding CLI to generate boilerplate:
+
+```bash
+uv run --project backend python -m backend.steps._scaffold new your_step --category action
+```
+
+This creates `backend/steps/builtin/your_step.py` and `backend/tests/steps/test_your_step.py`.
+
+Or write manually:
 
 ```python
 # backend/steps/builtin/your_step.py
@@ -33,6 +41,16 @@ class YourStepHandler(StepHandler):
                 },
             },
             default_config={"some_field": ""},
+            # Output contract: every data-emitting step must declare its outputs
+            output_schema={
+                "type": "object",
+                "properties": {
+                    "your_key": {
+                        "type": "string",
+                        "description": "Result value produced by this step",
+                    },
+                },
+            },
         )
 
     async def execute(self, step, execution, pipeline_data, trigger, services):
@@ -55,17 +73,45 @@ class YourStepHandler(StepHandler):
         )
 ```
 
-That's it. The step is auto-discovered at startup and appears in the frontend StepPalette (loaded dynamically from `GET /api/v1/pipeline/step-types`). Unknown step types get a generic JSON config editor in StepConfigDialog automatically.
+That's it. The step is auto-discovered at startup and appears in the frontend StepPalette (loaded dynamically from `GET /api/v1/pipeline/step-types`).
+
+### StepMetadata Fields
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `type_name` | Yes | Lower snake_case identifier, e.g. `"your_step"` |
+| `display_name` | Yes | Human-readable name for the UI |
+| `category` | Yes | `perception`, `reasoning`, `action`, `state`, or `flow` |
+| `icon` | Yes | Material Design icon name, e.g. `"mdi-star"` |
+| `description` | Yes | One-line description for tooltips |
+| `config_schema` | Yes | JSONSchema for config validation and form generation |
+| `default_config` | Yes | Default config values for new steps |
+| `output_schema` | **Required** for data-emitting steps | JSONSchema describing step outputs; feeds autocomplete and contract tests |
+| `schema_version` | No (default 1) | Bump when `config_schema` shape changes; enables migration chains |
+| `ui_hints_version` | No (default 1) | Version of `x-ui` widget hints; frontend falls back to generic editor for unknown versions |
+| `ui_hints` | No | `x-ui` widget hints for the `SchemaForm` generic renderer |
+| `tags` | No | Tuple of strings for palette grouping and search |
 
 ### Custom Frontend Config Form
 
-For a richer editing experience, add a `<template v-if>` block in `frontend/src/components/pipeline/StepConfigDialog.vue`:
+For a richer editing experience, either use `x-ui` hints in your `config_schema` (consumed by `SchemaForm.vue`), or add a custom component. `x-ui` hints are preferred for new step types as they require zero frontend edits.
 
-```html
-<template v-if="localStep.step_type === 'your_step'">
-  <v-text-field v-model="cfg.some_field" label="Some Field" variant="outlined" />
-</template>
+```json
+{
+  "type": "object",
+  "properties": {
+    "threshold": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "default": 0.5,
+      "x-ui": {"widget": "slider", "min": 0, "max": 1, "step": 0.05, "label": "Confidence Threshold"}
+    }
+  }
+}
 ```
+
+Supported widgets: `text`, `textarea`, `template-textarea`, `template-text`, `number`, `slider`, `checkbox`, `select`, `multiselect`, `chips`, `code-json`, `cron`, `time-of-day`, `step-label-ref`. Unknown widgets fall back to the generic JSON editor.
 
 ### Key Types
 

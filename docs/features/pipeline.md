@@ -707,24 +707,35 @@ When using the `voice_prompt_template` channel, the prompt is sent to the Gemini
 
 ## Condition Expressions {#condition-expressions}
 
-Condition steps use a safe expression evaluator built on a recursive-descent parser with no `eval()`. Supported syntax:
+All template and condition expressions use a unified Lark-based grammar with `{{ }}` wrapping. The grammar supports paths, JMESPath pipes, comparisons, boolean operators, and built-in functions. Simple path references use a fast regex shortcut; complex expressions are parsed into an AST and evaluated.
+
+Server-side validation catches typos and unknown paths at save time, so invalid expressions never persist.
 
 ### Path Access
 
 Access nested values in `pipeline_data`:
 
 ```text
-person_detections.count
-logic_response.is_notification_needed
-vision_response
+{{ steps.scene_1.outputs.count }}
+{{ trigger.sensor_id }}
+{{ system.local_time }}
+```
+
+### JMESPath Pipes
+
+Apply JMESPath filters and transformations:
+
+```text
+{{ steps.scene_1.outputs.detections | length(@) }}
+{{ steps.scene_1.outputs.detections[?label == 'person'] }}
 ```
 
 ### Comparisons
 
 ```text
-person_detections.count > 0
-logic_response.alert_level == "emergency"
-vision_response != null
+{{ steps.scene_1.outputs.count > 3 }}
+{{ steps.logic_1.outputs.alert_level == "emergency" }}
+{{ steps.scene_1.outputs.label != null }}
 ```
 
 Operators: `==`, `!=`, `>`, `<`, `>=`, `<=`
@@ -732,29 +743,37 @@ Operators: `==`, `!=`, `>`, `<`, `>=`, `<=`
 ### Boolean Operators
 
 ```text
-person_detections.count > 0 and logic_response.is_notification_needed == true
-not exists(translation) or contains(vision_response, "empty")
+{{ steps.scene_1.outputs.count > 0 and steps.logic_1.outputs.is_notification_needed == true }}
+{{ not exists(steps.translate_1.outputs) or contains(steps.scene_1.outputs.description, "empty") }}
 ```
 
 ### Built-in Functions
 
-| Function                   | Description                                                    |
-| -------------------------- | -------------------------------------------------------------- |
-| `exists(path)`             | Returns true if the path exists in pipeline data               |
-| `contains(path, value)`    | Returns true if the value at path contains the given substring |
+| Function | Description |
+| --- | --- |
+| `contains(haystack, needle)` | Substring or list-membership test (case-sensitive) |
+| `icontains(haystack, needle)` | Case-insensitive substring test |
+| `length(value)` | Length of string, list, or dict |
+| `lower(value)` | Convert to lowercase |
+| `upper(value)` | Convert to uppercase |
+| `keys(value)` | Dict keys as a list |
+| `values(value)` | Dict values as a list |
+| `exists(path)` | True if the path resolves to a non-None value |
 
 ### Examples
 
 ```text
 # Notify only if a person was detected and reasoning says to
-person_detections.count > 0 and logic_response.is_notification_needed == true
+{{ steps.identify_1.outputs.person_detections | length(@) > 0 and steps.logic_1.outputs.is_notification_needed == true }}
 
 # Skip translation if no notification message exists
-exists(logic_response.notification_message)
+{{ exists(steps.logic_1.outputs.notification_message) }}
 
 # Branch based on alert level
-logic_response.alert_level == "emergency"
+{{ steps.logic_1.outputs.alert_level == "emergency" }}
 ```
+
+Expression validation runs on every step save. A typo like `steps.scene_anaylsis_1.outputs.count` is rejected with a suggestion pointing to the correct label.
 
 ## Prompt Templates {#prompt-templates}
 
@@ -1055,18 +1074,47 @@ The reminder examples above push notifications and stop. To turn a reminder into
 
 :::
 
+## Cron Triggers
+
+Cron schedules are decoupled from rules through a dedicated `CronTrigger` model with a many-to-many relationship. A rule can have multiple cron schedules, and multiple rules can share the same schedule.
+
+Cron-triggered rules go through `RulesEngine` like sensor events, so context filters (`time_range`, `day_of_week`, `person_presence`), dependencies, and rate limits all apply. The scheduler creates one APScheduler job per `CronTrigger`, not per rule.
+
+The admin UI includes a **Cron Builder** with preset modes: Daily, Weekly, Hourly, Every N Minutes, and Custom. A live "next 5 runs" preview shows when the rule will fire in the operator's timezone. Raw cron expressions are always editable for power users.
+
+The `POST /api/v1/pipeline/cron/preview` endpoint validates expressions and returns parsed structure plus next-run timestamps.
+
+## Rule Import/Export
+
+Rules can be exported to portable YAML or JSON bundles and imported across installations. Bundles use stable string identifiers (labels, type names, sensor ids) instead of database primary keys, so they survive round-trips between different installs.
+
+- **Export:** `GET /api/v1/rules/{id}/export` returns a self-contained `RuleBundle` document with steps, contexts, dependencies, cron expressions, and external references
+- **Import preview:** `POST /api/v1/rules/import/preview` validates a bundle and returns an `ImportReport` with per-step migration status and any warnings, without writing to the database
+- **Import commit:** `POST /api/v1/rules/import` commits a validated bundle within a single transaction. All-or-nothing: if any step fails validation or any reference is unresolvable, the entire import rolls back
+- **Migration chains:** Each step handler can declare `ConfigMigration` entries that transform config dicts from older schema versions to the current one. Migrations are pure functions with unit tests
+
+Bundles are also accessible to AI agents through the MCP server (`get_rule_bundle`, `import_rule_bundle`).
+
 ## Workflow Execution
 
 When a rule's pipeline is triggered, a `WorkflowExecution` record tracks the full lifecycle:
 
 | Status | Meaning |
-| ------ | ------- |
+| --- | --- |
 | `running` | Pipeline is actively executing steps |
-| `waiting` | Paused at a `wait` step, will resume at `resume_at` time |
+| `waiting` | Paused at a `wait` or `interactive_prompt` step, will resume at `resume_at` time |
 | `completed` | All steps finished successfully |
-| `failed` | A step failed and the pipeline halted |
+| `failed` | A step failed or the pipeline timed out |
 | `cancelled` | Manually cancelled via the API or admin UI |
 
-All intermediate results are persisted in `pipeline_data_json` on both the `WorkflowExecution` and the `EventLog` for debugging and auditability. You can inspect the full pipeline data at any point via the admin console's **Workflows** view.
+**Cancel:** Running or waiting executions can be cancelled from the Live Run tab or via `POST /api/v1/workflows/{id}/cancel`. The executor checks for cancellation between steps (cooperative cancellation) and stops at the next step boundary.
+
+**Rerun:** Any execution can be rerun from the beginning via `POST /api/v1/workflows/{id}/rerun`. This copies the original trigger context and re-executes all enabled steps. Useful for testing rule changes against the same trigger.
+
+**Execution detail:** `GET /api/v1/workflows/{id}/detail` returns a rich view model with a step-by-step timeline showing labels, icons, categories, elapsed seconds, success/failure status, outputs, and errors. The same component renders both live and historical executions.
+
+**Per-step timeout:** Each step has a 60-second timeout to prevent stuck LLM calls from hanging the pipeline. If a step times out, it is marked failed and the pipeline continues.
+
+All intermediate results are persisted in `pipeline_data_json` on both the `WorkflowExecution` and the `EventLog` for debugging and auditability. Step timings include labels, elapsed seconds, and success/failure status.
 
 Separately, the related `EventLog` is finalized as either `completed` or `ignored`. Only `completed` events participate in rule cool-off checks.

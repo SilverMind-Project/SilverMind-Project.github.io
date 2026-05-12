@@ -83,7 +83,9 @@ The `EventAggregator` batches incoming sensor events before rule evaluation. Thi
 
 ### 3. Rule Matching
 
-The `RulesEngine` evaluates each event batch against all enabled rules. A rule matches when:
+Rules can be triggered by multiple sources: sensor events, cron schedules, webhooks, Telegram commands, manual execution, and occupancy duration. Each rule stores a `trigger_types: list[str]` JSON column. Cron schedules are managed through a separate `CronTrigger` model with a many-to-many join table, so multiple rules can share the same schedule and a single rule can have multiple cron expressions.
+
+The `RulesEngine` evaluates each event against all enabled rules whose `trigger_types` contains the matching trigger type. A rule matches when:
 
 - **Context filters** pass: room matches, current time is within the allowed range, day of week matches, required persons are present (or absent), required activities have (or haven't) occurred
 - **Dependencies** are satisfied: dependent rules must have fired (or not fired) within their lookback window
@@ -96,12 +98,13 @@ Each matched rule triggers its own composable pipeline via the `PipelineExecutor
 ```python
 @dataclass
 class TriggerContext:
-    trigger_type: str       # "sensor_event", "cron", "manual", "webhook"
+    trigger_type: str       # "sensor_event", "cron", "manual", "webhook", "occupancy_duration", "telegram", "resume"
     sensor_id: str | None
     room_name: str | None
     media_paths: list[str]
     media_type: str | None
-    webhook_payload: dict | None  # Payload from webhook triggers
+    webhook_payload: dict | None     # Payload from webhook and Telegram triggers
+    occupancy_duration_minutes: float | None  # Set for occupancy_duration triggers
 
 @dataclass
 class StepResult:

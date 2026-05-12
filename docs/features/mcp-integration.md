@@ -1,6 +1,6 @@
 # MCP Integration
 
-Cognitive Companion includes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, that exposes 28 tools for AI agent integration. Agents can discover system state, query sensor data, inspect enrollment and e-ink status, check person locations, review activity timelines and daily reports, explore semantic memory, and trigger rule executions. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
+Cognitive Companion includes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, that exposes 31 tools for AI agent integration. Agents can discover system state, query sensor data, inspect enrollment and e-ink status, check person locations, review activity timelines and daily reports, explore semantic memory, trigger rule executions, author new rules, and inspect plugin metadata. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
 
 ## What is MCP?
 
@@ -62,6 +62,9 @@ A `GeminiToolAdapter` reads the same tool definitions and converts them to Gemin
 | `get_person_movements`      | Movement transitions for a person between rooms         | `person_id`, `semantic`, `since_minutes` (optional) |
 | `get_room_trend`            | Room-level trend state from object presence data        | `room_id`, `since_hours` (optional)          |
 | `search_similar_scenes`     | Vector search across scene embeddings                   | `query_embedding`, `room_id`, `limit` (optional) |
+| `list_plugin_metadata`   | Metadata for all registered steps, filters, and channels | `kind` (optional: `"step"`, `"filter"`, `"channel"`) |
+| `get_rule_bundle`        | Export a rule as a portable bundle                   | `rule_id`                                     |
+| `import_rule_bundle`     | Validate or commit a rule bundle                        | `bundle` (RuleBundle dict), `mode` (`"preview"` or `"commit"`) |
 
 ## Authentication
 
