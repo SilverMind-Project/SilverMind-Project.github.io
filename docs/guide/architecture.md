@@ -240,6 +240,43 @@ Key models:
 | `ImageTemplate` | E-ink template with background image and text regions |
 | `MediaCache` | MinIO object tracking with pre-signed URLs and expiry timestamps |
 
+## Semantic Memory Service
+
+The `semantic-memory-service` is a standalone FastAPI microservice that provides time-series and vector-searchable memory for scene observations, person movement transitions, and object presence. Cognitive Companion writes observations and movements through its pipeline steps (`semantic_memory_query`, `semantic_memory_write`, `object_trend_analysis`) and reads them back via vector similarity search and temporal queries.
+
+```mermaid
+flowchart LR
+    CC["Cognitive Companion"] --> |"POST /observations/<br/>POST /observations/search<br/>POST /movements/<br/>GET /movements/transitions<br/>GET /objects/{room_id}/recent"| SMS["semantic-memory-service<br/>(port 8400)"]
+    SMS --> |"AsyncConnectionPool<br/>psycopg3"| PG["PostgreSQL 18<br/>semantic_memory database<br/>pgvectorscale<br/>StreamingDiskANN"]
+    SMS --> |"gRPC"| TRITON["Triton Inference Server<br/>embeddinggemma-300m"]
+```
+
+### Data model
+
+| Table | Purpose | Vector columns |
+| --- | --- | --- |
+| `scene_observations` | Structured scene descriptions with hazard flags, object labels, and descriptions | `embedding` (CLIP, 768-dim), `description_embedding` (text, 768-dim) |
+| `person_movements` | Room-to-room movement transitions with semantic direction | none |
+| `object_presence` | Per-room object tracking with upsert semantics | none |
+
+Vector similarity search uses `pgvectorscale` StreamingDiskANN indexes. Cosine distance (`<=>`) orders results. Both image (CLIP) and text (embeddinggemma-300m) embeddings are 768-dimensional, enabling combined scoring when both are provided.
+
+### Design
+
+- **No ORM**: All queries use raw SQL via `psycopg` async cursors. Pydantic models define the wire format.
+- **No auth**: The service runs on the internal LAN. Authentication is handled by Cognitive Companion (the BFF).
+- **Migrations on startup**: Alembic migrations run automatically via `alembic upgrade head` in the FastAPI lifespan. No manual migration step.
+- **Graceful degradation**: Text embeddings are optional. When `TEXT_EMBEDDING_ENABLED=false` or Triton is unreachable, the service falls back to metadata-only search. The `TextEmbedder` ABC pattern with `NullTextEmbedder` ensures no exceptions bubble.
+
+### External dependencies
+
+| Dependency | Required | Notes |
+| --- | --- | --- |
+| PostgreSQL | Yes | Shared `timescale/timescaledb-ha:pg18` instance, `semantic_memory` database |
+| Triton Inference Server | No | embeddinggemma-300m model for text embeddings. Disable with `TEXT_EMBEDDING_ENABLED=false`. |
+
+See [CLAUDE.md](https://github.com/SilverMind-Project/semantic-memory-service/blob/main/CLAUDE.md) and [AGENTS.md](https://github.com/SilverMind-Project/semantic-memory-service/blob/main/AGENTS.md) for contributor documentation.
+
 ## Security Model
 
 ### Authentication

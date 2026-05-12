@@ -41,7 +41,7 @@ The service exposes an OpenAI-compatible API:
 ### `POST /v1/audio/speech`
 
 ```bash
-curl -X POST http://tts-service:8200/v1/audio/speech \
+curl -X POST http://tts-service:8600/v1/audio/speech \
   -H "Content-Type: application/json" \
   -d '{
     "model": "svara",
@@ -55,7 +55,7 @@ curl -X POST http://tts-service:8200/v1/audio/speech \
 **Streaming:**
 
 ```bash
-curl -X POST http://tts-service:8200/v1/audio/speech \
+curl -X POST http://tts-service:8600/v1/audio/speech \
   -H "Content-Type: application/json" \
   -d '{"model": "svara", "input": "Hello", "stream": true}' \
   --output stream.pcm
@@ -115,7 +115,7 @@ tts:
 The service integrates with Home Assistant's voice pipeline via a [wyoming_openai](https://github.com/roryeckel/wyoming_openai) sidecar that bridges the OpenAI-compatible API to the Wyoming protocol:
 
 ```
-Home Assistant (Wyoming) <-> wyoming-openai (:10300) <-> tts-service (:8200)
+Home Assistant (Wyoming) <-> wyoming-openai (:10300) <-> tts-service (:8600)
 ```
 
 Start with `docker compose --profile wyoming up -d`, then add the Wyoming integration in Home Assistant (host IP, port 10300).

@@ -51,23 +51,14 @@ The recognition threshold is configured in the person-ID service's `config/setti
 
 ### Guest Image Saving
 
-When the `save_guest_images` flag is set to `true` on an identification request, the person-ID service saves the **full frame image** to disk whenever unidentified guests are detected. Images are organized by date under `data/guests/`:
+When the `save_guest_images` flag is set to `true` on an identification request, the person-ID service uploads the **full frame image** to MinIO whenever unidentified guests are detected. Images are stored under the `guests/` prefix organized by date:
 
 ```text
-data/guests/
-├── 2026-03-23/
-│   ├── 143022-123456_f0_2guests.jpg
-│   └── 143022-234567_f1_1guests.jpg
-└── ...
+guests/2026-03-23/143022-123456_f0_2guests.jpg
+guests/2026-03-23/143022-234567_f1_1guests.jpg
 ```
 
-This is useful for:
-
-- **Reviewing visitors**: see who has been at the door
-- **Building enrollment datasets**: identify frequent visitors and enroll them
-- **Auditing false negatives**: check if known members were misclassified as guests
-
-The flag defaults to `false` and can be enabled per-request on both the single (`/identify`) and batch (`/identify-batch`) endpoints.
+The filename encodes: `{UTC time}_{frame index}_{guest count}.jpg`. Metadata is recorded in the `guest_visits` hypertable for querying. Guest images are stored in MinIO (the shared S3-compatible object store), not on the local filesystem.
 
 ## Motion Direction Detection
 

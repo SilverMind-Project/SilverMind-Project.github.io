@@ -59,7 +59,7 @@ GEMMA_MODEL_URL=http://localhost:8080/v1        # llama.cpp (Gemma 4)
 GEMINI_API_KEY=
 
 # TTS Service
-TTS_API_URL=http://localhost:8200/v1
+TTS_API_URL=http://localhost:8600/v1
 
 # Home Assistant
 HOME_ASSISTANT_URL=http://homeassistant.local:8123
@@ -98,14 +98,14 @@ The following services run **outside** Docker Compose and must be accessible fro
 | **llama.cpp** (Gemma 4)       | General reasoning                   | `http://localhost:8080/v1`        |
 | **MinIO**                     | S3-compatible object storage        | `http://localhost:9000`           |
 | **Home Assistant**            | Sensor integration                  | `http://homeassistant.local:8123` |
-| **TTS service**               | Text-to-speech                      | `http://localhost:8200/v1`        |
+| **TTS service**               | Text-to-speech                      | `http://localhost:8600/v1`        |
 
 ### Persistent Volumes
 
 | Volume           | Compose File                  | Container Path | Contents                                     |
 | ------------------ | ------------------------------- | ---------------- | ---------------------------------------------- |
 | `backend-data`   | cognitive-companion           | `/app/data`    | PostgreSQL data, media cache                 |
-| `person-id-data` | person-identification-service | `/app/data`    | Face embeddings, enrollment DB, guest images |
+| `person-id-data` | person-identification-service | `/app/data`    | ONNX model files, model cache |
 
 ### Frontend Image
 
@@ -165,7 +165,7 @@ flowchart TB
 
 ### Manifest Structure
 
-All subproject manifests are consolidated under `kubernetes/` at the monorepo root, organized by service and infrastructure layer.
+All subproject manifests are consolidated under `kubernetes/` at the root, organized by service and infrastructure layer.
 
 ```text
 kubernetes/
@@ -268,7 +268,7 @@ This requires the [NVIDIA GPU Operator](https://docs.nvidia.com/datacenter/cloud
 | `data-postgres-0` | 100Gi | PostgreSQL data (3 databases, all extensions) |
 | `data-redis-0` | 20Gi | Redis AOF persistence |
 | `cc-backend-data` | 5Gi | Backend runtime data |
-| `person-id-data` | 5Gi | Face embeddings, enrollment DB, guest images |
+| `person-id-data` | 5Gi | ONNX model files, model cache |
 | `tts-service-data` | 20Gi | TTS model cache |
 | `triton-models` | 50Gi | Triton ONNX models |
 

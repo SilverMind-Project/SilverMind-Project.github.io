@@ -1,6 +1,6 @@
 # MCP Integration
 
-Cognitive Companion includes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, that exposes 27 tools for AI agent integration. Agents can discover system state, query sensor data, inspect enrollment and e-ink status, check person locations, review activity timelines and daily reports, explore semantic memory, and trigger rule executions. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
+Cognitive Companion includes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, that exposes 28 tools for AI agent integration. Agents can discover system state, query sensor data, inspect enrollment and e-ink status, check person locations, review activity timelines and daily reports, explore semantic memory, and trigger rule executions. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
 
 ## What is MCP?
 
@@ -57,6 +57,11 @@ A `GeminiToolAdapter` reads the same tool definitions and converts them to Gemin
 | `get_daily_report`         | End-of-day wellness report for one or all members            | `person_id`, `report_date` (optional)       |
 | `get_open_sessions`        | Currently open activity sessions (meals, bathroom, etc.)     | `person_id`, `activity_type` (optional)     |
 | `respond_to_interactive_prompt` | Record user response to an interactive prompt step    | `execution_id`, `step_id`, `action`         |
+| `get_recent_scene_objects`  | Recent object presence in a room                        | `room_id`, `since_minutes`                   |
+| `get_scene_observations`    | Search scene observations with vector similarity        | `query_text`, `room_id`, `limit` (optional)  |
+| `get_person_movements`      | Movement transitions for a person between rooms         | `person_id`, `semantic`, `since_minutes` (optional) |
+| `get_room_trend`            | Room-level trend state from object presence data        | `room_id`, `since_hours` (optional)          |
+| `search_similar_scenes`     | Vector search across scene embeddings                   | `query_embedding`, `room_id`, `limit` (optional) |
 
 ## Authentication
 

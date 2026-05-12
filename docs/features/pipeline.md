@@ -243,7 +243,7 @@ Queries the [semantic-memory-service](/guide/architecture#semantic-memory-servic
 | `room_trends_max_severity` | str | Highest severity across all rooms |
 | `room_trends_summary` | str | Compact single-line text ready for LLM prompt injection |
 
-Graceful degradation: if `object_trend_client` is unavailable or the service returns no data, the step writes empty results and continues.
+Graceful degradation: when the semantic-memory-service is unreachable or returns no data, the step writes empty results and continues.
 
 #### `presence_query`
 

@@ -62,7 +62,7 @@ features:
 
   - icon: 🤖
     title: MCP Tool Server
-    details: 27 tools exposed via the Model Context Protocol for AI agent integration. Includes knowledge base queries, quiz answer submission, rule triggering, person location, semantic memory search, activity history, and real-time sensor data.
+    details: 28 tools exposed via the Model Context Protocol for AI agent integration. Includes knowledge base queries, quiz answer submission, rule triggering, person location, semantic memory search, activity history, and real-time sensor data.
     link: /features/mcp-integration
 
   - icon: 🔒
@@ -95,7 +95,7 @@ Most care systems address only the first. Cognitive Companion addresses both.
 
 **Multigenerational by default.** Cognitive Companion is built for households where a senior lives with family members who share caregiving responsibilities. The system adapts to your home layout, your routines, and your language. English, Tamil, and Tanglish are supported out of the box.
 
-**Extensible by design.** Each pipeline step, notification channel, and context filter is a self-contained plugin. Drop a Python file in the right directory and the system discovers it at startup. The MCP server exposes 27 tools for integration with external AI agents, home automation systems, and custom workflows.
+**Extensible by design.** Each pipeline step, notification channel, and context filter is a self-contained plugin. Drop a Python file in the right directory and the system discovers it at startup. The MCP server exposes 28 tools for integration with external AI agents, home automation systems, and custom workflows.
 
 ---
 
