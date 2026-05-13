@@ -38,6 +38,7 @@ import {
   buildBorderBridges,
   getCharPositions,
   buildIntraToBorderEdges,
+  buildIntraCharEdges,
   nodeColour,
   updateNodes,
 } from './NeuronHeroText.utils'
@@ -70,12 +71,12 @@ const REFERENCE_FONT_PHYSICAL_PX = 80
  *  was sparse before), landscape phones get many more (their wide mask
  *  used to feel empty with the old hardcoded 120). */
 const FILLED_PIXELS_PER_INTERIOR_NODE = 40
-const MIN_INTERIOR_NODES = 450
-const MAX_INTERIOR_NODES = 900
+const MIN_INTERIOR_NODES = 250
+const MAX_INTERIOR_NODES = 400
 
 /** Reach for interior→border edges, as a fraction of the rasterised font
  *  size. 0.5 ≈ half a cap-height of reach in every direction. */
-const INTERIOR_REACH_RATIO = .69
+const INTERIOR_REACH_RATIO = .70
 
 /** Inter-glyph bridges (capped to keep small fonts readable):
  *  one edge between letters within a word, a small handful between words. */
@@ -85,18 +86,33 @@ const CROSS_WORD_BRIDGES_MAX = 0
 /** Max border-node connections per interior node (K-nearest). Lower than
  *  before because node *count* now scales with area — each node only needs
  *  a handful of links to keep the mesh visually continuous. */
-const MAX_EDGES_PER_INTERIOR = 550
+const MAX_EDGES_PER_INTERIOR = 100
 
 /** Per-interior-node rendering size, in CSS pixels (multiplied by DPR in
- *  drawFrame). Was 2.5 *physical* px → invisible on retina; now ~1 CSS px. */
-const INTERIOR_NODE_SIZE_CSS = 1.0
+ *  drawFrame). */
+const INTERIOR_NODE_SIZE_CSS = 2.0
 const INTERIOR_NODE_ALPHA    = 0.8
+
+/** Interior node drift speed in physical px/frame.
+ *  Decrease for slower, more subtle motion; increase for faster drift.
+ *  At 60 fps and DPR=2, MAX gives 0.075 CSS px/frame (≈4.5 CSS px/sec). */
+const INTERIOR_NODE_MIN_SPEED = 0.05
+const INTERIOR_NODE_MAX_SPEED = 0.20
+
+// === Interior-to-interior mesh =======================================
+/** Connection threshold for intra-character interior edges, as a fraction of
+ *  the rasterised font size. Connects nearby drifting nodes within the same
+ *  letterform, producing the visible neural-network graph inside each glyph. */
+const INTERIOR_INTRA_THRESHOLD_RATIO = 0.17
+/** Max interior-to-interior edges per node (K-nearest cap, same role as
+ *  MAX_EDGES_PER_INTERIOR for interior→border edges). */
+const MAX_INTRA_EDGES_PER_NODE = 30
 
 // === Border ring (CSS-px-scaled, font-independent) ===================
 /** Spacing between border nodes along the outline (CSS px × DPR). */
 const BORDER_NODE_SPACING_CSS = 1.0
 /** Connection threshold for border-to-border edges (CSS px × DPR). */
-const BORDER_EDGE_THRESHOLD_CSS = 10
+const BORDER_EDGE_THRESHOLD_CSS = 9
 
 /** FLOOR for border edge half-width: 0.5 CSS px → 1 CSS px full width.
  *  This is the readability guarantee — outlines never render sub-pixel,
@@ -132,6 +148,7 @@ let borderNodes:          Node[] = []       // fixed outline nodes
 let cachedBorderEdges:    Edge[] = []       // precomputed; border nodes never move
 let borderEdgeThreshold:           number = 10      // physical px; updated in rebuildMask
 let interiorToBorderThreshold:     number = 25      // physical px; scaled by font size in rebuildMask
+let interiorIntraThreshold:        number = 15      // physical px; scaled by font size in rebuildMask
 let fontPhysicalScale:             number = 1.0     // fittedFontSize / REFERENCE_FONT_PHYSICAL_PX; updated in rebuildMask
 let currentDpr:                    number = 1       // device pixel ratio; updated in rebuildMask
 let isDarkMode:                    boolean = false  // updated by MutationObserver
@@ -425,10 +442,11 @@ function drawFrame(
 
   // Identical brand colours in both modes — the canvas drop-shadow glow
   // (custom.css) provides the contrast needed for legibility on light backgrounds.
-  // Dark mode uses additive blending, so the per-particle multiplier stays
-  // low to prevent overlap saturation; light mode uses standard alpha and can
-  // run at full saturation.
-  const cs = isDarkMode ? .25 : 1.0
+  // Dark mode uses additive blending so the per-particle multiplier is kept below
+  // 1 to prevent the densely-overlapping border ring from saturating; 0.40 gives
+  // interior nodes enough individual brightness to be clearly visible while the
+  // ring accumulates to a bright outline through overlap.
+  const cs = isDarkMode ? .40 : 1.0
 
   // Per-node sizes are authored in CSS px and scaled to physical px here so
   // dots remain visible (and not chunky) across the full DPR range.
@@ -543,9 +561,12 @@ function startAnimationLoop(): void {
 
     if (gl) {
       updateNodes(nodes, filledPixels, maskSet, canvas.width, reducedMotion.value)
-      // Interior nodes connect to K nearest border nodes each frame (nodes drift).
+      // Interior→border spokes (recomputed each frame since interior nodes drift).
       // cachedBorderEdges is precomputed in rebuildMask — border nodes are fixed.
-      const iEdges = buildIntraToBorderEdges(nodes, borderNodes, charPositions, interiorToBorderThreshold, MAX_EDGES_PER_INTERIOR, maskSet, canvas.width)
+      const toBorderEdges = buildIntraToBorderEdges(nodes, borderNodes, charPositions, interiorToBorderThreshold, MAX_EDGES_PER_INTERIOR, maskSet, canvas.width)
+      // Interior↔interior mesh (recomputed each frame, capped to MAX_INTRA_EDGES_PER_NODE).
+      const intraEdges = buildIntraCharEdges(nodes, charPositions, interiorIntraThreshold, MAX_INTRA_EDGES_PER_NODE)
+      const iEdges = [...toBorderEdges, ...intraEdges]
       drawFrame(gl, nodes, borderNodes, iEdges, cachedBorderEdges, elapsed, canvas.width)
     }
 
@@ -594,6 +615,9 @@ function rebuildMask(canvas: HTMLCanvasElement): void {
   // Interior reach: scales with the actual rasterised font size so each node's
   // reach is a constant fraction of cap-height regardless of viewport / DPR.
   interiorToBorderThreshold = Math.max(8, Math.round(INTERIOR_REACH_RATIO * fontSize))
+  // Interior-to-interior reach: shorter than border reach so nodes only connect
+  // to immediate neighbours, producing a mesh rather than a hub-and-spoke fan.
+  interiorIntraThreshold = Math.max(8, Math.round(INTERIOR_INTRA_THRESHOLD_RATIO * fontSize))
   const borderPixels = buildBorderPixels(filledPixels, maskSet, canvas.width)
   borderNodes        = spawnBorderNodes(borderPixels, borderSpacing)
 
@@ -631,7 +655,7 @@ function startWebGL(canvas: HTMLCanvasElement): void {
 
   const initAfterFonts = () => {
     rebuildMask(canvas)
-    nodes = spawnNodes(filledPixels, computeInteriorNodeCount(filledPixels.length))
+    nodes = spawnNodes(filledPixels, computeInteriorNodeCount(filledPixels.length), INTERIOR_NODE_MIN_SPEED, INTERIOR_NODE_MAX_SPEED)
     startAnimationLoop()
   }
 
@@ -652,7 +676,7 @@ function startWebGL(canvas: HTMLCanvasElement): void {
     gl = restoredCtx
     if (!initWebGL(gl)) return
     rebuildMask(canvas)
-    nodes = spawnNodes(filledPixels, computeInteriorNodeCount(filledPixels.length))
+    nodes = spawnNodes(filledPixels, computeInteriorNodeCount(filledPixels.length), INTERIOR_NODE_MIN_SPEED, INTERIOR_NODE_MAX_SPEED)
     startTime = 0
     startAnimationLoop()
   })
@@ -667,7 +691,7 @@ function startWebGL(canvas: HTMLCanvasElement): void {
     }
 
     rebuildMask(canvas)
-    nodes = spawnNodes(filledPixels, computeInteriorNodeCount(filledPixels.length))
+    nodes = spawnNodes(filledPixels, computeInteriorNodeCount(filledPixels.length), INTERIOR_NODE_MIN_SPEED, INTERIOR_NODE_MAX_SPEED)
   })
 
   resizeObserver.observe(canvas)

@@ -228,7 +228,7 @@ onUnmounted(() => {
 - **Catch `AuthenticationError` or `PermissionDeniedError` in routers.** Let global handlers deal with them.
 - **Store secrets in config files.** Use `${ENV_VAR}` interpolation.
 - **Hardcode pipeline step order.** Use the `PipelineStep` model with its `order` field.
-- **Use `eval()` for condition expressions.** Use `ConditionEvaluator`.
+- **Use `eval()` for condition expressions.** Use `evaluate_condition()` from `backend.core.template` (Lark-based grammar).
 - **Use lazy imports for required dependencies.** All imports belong at the top of the file.
 - **Use `alert()` or `confirm()` in Vue views.** Use composables.
 - **Swallow errors silently.** Bare `catch {}` blocks must log.

@@ -124,7 +124,7 @@ The `tracking-orchestrator` emits a `pacing` signal whenever a sustained back-an
 
 **Rule:**
 
-- `trigger_type`: `sensor_event` or `manual` does not work here; use a `dementia_signal` filter on a recurring rule. The simplest pattern is a webhook trigger fired by `DementiaSignalSubscriber` (see Internal wiring below) plus a `dementia_signal` filter that gates on `kind=pacing`.
+- `trigger_types`: `sensor_event` or `manual` alone does not work here; use a `dementia_signal` filter on a recurring rule. The simplest pattern is a webhook trigger fired by `DementiaSignalSubscriber` (see Internal wiring below) plus a `dementia_signal` filter that gates on `kind=pacing`.
 - `cool_off_minutes`: `30`
 
 **Filters:**

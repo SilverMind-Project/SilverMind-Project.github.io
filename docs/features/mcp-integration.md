@@ -62,6 +62,7 @@ A `GeminiToolAdapter` reads the same tool definitions and converts them to Gemin
 | `get_person_movements`      | Movement transitions for a person between rooms         | `person_id`, `semantic`, `since_minutes` (optional) |
 | `get_room_trend`            | Room-level trend state from object presence data        | `room_id`, `since_hours` (optional)          |
 | `search_similar_scenes`     | Vector search across scene embeddings                   | `query_embedding`, `room_id`, `limit` (optional) |
+| `list_rules`            | List all rules with summary info                        | (none) |
 | `list_plugin_metadata`   | Metadata for all registered steps, filters, and channels | `kind` (optional: `"step"`, `"filter"`, `"channel"`) |
 | `get_rule_bundle`        | Export a rule as a portable bundle                   | `rule_id`                                     |
 | `import_rule_bundle`     | Validate or commit a rule bundle                        | `bundle` (RuleBundle dict), `mode` (`"preview"` or `"commit"`) |

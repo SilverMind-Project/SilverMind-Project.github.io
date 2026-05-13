@@ -432,9 +432,15 @@ A cron rule fires every morning at 9 AM to deliver a "Today's date and family fa
 
 ```yaml
 Rule:
-  trigger_type: cron
-  schedule_cron: "0 9 * * *"
+  trigger_types: [cron]
+  cron_trigger_ids: [1]
   cool_off_minutes: 1440
+
+# CronTrigger:
+#   id: 1
+#   name: "Daily 9 AM"
+#   expression: "0 9 * * *"
+#   timezone: "America/New_York"
 
 Pipeline:
   step_type: info_card
@@ -452,9 +458,15 @@ A weekly quiz about family photos, delivered every Sunday afternoon:
 
 ```yaml
 Rule:
-  trigger_type: cron
-  schedule_cron: "0 14 * * 0"
+  trigger_types: [cron]
+  cron_trigger_ids: [2]
   cool_off_minutes: 10080  # once per week
+
+# CronTrigger:
+#   id: 2
+#   name: "Weekly Sunday Quiz"
+#   expression: "0 14 * * 0"
+#   timezone: "America/New_York"
 
 Pipeline:
   step_type: quiz_start

@@ -258,12 +258,24 @@ body {
   }
 }
 
-/* CSS fallback when WebGL is unavailable or in light mode — matches the default VPHero .name gradient */
+/* CSS fallback when WebGL is unavailable or in light mode.
+   Font sizes match what computeFittedFontSize() actually produces for each
+   breakpoint's container width (canvas target → fitted result):
+     mobile : 44px target → ~32px fitted  (container ≈ 330–375px)
+     640+   : 64px target → ~48px fitted  (container ≈ 500–600px)
+     960+   : 80px target → ~56px fitted  (has-image .main max-width: 592px)
+   Block heights mirror the canvas heights so the hero layout is identical
+   whether the canvas or the span is rendered. */
 .neuron-hero-fallback {
-  display: inline-block;
-  font-weight: 600;
+  display: block;
+  width: 100%;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  font-weight: 700;
   font-size: 32px;
-  line-height: 1.2;
+  height: 72px;
+  line-height: 72px;
   background: var(--cc-brand-gradient);
   background-size: var(--cc-brand-gradient-size);
   -webkit-background-clip: text;
@@ -271,17 +283,24 @@ body {
   -webkit-text-fill-color: transparent;
   color: transparent;
   animation: cc-gradient-drift var(--cc-brand-gradient-duration) ease-in-out infinite;
+  filter:
+    drop-shadow(0 0 6px rgba(94, 92, 230, 0.55))
+    drop-shadow(0 0 14px rgba(191, 90, 242, 0.30));
 }
 
 @media (min-width: 640px) {
   .neuron-hero-fallback {
-    font-size: 40px;
+    font-size: 48px;
+    height: 100px;
+    line-height: 100px;
   }
 }
 
 @media (min-width: 960px) {
   .neuron-hero-fallback {
-    font-size: 60px;
+    font-size: 56px;
+    height: 120px;
+    line-height: 120px;
   }
 }
 

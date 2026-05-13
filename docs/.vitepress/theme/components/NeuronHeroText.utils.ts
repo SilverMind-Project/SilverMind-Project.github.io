@@ -132,9 +132,15 @@ export const DESKTOP_NODE_COUNT = 300
 export const MOBILE_NODE_COUNT = 120
 
 /**
- * Upper bound on node velocity magnitude in pixels per frame.
+ * Default upper bound on node velocity magnitude in pixels per frame.
+ * Used when callers do not supply an explicit maxSpeed to spawnNodes.
  */
 export const MAX_SPEED = 0.5
+
+/**
+ * Default lower bound on node velocity magnitude in pixels per frame.
+ */
+export const MIN_SPEED = 0.05
 
 /**
  * A single node positioned within the text mask.
@@ -150,20 +156,23 @@ export interface Node {
 }
 
 /**
- * Minimum node velocity magnitude in pixels per frame.
- */
-const MIN_SPEED = 0.05
-
-/**
  * Samples `count` positions uniformly at random from `pixels` (with
  * replacement) and assigns each a random velocity with magnitude uniformly
- * distributed in [MIN_SPEED, MAX_SPEED] and a uniformly random direction.
+ * distributed in [minSpeed, maxSpeed] and a uniformly random direction.
+ *
+ * `minSpeed` and `maxSpeed` default to the module constants MIN_SPEED /
+ * MAX_SPEED so callers that don't need to override them stay unchanged.
  *
  * Returns an empty array when `pixels` is empty.
  *
  * Validates: Requirements 1.4, 4.1
  */
-export function spawnNodes(pixels: FilledPixel[], count: number): Node[] {
+export function spawnNodes(
+  pixels: FilledPixel[],
+  count: number,
+  minSpeed: number = MIN_SPEED,
+  maxSpeed: number = MAX_SPEED,
+): Node[] {
   if (pixels.length === 0) {
     return []
   }
@@ -177,8 +186,8 @@ export function spawnNodes(pixels: FilledPixel[], count: number): Node[] {
     // Random direction: angle uniformly in [0, 2π)
     const angle = Math.random() * 2 * Math.PI
 
-    // Random magnitude uniformly in [MIN_SPEED, MAX_SPEED]
-    const speed = MIN_SPEED + Math.random() * (MAX_SPEED - MIN_SPEED)
+    // Random magnitude uniformly in [minSpeed, maxSpeed]
+    const speed = minSpeed + Math.random() * (maxSpeed - minSpeed)
 
     nodes.push({
       x: pixel.x,
@@ -442,20 +451,22 @@ export function updateNodes(
   }
 
   for (const node of nodes) {
-    const cx = Math.round(node.x + node.vx)
-    const cy = Math.round(node.y + node.vy)
+    // Candidate float positions — NOT rounded so motion is smooth sub-pixel.
+    // Only the mask lookup is rounded (integer pixel membership test).
+    const nx = node.x + node.vx
+    const ny = node.y + node.vy
 
     // 1. Straight move — candidate is inside the mask
-    if (maskSet.has(cy * canvasWidth + cx)) {
-      node.x = cx
-      node.y = cy
+    if (maskSet.has(Math.round(ny) * canvasWidth + Math.round(nx))) {
+      node.x = nx
+      node.y = ny
       continue
     }
 
     // 2. Try reflection: flip vx only
-    const rx1 = Math.round(node.x - node.vx)
-    const ry1 = Math.round(node.y + node.vy)
-    if (maskSet.has(ry1 * canvasWidth + rx1)) {
+    const rx1 = node.x - node.vx
+    const ry1 = ny
+    if (maskSet.has(Math.round(ry1) * canvasWidth + Math.round(rx1))) {
       node.vx = -node.vx
       node.x = rx1
       node.y = ry1
@@ -463,9 +474,9 @@ export function updateNodes(
     }
 
     // 3. Try reflection: flip vy only
-    const rx2 = Math.round(node.x + node.vx)
-    const ry2 = Math.round(node.y - node.vy)
-    if (maskSet.has(ry2 * canvasWidth + rx2)) {
+    const rx2 = nx
+    const ry2 = node.y - node.vy
+    if (maskSet.has(Math.round(ry2) * canvasWidth + Math.round(rx2))) {
       node.vy = -node.vy
       node.x = rx2
       node.y = ry2
@@ -473,9 +484,9 @@ export function updateNodes(
     }
 
     // 4. Try reflection: flip both vx and vy
-    const rx3 = Math.round(node.x - node.vx)
-    const ry3 = Math.round(node.y - node.vy)
-    if (maskSet.has(ry3 * canvasWidth + rx3)) {
+    const rx3 = node.x - node.vx
+    const ry3 = node.y - node.vy
+    if (maskSet.has(Math.round(ry3) * canvasWidth + Math.round(rx3))) {
       node.vx = -node.vx
       node.vy = -node.vy
       node.x = rx3
@@ -669,13 +680,19 @@ function getCharIndex(x: number, positions: CharPosition[]): number {
 }
 
 /**
- * Builds only intra-character edges (local connections within each letterform).
+ * Builds intra-character edges (local connections within each letterform).
  * Called every animation frame since interior node positions change.
+ *
+ * `maxEdgesPerNode` caps how many edges each node may participate in.
+ * Edges are added in traversal order (nearest pairs first within each
+ * character group). Defaults to `Infinity` for uncapped behaviour.
+ * Mirror of the `maxEdgesPerNode` cap in `buildIntraToBorderEdges`.
  */
 export function buildIntraCharEdges(
   nodes: Node[],
   charPositions: CharPosition[],
   intraThreshold: number,
+  maxEdgesPerNode: number = Infinity,
 ): Edge[] {
   const n = nodes.length
   if (n < 2 || intraThreshold <= 0) return []
@@ -690,17 +707,22 @@ export function buildIntraCharEdges(
     if (ci >= 0) charNodes[ci].push(i)
   }
 
+  const edgeCounts = new Int32Array(n)
   const edges: Edge[] = []
+
   for (const indices of charNodes) {
     const m = indices.length
     for (let a = 0; a < m - 1; a++) {
       for (let b = a + 1; b < m; b++) {
         const ni = indices[a], nj = indices[b]
+        if (edgeCounts[ni] >= maxEdgesPerNode || edgeCounts[nj] >= maxEdgesPerNode) continue
         const dx = nodes[nj].x - nodes[ni].x
         const dy = nodes[nj].y - nodes[ni].y
         const dist = Math.sqrt(dx * dx + dy * dy)
         if (dist <= intraThreshold) {
           edges.push({ i: ni, j: nj, alpha: 1 - dist / intraThreshold })
+          edgeCounts[ni]++
+          edgeCounts[nj]++
         }
       }
     }

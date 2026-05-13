@@ -50,13 +50,18 @@ Rooms represent physical spaces in the household (kitchen, bedroom, hallway). Ea
 | `name` | string | Rule name |
 | `description` | string | Human-readable description |
 | `enabled` | boolean | Whether the rule is active |
-| `trigger_type` | string | `sensor_event`, `cron`, `manual`, `webhook`, or `occupancy_duration` |
-| `primary_sensor_id` | string | Sensor that triggers this rule (required for `cron` and `occupancy_duration`) |
-| `schedule_cron` | string | Cron expression (for `cron` trigger type) |
+| `trigger_types` | list[string] | Trigger types this rule responds to: `sensor_event`, `cron`, `manual`, `webhook`, `telegram`, `occupancy_duration` |
+| `primary_sensor_id` | string | Fallback sensor for context filters (no longer required for cron triggers) |
+| `cron_trigger_ids` | list[int] | IDs of `CronTrigger` rows that schedule this rule (many-to-many via `rule_cron_triggers`) |
 | `cool_off_minutes` | integer | Minimum minutes between triggers |
 | `max_daily_triggers` | integer | Maximum triggers per day |
-| `webhook_config` | object | Webhook settings: `{secret, created_at}` (for `webhook` trigger type) |
-| `occupancy_config` | object | Occupancy threshold: `{min_minutes: int}` (for `occupancy_duration` trigger type) |
+| `max_concurrent_executions` | integer | Maximum simultaneous executions (default 1) |
+| `execution_timeout_minutes` | integer | Maximum minutes a pipeline can run (default 5) |
+| `webhook_config` | object | Webhook settings: `{secret}` (rule responds to webhook when `"webhook"` is in `trigger_types`) |
+| `occupancy_config` | object | Occupancy threshold: `{min_minutes: int}` (rule responds when `"occupancy_duration"` is in `trigger_types`) |
+| `telegram_trigger_config` | object | Telegram settings: `{command, allowed_chat_ids, respond_with_ack}` |
+
+Cron schedules are managed separately via `CronTrigger` (see Cron Triggers section). Rules link to cron schedules through the `cron_trigger_ids` field.
 
 ### Pipeline Steps
 

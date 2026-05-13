@@ -890,7 +890,7 @@ llm_call (translation, output_key: translation) → notification [alert_level: w
 
 **Rule configuration:**
 
-- `trigger_type`: `occupancy_duration`
+- `trigger_types`: `["occupancy_duration"]`
 - `primary_sensor_id`: the presence sensor to watch (e.g. `bathroom_sensor_01`)
 - `occupancy_config`: `{"min_minutes": 40}`
 - `cool_off_minutes`: `30`, which prevents re-firing until a cool-off-triggering execution ages out
@@ -904,7 +904,7 @@ Rules with `trigger_type: telegram` fire when a matching Telegram bot command is
 
 **Rule settings tab:**
 
-- `trigger_type`: `telegram`
+- `trigger_types`: `["telegram"]`
 - `telegram_trigger_config.command`: the command to match, e.g. `/medication`. Leave empty to match any command.
 - `telegram_trigger_config.allowed_chat_ids`: list of Telegram chat IDs that may fire the rule. Falls back to `notifications.telegram.trigger_allowed_chat_ids` in settings. **An absent or empty whitelist blocks the command (fail-closed).**
 - `telegram_trigger_config.respond_with_ack`: send a brief reply confirming the rule was triggered (default `true`).
@@ -937,7 +937,7 @@ The goal: when grandma is the only person at home and steps into the kitchen, ge
 
 **Rule settings:**
 
-- `trigger_type`: `sensor_event`
+- `trigger_types`: `["sensor_event"]`
 - `primary_sensor_id`: kitchen camera
 - `cool_off_minutes`: `60`
 
@@ -972,8 +972,8 @@ The goal: between 12:00 and 14:00, observe the kitchen periodically. If grandma 
 
 **Rule settings:**
 
-- `trigger_type`: `cron`
-- `schedule_cron`: `*/10 12-13 * * *` (every 10 minutes from 12:00 to 13:50)
+- `trigger_types`: `["cron"]`
+- Cron trigger: `*/10 12-13 * * *` (every 10 minutes from 12:00 to 13:50, managed via `CronTrigger` model)
 - `cool_off_minutes`: `120` (one lunch confirmation per day is enough)
 
 **Filters:** none beyond cron.
@@ -1013,8 +1013,8 @@ The goal: at 14:00, check whether a `meal_lunch` activity was recorded for grand
 
 **Rule settings:**
 
-- `trigger_type`: `cron`
-- `schedule_cron`: `0 14 * * *`
+- `trigger_types`: `["cron"]`
+- Cron trigger: `0 14 * * *` (managed via `CronTrigger` model)
 - `dependencies`: must depend on the lunch-confirmation rule (above) so this rule does not fire on a day where the database write hasn't propagated.
 
 **Pipeline:**
@@ -1042,7 +1042,7 @@ The goal: if grandma is the only person home and an unidentified face is detecte
 
 **Rule settings:**
 
-- `trigger_type`: `sensor_event`
+- `trigger_types`: `["sensor_event"]`
 - `primary_sensor_id`: entry camera
 - `cool_off_minutes`: `5` (we want quick re-firing if the person stays)
 
