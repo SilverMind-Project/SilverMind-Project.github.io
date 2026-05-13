@@ -510,16 +510,26 @@ body {
 
 /* ----- Tables ----- */
 
-.vp-doc table {
-  border-radius: 12px;
-  border-collapse: collapse;
-  border: 1px solid var(--vp-c-divider);
-  display: block;
-  max-width: 100%;
-  margin: 20px 0;
+.vp-doc .vp-table-wrapper {
+  width: 100%;
   overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
+  margin: 20px 0;
+  border-radius: 12px;
+  border: 1px solid var(--vp-c-divider);
+}
+
+.vp-doc .vp-table-wrapper table {
+  /* Override VitePress's display:block — with display:table, width:100% tells
+     the table layout algorithm to fill the wrapper (narrow tables stretch).
+     min-width:max-content lets wide tables exceed the wrapper so the wrapper's
+     overflow-x:auto takes over (wide tables scroll instead of compressing). */
+  display: table;
+  overflow-x: unset;
+  width: 100%;
+  min-width: max-content;
+  max-width: 200vw;
+  margin: 0;
+  border: none;
 }
 
 .vp-doc th {

@@ -11,6 +11,13 @@ export default defineConfig({
         }
         return defaultRender ? defaultRender(tokens, idx, options, env, self) : self.renderToken(tokens, idx, options);
       };
+
+      // Wrap tables in a scrollable container so wide tables get a scrollbar
+      // while normal-width tables stretch to fill the parent.
+      md.renderer.rules.table_open = () =>
+        '<div class="vp-table-wrapper"><table>';
+      md.renderer.rules.table_close = () =>
+        "</table></div>";
     },
   },
   title: "Cognitive Companion",

@@ -221,24 +221,26 @@ A composite rule can encode this with two `presence_query` calls (current + 20 m
 
 ## Internal wiring (for builders)
 
-When `cts.enabled` is true, `backend/services/cts/runtime.py` constructs `CTSRuntime`, which owns three Redis Streams subscribers:
+When `cts.enabled` is true, `backend/services/cts/runtime.py` constructs `CTSRuntime`, which owns four Redis Streams subscribers. All Redis Stream messages are protobuf-encoded (compiled from `.proto` sources in `continuous-tracking/proto/continuoustracking/v1/`). Cognitive Companion consumes the compiled bindings from `backend/integrations/proto/continuoustracking/v1/`.
 
 | Subscriber | Stream | Effect |
 | --- | --- | --- |
-| `DementiaSignalSubscriber` | `tracking.signals` | Persists `DementiaSignal` via `SignalStore`; fires a `TriggerContext(trigger_type="cts_signal")` event for any rule with a matching `dementia_signal` filter. |
-| `TrackingEventSubscriber` | `tracking.events` | Updates `PersonLocationState` and writes `PersonLocationHistory` via `LocationWriter` and `SourceAuthority` (CTS-precedence lock controlled by `cts.lock_seconds`). |
+| `TrackingEventSubscriber` | `tracking.events` | Updates `PersonLocationState` and writes `PersonLocationHistory` via `LocationWriter` and `SourceAuthority` (CTS-precedence lock controlled by `cts.lock_seconds`). Broadcasts `cts_live_frame` WebSocket messages for the live tracking view. |
 | `IdentityRevisionSubscriber` | `tracking.revisions` | Soft-deletes superseded `PersonLocationHistory` rows via `IdentityRewriter` and inserts the corrected entries. |
+| `DementiaSignalSubscriber` | `tracking.signals` | Persists `DementiaSignal` via `SignalStore`; fires a `TriggerContext(trigger_type="cts_signal")` event for any rule with a matching `dementia_signal` filter. |
+| `SceneSampleSubscriber` | `scene.samples` | Decodes tagged keyframe `SceneSample` proto messages, pulls the JPEG from MinIO, runs scene analysis (YOLO + Florence-2 + CLIP + hazards), and persists observations to semantic memory. |
 
-All three reuse the `StreamConsumer` base class for consumer-group creation, `XAUTOCLAIM` reclaim, bounded semaphore, and graceful shutdown.
+All four reuse the `StreamConsumer` base class for consumer-group creation, `XAUTOCLAIM` reclaim, bounded semaphore, and graceful shutdown. Shared utilities live in `_time.py` (time helpers) and `_types.py` (protocol types for injected service parameters).
 
-The CTS BFF surface (cameras, calibration, signals, keyframes, identity, presence, dashboard, live view) lives under `/api/v1/cts/*`. Browsers and MCP agents never reach `tracking-orchestrator` or `rtsp-ingress` directly: every call goes through CC routers, which proxy via the mTLS-aware `IngressAdminClient` and `OrchestratorClient`.
+The CTS BFF surface (cameras, calibration, signals, keyframes, identity, presence, dashboard, live view, frames) lives under `/api/v1/cts/*`. Browsers and MCP agents never reach `tracking-orchestrator` or `rtsp-ingress` directly: every call goes through CC routers, which proxy via the mTLS-aware `IngressAdminClient` and `OrchestratorClient`.
 
 ## Boundaries
 
 - Do not write to `dementia_signals` or `cts_cameras` outside `services/cts/`.
 - Do not import `_upstream_base` (mTLS + EdDSA service JWTs) from non-CTS code; LAN clients use `_http_base`.
-- Do not subscribe to `tracking.*` streams outside `CTSRuntime`.
+- Do not subscribe to `tracking.*` or `scene.*` streams outside `CTSRuntime`.
 - Do not bypass the BFF: there is no other path from the browser or MCP into CTS internals.
+- Do not duplicate `_cts_enabled()`, `ns_to_iso()`, or `parse_ts()`. Import them from `backend.routers.cts_deps` or `backend.services.cts._time`.
 
 ## Related pages
 

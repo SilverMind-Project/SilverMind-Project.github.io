@@ -9,7 +9,7 @@ This document outlines the coding standards and conventions used in Cognitive Co
 - **Linter/Formatter**: ruff with `E`, `F`, `I`, `W`, `UP`, `B`, `SIM`, `RUF`, `PIE`, `PT`, `C4`, `T20` rules
 - **Type checker**: mypy with `enable_error_code = ["import"]` (catches broken imports)
 - **Line length**: 100 characters
-- **Target**: Python 3.11+
+- **Target**: Python 3.14
 - **Async**: Use `async`/`await` for all I/O operations
 
 ### Foundation Layer: `backend.core.*`
@@ -34,7 +34,7 @@ Rules specific to code under `backend/core/`:
 - Public API changes require a corresponding update to `backend/tests/core/`.
 
 The canonical test suite for this layer lives at `backend/tests/core/` and
-covers 113 cases across 6 modules at roughly 98% branch coverage. Treat it
+covers over 200 test cases across multiple modules. Treat it
 as the contract: if a refactor changes a public behavior in
 `backend.core.*`, those tests should be updated in the same commit.
 
@@ -42,8 +42,8 @@ as the contract: if a refactor changes a public behavior in
 
 ```bash
 make test              # full backend suite
-make test-core         # backend.core only (113 tests)
-make test-services     # backend.services only (177 tests)
+make test-core         # backend.core only
+make test-services     # backend.services only
 make coverage          # backend.core with branch coverage (terminal)
 make coverage-services # backend.services with branch coverage
 make coverage-html     # + HTML report under ./htmlcov
@@ -218,9 +218,45 @@ onUnmounted(() => {
 });
 ```
 
+## CTS-specific standards
+
+CTS code under `backend/services/cts/` and `backend/routers/cts*.py` follows additional rules:
+
+### Shared utilities
+
+Three files are the single authoritative source for functions that were historically duplicated across the codebase:
+
+| Utility | Import from | Replaces |
+| --- | --- | --- |
+| `ns_to_iso()` | `backend.services.cts._time` | 4 copies across subscriber files |
+| `parse_ts()` | `backend.services.cts._time` | 3 divergent copies across service files |
+| `ensure_aware()` | `backend.services.cts._time` | 1 copy in source_authority |
+| `cts_enabled()` | `backend.routers.cts_deps` | 8 copies across router files |
+
+Import these; never redefine them.
+
+### Protocol-based dependency injection
+
+CTS subscribers and services use structural `Protocol` classes from `backend/services.cts._types` instead of `Any`:
+
+- `ConnectionManager` — WebSocket broadcast and disconnect
+- `PipelineExecutor` — event firing interface
+- `MinioClient` — presigned URL generation and object retrieval
+- `SceneAnalysisClient` — YOLO, Florence-2, CLIP analysis
+- `SemanticMemoryClient` — observation creation and queries
+- `DBSessionFactory` — `Callable[[], Session]` type alias for `db_factory` parameters
+
+### StreamConsumer contract
+
+All four CTS subscribers extend `StreamConsumer[T]`. The `decode` parameter uses `dict[bytes | str, bytes | str]` because Redis returns bytes when `decode_responses=False`. Messages are protobuf-encoded; the compiled bindings live in `backend/integrations/proto/continuoustracking/v1/`.
+
+### Extraction threshold
+
+When the same logic appears in three or more places, extract it to a shared module. For CTS, this rule produced `_time.py`, `cts_deps.py`, and `_types.py`. For the frontend, it produced `useCtsSeverity.js`, `useFormatRelative.js`, and `useCtsWebSocket.js`.
+
 ## Do NOT
 
-- **Run migrations.** Delete `data/cognitive_companion.db` and restart instead.
+- **Run migrations by hand in production.** Use Alembic via `make migrate`.
 - **Use `print()`.** Use `get_logger()` from `backend.core.logging`.
 - **Instantiate services in routers.** Access them from `request.app.state`.
 - **Add dependencies without updating `pyproject.toml` and running `uv lock`** (backend) or `package.json` (frontend).
@@ -232,3 +268,8 @@ onUnmounted(() => {
 - **Use lazy imports for required dependencies.** All imports belong at the top of the file.
 - **Use `alert()` or `confirm()` in Vue views.** Use composables.
 - **Swallow errors silently.** Bare `catch {}` blocks must log.
+- **Duplicate `_cts_enabled()` in CTS router files.** Import from `backend.routers.cts_deps`.
+- **Duplicate `ns_to_iso()` or `parse_ts()` in CTS service files.** Import from `backend.services.cts._time`.
+- **Use `Any` for injected service parameters in CTS code.** Use protocol types from `backend.services.cts._types`.
+- **Hardcode hex color values in Vue templates.** Use `var(--cc-*)` design tokens or Vuetify theme colors.
+- **Duplicate `severityColor` or `formatRelative` in Vue views.** Import from `frontend/src/composables/`.

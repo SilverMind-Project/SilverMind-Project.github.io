@@ -90,7 +90,7 @@ flowchart TB
 | Visual pipeline builder | Drag-and-drop step ordering, dynamic step palette, per-step config dialogs. |
 | Presence fusion | Priority-ordered chain: bed sensor, CTS, HA device tracker, fallback. Configured in `config/presence.yaml`. |
 | E-ink displays | Per-device notification images with template editor and refresh suppression. |
-| MCP tool server | 27 tools (read-only plus rule triggering and interactive response recording). |
+| MCP tool server | Over 30 tools (read-only plus rule triggering, rule authoring, and interactive response recording). |
 | Plugin systems | Step handlers, channels, and filters auto-discovered as Python files. |
 | RBAC | API keys, hardware device keys, and `fnmatch` permission patterns. |
 
