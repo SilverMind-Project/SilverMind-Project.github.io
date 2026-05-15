@@ -6,7 +6,7 @@ This guide covers setting up a development environment for contributing to Cogni
 
 - **Python 3.14** (required by backend)
 - **[uv](https://docs.astral.sh/uv/)** (Python package manager)
-- **Node.js 18+** with npm
+- **Node.js 20+** with npm
 - **Git**
 - **NVIDIA GPU** with 10 GB+ VRAM (for running models locally)
 - **Docker** + NVIDIA Container Toolkit (for person-ID service)

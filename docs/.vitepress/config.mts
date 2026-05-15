@@ -41,7 +41,7 @@ export default defineConfig({
       { text: "Development", link: "/development/setup" },
       { text: "Roadmap", link: "/roadmap" },
       {
-        text: "v0.6.108",
+        text: "v0.6.113",
         items: [
           {
             text: "Code",
@@ -118,7 +118,7 @@ export default defineConfig({
 
     editLink: {
       pattern:
-        "https://github.com/OWNER/cognitive-companion-pages/edit/main/docs/:path",
+        "https://github.com/SilverMind-Project/silvermind-project.github.io/edit/main/docs/:path",
       text: "Edit this page on GitHub",
     },
 

@@ -62,7 +62,7 @@ device_keys:
 
 **Per-camera options:**
 
-Configure per-camera behaviour in `config/settings.yaml` under the `cameras` key, using the `sensor_id` as the key:
+Configure per-camera behavior in `config/settings.yaml` under the `cameras` key, using the `sensor_id` as the key:
 
 ```yaml
 cameras:

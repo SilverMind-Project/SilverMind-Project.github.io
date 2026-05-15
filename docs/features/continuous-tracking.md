@@ -1,6 +1,6 @@
 # Continuous Tracking
 
-The Continuous Tracking System (CTS) is a sibling service family in `continuous-tracking/`. It pulls RTSP camera streams, tracks individuals across multiple cameras, infers identity with a Bayesian posterior, and detects dementia-relevant behavioural patterns. Cognitive Companion is the BFF gateway: every browser, MCP, and rule-engine path into CTS goes through the CC backend.
+The Continuous Tracking System (CTS) is a sibling service family in `continuous-tracking/`. It pulls RTSP camera streams, tracks individuals across multiple cameras, infers identity with a Bayesian posterior, and detects dementia-relevant behavioral patterns. Cognitive Companion is the BFF gateway: every browser, MCP, and rule-engine path into CTS goes through the CC backend.
 
 This page covers what CTS adds on top of Cognitive Companion's existing single-frame perception, how to enable it, and how to write rules that use it.
 

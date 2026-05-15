@@ -564,7 +564,7 @@ Generate end-of-day activity reports for one or all household members. Aggregate
 
 #### `info_card`
 
-Delivers a curated info card to the senior via PWA popup, e-ink display, or both. Loads an approved `InfoCard` by ID from the knowledge repository, resolves its image slots through the image pipeline, and dispatches via the knowledge delivery service. A voice instruction override allows per-delivery Gemini Live behavioural guardrails.
+Delivers a curated info card to the senior via PWA popup, e-ink display, or both. Loads an approved `InfoCard` by ID from the knowledge repository, resolves its image slots through the image pipeline, and dispatches via the knowledge delivery service. A voice instruction override allows per-delivery Gemini Live behavioral guardrails.
 
 **Config fields:**
 

@@ -36,7 +36,7 @@ Key capabilities:
 - **Info cards:** 5 layout types (text_only, single_hero, side_by_side, gallery_grid_2x2), per-surface image variants (PWA WebP, e-ink dithered PNG), voice delivery via Gemini Live
 - **Quizzes:** multiple-choice + open-ended, voice + button dual input, LLM grader for open-ended answers, quiz session lifecycle with timeout, LLM-assisted generation
 - **Senior Q&A:** voice questions → embed → pgvector cosine search → LLM synthesis → logged for caregiver review
-- **Voice instruction system:** 3-layer composition (step override → resource column → yaml default → base) for per-delivery Gemini Live behavioural guardrails
+- **Voice instruction system:** 3-layer composition (step override → resource column → yaml default → base) for per-delivery Gemini Live behavioral guardrails
 - **LLM-assisted content generation:** paraphrase, quiz, and voice instruction suggestions with caregiver review gate
 
 See [Knowledge Repository](/features/knowledge-repository) for full documentation.

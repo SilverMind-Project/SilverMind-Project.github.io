@@ -77,7 +77,7 @@ Cron schedules are managed separately via `CronTrigger` (see Cron Triggers secti
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `step_type` | string | One of the 14 step types |
+| `step_type` | string | One of the 20 step types |
 | `label` | string | Display label |
 | `config_json` | object | Step-type-specific configuration |
 | `enabled` | boolean | Whether the step is active |

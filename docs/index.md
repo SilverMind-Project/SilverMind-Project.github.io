@@ -27,7 +27,7 @@ features:
 
   - icon: 🗣️
     title: Voice Companion
-    details: Natural conversation powered by Google Gemini Live. Real-time WebSocket audio streaming, MCP tool calling for live system queries, bilingual Tamil and English support, and per-delivery voice instructions that adapt the assistant's behaviour to each interaction.
+    details: Natural conversation powered by Google Gemini Live. Real-time WebSocket audio streaming, MCP tool calling for live system queries, bilingual Tamil and English support, and per-delivery voice instructions that adapt the assistant's behavior to each interaction.
     link: /features/voice-companion
 
   - icon: 🧩
@@ -37,7 +37,7 @@ features:
 
   - icon: 🛰️
     title: Continuous Tracking
-    details: "Multi-camera person tracking with BoT-SORT and Bayesian identity resolution. Detects dementia-relevant behavioural patterns: pacing, sundowning, bathroom anomalies, and prolonged stillness. Surfaces them through configurable rules and alerts."
+    details: "Multi-camera person tracking with BoT-SORT and Bayesian identity resolution. Detects dementia-relevant behavioral patterns: pacing, sundowning, bathroom anomalies, and prolonged stillness. Surfaces them through configurable rules and alerts."
     link: /features/continuous-tracking
 
   - icon: 👤

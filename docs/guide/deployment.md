@@ -129,8 +129,8 @@ flowchart TB
     Internet["Internet / LAN"] --> Ingress
 
     subgraph Ingress["nginx ingress (LoadBalancer)"]
-        FrontendRoute["nanai.khoofia.com → frontend-svc:80"]
-        APIRoute["api.nanai.khoofia.com → backend-svc:8000"]
+        FrontendRoute["example.com → frontend-svc:80"]
+        APIRoute["api.example.com → backend-svc:8000"]
         VLLMRoute[":8000-8002 TCP → vllm-svc"]
         PGRoute[":5432 TCP → postgres"]
     end
@@ -243,7 +243,7 @@ The local overlay includes a TLS ingress for the API:
 
 | Host | Backend |
 | ------ | --------- |
-| `api.nanai.khoofia.com` | `ai-api-gateway-svc:8000` |
+| `ai-api-gateway-svc.example.com:8000` | `ai-api-gateway-svc:8000` |
 
 TLS certificates are provisioned automatically by cert-manager with the `letsencrypt-prod` ClusterIssuer.
 

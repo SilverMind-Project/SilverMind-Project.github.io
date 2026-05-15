@@ -379,7 +379,7 @@ The `VoiceInstructionConfig` dataclass loads defaults at startup from `config/kn
 # config/knowledge_voice.yaml
 interactive_prompt_default: ""
   # No default for generic prompts; the step's own voice_prompt_template
-  # carries the behavioural context.
+  # carries the behavioral context.
 
 info_card_default: >
   You are now delivering an information card to the senior. Read the
@@ -398,7 +398,7 @@ quiz_default: >
   summary of how they did without specific scores.
 ```
 
-When a new delivery starts (info card, quiz, or interactive prompt), the system composes the final instruction and reconnects the Gemini Live session with the updated system instruction. This ensures the voice assistant's behaviour matches the current delivery type.
+When a new delivery starts (info card, quiz, or interactive prompt), the system composes the final instruction and reconnects the Gemini Live session with the updated system instruction. This ensures the voice assistant's behavior matches the current delivery type.
 
 Template variables like `{{senior_name}}` are available in voice instruction templates and resolved from the household member records before sending to Gemini.
 
@@ -497,7 +497,7 @@ config:
 
 ::: tip voice_instruction best practices
 
-Keep voice instructions concise (1-3 sentences). Focus on tone and behaviour rather than content: the content is already in the prompt template. The instruction tells Gemini *how* to say it, not *what* to say.
+Keep voice instructions concise (1-3 sentences). Focus on tone and behavior rather than content: the content is already in the prompt template. The instruction tells Gemini *how* to say it, not *what* to say.
 
 :::
 

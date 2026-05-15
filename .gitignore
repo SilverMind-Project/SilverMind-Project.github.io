@@ -4,6 +4,7 @@ docs/.vitepress/cache/
 .DS_Store
 *.log
 .vscode/
-.claude/
 .qwen/
 .kiro/
+.claude/settings.json
+.claude/settings.local.json
