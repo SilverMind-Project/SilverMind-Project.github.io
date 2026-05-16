@@ -36,7 +36,7 @@ flowchart TB
         direction TB
         Aggregator["EventAggregator"]
         RulesEngine["RulesEngine"]
-        Executor["PipelineExecutor<br/>(20 step types)"]
+        Executor["PipelineExecutor<br/>(22 step types)"]
         Dispatcher["NotificationDispatcher<br/>(7 channels)"]
         CTS["CTSRuntime<br/>(Redis Streams)"]
         Presence["PresenceService<br/>(fused)"]
@@ -78,7 +78,7 @@ flowchart TB
 
 | Capability | Description |
 | --- | --- |
-| 20 pipeline step types | `llm_call`, `person_identification`, `scene_analysis`, `semantic_memory_query`, `semantic_memory_write`, `object_trend_analysis`, `presence_query`, `home_state`, `notification`, `ha_action`, `activity_detection`, `activity_session_start`, `activity_session_end`, `daily_report`, `verification`, `condition`, `wait`, `interactive_prompt`, `info_card`, `quiz_start`. |
+| 22 pipeline step types | `llm_call`, `person_identification`, `scene_analysis`, `semantic_memory_query`, `semantic_memory_write`, `object_trend_analysis`, `presence_query`, `home_state`, `notification`, `ha_action`, `activity_detection`, `activity_session_start`, `activity_session_end`, `daily_report`, `verification`, `condition`, `wait`, `interactive_prompt`, `info_card`, `quiz_start`, `recamera_media_poll`, `cts_window_poll`. |
 | 7 notification channels | `pwa_popup_text`, `pwa_realtime_ai`, `pwa_tts_announcement`, `telegram`, `eink`, `ha_speaker_tts`, `webhook`. |
 | 13 context filters | `room`, `time_range`, `day_of_week`, `person_presence`, `person_activity`, `room_transition`, `person_movement_memory`, `scene_contains`, `scene_trend`, `home_state`, `presence_status`, `presence_dwell`, `dementia_signal`. |
 | 6 trigger types | `sensor_event`, `cron`, `manual`, `webhook` (HMAC), `telegram` (bot command), `occupancy_duration`. |

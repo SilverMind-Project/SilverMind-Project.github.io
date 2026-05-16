@@ -52,20 +52,34 @@ For `webhook` and `telegram` triggers, the payload is also available in `pipelin
 
 See [Telegram Command Triggers](#telegram-command-triggers) below for configuration details.
 
-The executor also injects a localized `system` object into `pipeline_data` using `app.timezone` from `settings.yaml`:
+The executor also injects a localized `system` object into `pipeline_data` using `app.timezone` from `settings.yaml`. The namespace covers time, day, date, and friendly composite strings so templates can reference any common format without further conversion:
 
 ```json
 {
   "system": {
-    "local_time": "08:42 AM",
+    "local_time": "8:42 AM",
+    "local_time_24h": "08:42",
+    "local_hour_12h": "8",
+    "local_hour_24h": "08",
+    "local_minute": "42",
+    "local_ampm": "AM",
     "local_date": "2026-03-29",
     "local_day_of_week": "Sunday",
+    "local_day_of_week_short": "Sun",
+    "local_day_of_month": 29,
+    "local_day_ordinal": "29th",
+    "local_month_name": "March",
+    "local_month_name_short": "Mar",
+    "local_month_number": 3,
+    "local_year": 2026,
+    "local_date_long": "March 29th, 2026",
+    "local_date_friendly": "Sunday, March 29th",
     "timezone": "America/New_York"
   }
 }
 ```
 
-This makes local wall-clock values available to prompts and notification templates without requiring each step to compute them independently.
+This makes local wall-clock values available to prompts and notification templates without requiring each step to compute them independently. The complete list of keys is served by `GET /api/v1/pipeline/data-keys` and surfaced as autocomplete suggestions in the admin UI template editors.
 
 ## Cool-Off Behavior
 
@@ -321,6 +335,50 @@ Queries the [semantic-memory-service](/guide/architecture#semantic-memory-servic
 | `{output_key}.summary` | str | Compact single-paragraph text ready for LLM prompt injection |
 
 Graceful degradation: when the semantic-memory-service is unreachable or disabled, the output contains empty lists and a "No memory context available." summary.
+
+#### `recamera_media_poll`
+
+Fetches recent reCamera images from the `MediaCache` via the `EventAggregator` and returns presigned MinIO URLs plus metadata. Snapshot semantics: reads what is currently in cache and returns immediately. To wait for new events to accumulate, place a `wait` step before this one.
+
+The step pairs well with the [Continuous Tracking](/features/continuous-tracking) data path. It lets a rule explicitly collect frames from one or more reCamera sensors or rooms, branch on the image count, then forward the snapshot to a downstream vision or scene-analysis step.
+
+**Config fields:**
+
+- `sensor_ids` (list): reCamera sensor IDs to include. Empty means all cameras (subject to `room_names` filter if set).
+- `room_names` (list): room names to include. Combined with `sensor_ids`, only sensors in these rooms are returned.
+- `since_minutes` (number, default `5`): return images captured within the last N minutes. Images older than the `MediaCache` retention window are never returned regardless of this setting.
+- `images_per_sensor` (int, default `3`): maximum images returned per sensor when `sensor_ids` are specified.
+- `sensor_frame_limits` (dict): per-sensor overrides for `images_per_sensor`. Keys are sensor IDs, values are integer frame limits.
+- `max_images` (int, default `10`): hard cap on total images returned across all sensors.
+- `chronological` (bool, default `true`): when `true`, images within each sensor are sorted oldest-first (better for temporal reasoning). When `false`, newest-first.
+
+**Output keys:** `images` (list of presigned MinIO URLs), `count`, `sensor_ids`, `room_names`, `since_minutes`, `polled_at` (ISO-8601 UTC timestamp).
+
+Graceful degradation: when the `EventAggregator` is not available, the step returns `success=False` with an empty payload so downstream steps can branch on it.
+
+#### `cts_window_poll`
+
+Pulls a window of recent Continuous Tracking System (CTS) frames enriched with detections, identities, room dwells, and optionally scene captions. Designed to be used inside a pipeline triggered by a reCamera sensor event, so the downstream LLM step can reason over high-quality CTS data even when the trigger fired on a lower-resolution reCamera frame.
+
+The output payload shape is symmetric with the `cts_window` trigger so downstream template expressions are interchangeable between the two paths.
+
+**Config fields:**
+
+- `duration_s` (number, required, default `10`): total window duration in seconds.
+- `sample_period_s` (number, required, default `1.0`): downsample to one frame per this many seconds.
+- `cameras` (list): CTS camera IDs to include. Empty means all CTS cameras. CTS camera IDs are distinct from reCamera sensor IDs.
+- `rooms` (list): room names to include.
+- `lookback_s` (number, default `5`): seconds before the trigger time to include in the window.
+- `lookahead_s` (number, default `5`): seconds after the trigger time to wait and collect.
+- `include_scene` (bool, default `false`): run scene analysis on sampled frames.
+- `include_pose` (bool, default `false`): include pose keypoints. Requires the CTS pose pipeline (TD-005); the option is shown in the UI as disabled until that path is wired.
+- `max_frames` (int, default `30`): hard cap on total frames returned.
+
+**Output keys:** `trigger_id`, `window_start`, `window_end`, `cameras`, `rooms`, `frames` (list of enriched frame dicts: per-frame `detections`, `identities`, optional `scene_caption`), `summary` (`distinct_identities`, `detection_count`, `rooms`), `partial` (true when the bucketizer is not yet wired or when the downsampler trimmed frames).
+
+::: warning
+The CTS event bucketizer is the upstream feed for this step. When the bucketizer is not wired into the service container, `cts_window_poll` logs a warning and returns an empty window with `partial: true`. Downstream steps can branch on `partial` to handle the degraded path.
+:::
 
 #### `vision_analysis` _(deprecated)_
 
@@ -796,7 +854,7 @@ Unresolvable placeholders are left as-is so the LLM still sees the intent.
 
 ### Available Variables
 
-Any key in `pipeline_data` is available. Common variables:
+Any key in `pipeline_data` is available. The admin UI's template editors load the full reference from `GET /api/v1/pipeline/data-keys` and surface it as autocomplete when you type <code v-pre>{{</code> in a templated field. Common variables:
 
 | Variable | Source | Example Value |
 | -------- | ------ | ------------- |
@@ -804,8 +862,12 @@ Any key in `pipeline_data` is available. Common variables:
 | `person_detections.0.name` | person_identification step | `"grandma"` |
 | `person_detections.0.confidence` | person_identification step | `0.92` |
 | `logic_response.user_notification` | llm_call step (output_key: logic_response) | `"Stove left on"` |
-| `system.local_time` | executor-injected system context | `"08:42 AM"` |
+| `system.local_time` | executor-injected system context (12-hour, no leading zero) | `"8:42 AM"` |
+| `system.local_time_24h` | executor-injected system context (24-hour) | `"08:42"` |
 | `system.local_day_of_week` | executor-injected system context | `"Sunday"` |
+| `system.local_day_ordinal` | executor-injected system context (with suffix) | `"29th"` |
+| `system.local_date_long` | executor-injected system context (friendly long date) | `"March 29th, 2026"` |
+| `system.local_date_friendly` | executor-injected system context (day plus month) | `"Sunday, March 29th"` |
 | `trigger_input.reason` | webhook trigger payload | `"medication_missed"` |
 | `room_name` | trigger context | `"Kitchen"` |
 | `sensor_id` | trigger context | `"kitchen_cam_01"` |

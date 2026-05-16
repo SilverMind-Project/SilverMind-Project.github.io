@@ -74,7 +74,7 @@ interval = settings.get("homeassistant.poll_interval_seconds", 30)
 - **Cron rules.** A cron expression like `0 8 * * *` fires at 08:00 local time. APScheduler resolves DST transitions so "8 AM" always means 8 AM local.
 - **Time range and day-of-week context filters.** Filter windows are interpreted in local time, not UTC.
 - **Daily trigger limits.** The `max_daily_triggers` counter resets at local midnight, not UTC midnight.
-- **Pipeline context.** `system.local_time`, `system.local_date`, `system.local_day_of_week`, and `system.timezone` in pipeline data are derived from this setting.
+- **Pipeline context.** The `system.*` namespace in `pipeline_data` is derived from this setting. Templates can reference time variants (`system.local_time`, `system.local_time_24h`, `system.local_hour_12h`, `system.local_hour_24h`, `system.local_minute`, `system.local_ampm`), day and date components (`system.local_date`, `system.local_day_of_week`, `system.local_day_ordinal`, `system.local_month_name`, `system.local_year`), and friendly composites (`system.local_date_long`, `system.local_date_friendly`). See [Composable Pipelines](/features/pipeline) for the complete list.
 
 All timestamps are stored in the database as UTC. The timezone setting affects scheduling and display only, never the underlying data.
 
