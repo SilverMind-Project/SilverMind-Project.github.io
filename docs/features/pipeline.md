@@ -29,7 +29,7 @@ Every step receives the full `pipeline_data` dictionary and a `TriggerContext` w
 ```python
 @dataclass
 class TriggerContext:
-    trigger_type: str              # "sensor_event", "cron", "manual", "webhook", "occupancy_duration", "telegram"
+    trigger_type: str              # "sensor_event", "cron", "manual", "webhook", "occupancy_duration", "telegram", "dementia_signal"
     sensor_id: str | None
     room_name: str | None
     media_paths: list[str]
@@ -959,6 +959,41 @@ llm_call (translation, output_key: translation) → notification [alert_level: w
 - Context filters: add `time_range`, `person_presence`, or `room` filters as needed
 
 The `llm_call` step localises the message before the `notification` step dispatches it. The `pwa_realtime_ai` channel initiates an interactive voice check-in via Gemini Live; the `pwa_popup_text` and `telegram` channels alert the admin console and caregiver simultaneously.
+
+### Dementia Signal Trigger {#dementia-signal-triggers}
+
+Rules with `trigger_type: dementia_signal` fire when the CTS subscriber receives a behavioral signal from the tracking orchestrator that passes the per-person alert configuration gate. This allows caregivers to author rules that respond to pacing, sundowning, bathroom dwell anomalies, absence, or other CTS-detected behavioral patterns.
+
+**Dispatch path:** `DementiaSignalSubscriber` persists every signal to the database, then checks whether the signal is enabled for that person via `HouseholdMember.cts_alert_config`. If allowed, it calls `PipelineExecutor.fire_event`, which queries all rules with `trigger_types` containing `"dementia_signal"` and evaluates their `dementia_signal` context filters against the event payload.
+
+::: warning
+`dementia_signal` triggers require CTS to be enabled (`cts.enabled: true` in `config/settings.yaml`). The feature also requires each household member to be enrolled with an appropriate alert profile (Senior, Adult, or Presence only). See [Continuous Tracking](/features/continuous-tracking#per-person-alert-configuration) for configuration details.
+:::
+
+**Rule settings tab:**
+
+- `trigger_types`: `["dementia_signal"]`
+- Add a `dementia_signal` context filter to scope by signal kind, person, severity, or time window:
+  - `kinds`: list of signal kinds to match (`pacing`, `sundowning_index`, `bathroom_dwell_anomaly`, `nighttime_movement`, `stillness_anomaly`, `absence`, `room_revisit_rate`). Empty matches any kind.
+  - `person_ids`: list of person identity IDs. Empty matches any person.
+  - `min_severity`: numeric threshold where `0.33 = info`, `0.66 = warning`, `1.0 = emergency`.
+  - `cooldown_minutes`: suppress repeated matches for N minutes per (rule, person, kind). Uses `DementiaSignal.acknowledged_at` from the Alerts UI.
+
+::: details Example: pacing alert to caregiver Telegram
+
+When grandma has been pacing at warning severity, send an alert to Telegram with current room context:
+
+```text
+Rule: trigger_types=["dementia_signal"]
+Context filters:
+  - dementia_signal: kinds=["pacing"], min_severity=0.66, cooldown_minutes=30
+Pipeline:
+  1. presence_query (person_id: grandma, output_key: presence)
+  2. notification   (channels: [telegram, pwa_popup_text],
+                     telegram_template: "Grandma is pacing in {{presence.room_name}}.")
+```
+
+:::
 
 ### Telegram Command Trigger {#telegram-command-triggers}
 

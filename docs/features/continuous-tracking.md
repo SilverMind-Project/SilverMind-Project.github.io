@@ -349,7 +349,7 @@ When `cts.enabled` is true, the CC backend starts four Redis Streams subscribers
 |------------|--------|--------|
 | `TrackingEventSubscriber` | `tracking.events` | Updates `PersonLocationState` and writes `PersonLocationHistory` via `LocationWriter` and `SourceAuthority` (CTS-precedence lock controlled by `cts.lock_seconds`). Room name is taken from the `TrackingEvent` proto when present; when absent, `LocationWriter` falls back to the camera-to-room mapping loaded from `cts_cameras` at startup. Broadcasts `cts_live_frame` WebSocket messages for the live tracking view. |
 | `IdentityRevisionSubscriber` | `tracking.revisions` | Soft-deletes superseded `PersonLocationHistory` rows via `IdentityRewriter` and inserts corrected entries. |
-| `DementiaSignalSubscriber` | `tracking.signals` | Persists `DementiaSignal` via `SignalStore`; fires a trigger event for any rule with a matching `dementia_signal` filter. |
+| `DementiaSignalSubscriber` | `tracking.signals` | Persists `DementiaSignal` via `SignalStore`. Before calling `fire_event`, checks the person's `cts_alert_config` in `household_members`. If the signal kind or severity is disabled for that person, the signal is stored for history but no rule is triggered. See [Per-person alert configuration](#per-person-alert-configuration). |
 | `SceneSampleSubscriber` | `scene.samples` | Decodes tagged keyframe `SceneSample` protos, pulls the JPEG from MinIO, runs scene analysis (YOLO + Florence-2 + CLIP + hazards), and persists observations to semantic memory. |
 
 ### Rule examples
@@ -417,6 +417,56 @@ The `cooldown_minutes` field checks `DementiaSignal.acknowledged_at` and suppres
                          alert_level: emergency
                          telegram_template: "Grandma left the house at {{trigger.signal.started_at}} and has not returned."
 ```
+
+## Per-person alert configuration {#per-person-alert-configuration}
+
+Cognitive Companion supports multigenerational households where dementia-specific signals are relevant only for certain members. Each household member can be assigned an alert profile that controls which CTS signal kinds are dispatched and at what minimum severity.
+
+### Alert profiles
+
+| Profile | Signal kinds enabled |
+|---------|---------------------|
+| Senior | All 7 kinds: `pacing`, `room_revisit_rate`, `bathroom_dwell_anomaly`, `sundowning_index`, `nighttime_movement`, `stillness_anomaly`, `absence` |
+| Adult | `absence`, `nighttime_movement`, `stillness_anomaly` (presence and sleep/rest only) |
+| Presence only | `absence` only |
+| Custom | Operator-selected subset |
+
+### Setting an alert profile
+
+The alert profile is captured in the household member enrollment dialog at `/admin/persons`. Select a profile when creating or editing a member. The Custom option exposes a grouped checkbox list and a minimum severity selector.
+
+The profile is stored as `cts_alert_config` (JSONB) on the `household_members` table:
+
+```json
+{
+  "enabled_kinds": ["absence", "nighttime_movement", "stillness_anomaly"],
+  "min_severity": "info"
+}
+```
+
+A `null` config is treated as permissive: all kinds at `info` severity.
+
+### Enforcement layers
+
+The profile is enforced at three points:
+
+1. **Subscriber dispatch gate.** `DementiaSignalSubscriber` checks the config before calling `PipelineExecutor.fire_event`. The signal is always written to the database for history, but no rule is triggered when the kind or severity does not pass the gate.
+
+2. **API read filter.** `GET /api/v1/cts/signals` and `GET /api/v1/cts/signals/unacknowledged` filter the response list against each person's config. This keeps the Alerts view quiet for household members who do not need dementia-specific alerts.
+
+3. **Pipeline rule context filter.** Rules with a `dementia_signal` context filter can further narrow which signals trigger actions by specifying `kinds`, `person_ids`, `min_severity`, and `cooldown_minutes`.
+
+### Signal kind reference
+
+| Kind | Relevant for |
+|------|-------------|
+| `pacing` | Dementia (repetitive movement) |
+| `room_revisit_rate` | Dementia (spatial disorientation) |
+| `bathroom_dwell_anomaly` | Dementia, safety |
+| `sundowning_index` | Dementia (evening agitation) |
+| `nighttime_movement` | Safety, sleep quality |
+| `stillness_anomaly` | Safety (falls, medical events) |
+| `absence` | Presence (all member types) |
 
 ## Boundaries
 
