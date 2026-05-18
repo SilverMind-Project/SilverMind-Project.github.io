@@ -41,7 +41,7 @@ export default defineConfig({
       { text: "Development", link: "/development/setup" },
       { text: "Roadmap", link: "/roadmap" },
       {
-        text: "v0.6.119",
+        text: "v0.6.122",
         items: [
           {
             text: "Code",
@@ -75,7 +75,17 @@ export default defineConfig({
             { text: "Composable Pipelines", link: "/features/pipeline" },
             { text: "Knowledge Repository", link: "/features/knowledge-repository" },
             { text: "Person Tracking", link: "/features/person-tracking" },
-            { text: "Continuous Tracking (CTS)", link: "/features/continuous-tracking" },
+            {
+              text: "Continuous Tracking (CTS)",
+              link: "/features/continuous-tracking",
+              collapsed: true,
+              items: [
+                { text: "Overview", link: "/features/continuous-tracking" },
+                { text: "Frame Pipeline", link: "/features/continuous-tracking/frame-pipeline" },
+                { text: "Dementia Signals", link: "/features/continuous-tracking/dementia-signals" },
+                { text: "CC Integration", link: "/features/continuous-tracking/cc-integration" },
+              ],
+            },
             { text: "Voice Companion", link: "/features/voice-companion" },
             { text: "E-Ink Displays", link: "/features/eink-display" },
             { text: "Notifications", link: "/features/notifications" },
