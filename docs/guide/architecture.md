@@ -21,7 +21,7 @@ flowchart TB
     end
 
     subgraph AI["AI Services"]
-        PersonID["Person ID Service<br/>(InsightFace ArcFace)"]
+        PersonID["Person ID Service<br/>(ArcFace recognition)"]
         VisionLLM["Vision LLM<br/>(Cosmos Reason2 via vLLM)"]
         LogicLLM["Reasoning LLM<br/>(Gemma 4 via llama.cpp)"]
         SceneAnalysis["Scene Analysis<br/>(YOLO + Florence-2 + CLIP)"]
@@ -279,6 +279,110 @@ Vector similarity search uses `pgvectorscale` StreamingDiskANN indexes. Cosine d
 | Triton Inference Server | No | embeddinggemma-300m model for text embeddings. Disable with `TEXT_EMBEDDING_ENABLED=false`. |
 
 See [CLAUDE.md](https://github.com/SilverMind-Project/semantic-memory-service/blob/main/CLAUDE.md) and [AGENTS.md](https://github.com/SilverMind-Project/semantic-memory-service/blob/main/AGENTS.md) for contributor documentation.
+
+## Continuous Tracking System
+
+The Continuous Tracking System (CTS) is a sibling service family at `continuous-tracking/` that provides multi-camera person tracking, identity resolution, and dementia-relevant behavioral signal detection. It is a standalone system that Cognitive Companion consumes via Redis Streams and a REST API.
+
+### Services
+
+| Service | Language | Port | Role |
+|---------|----------|------|------|
+| `go2rtc` | Go (upstream) | 1984 | RTSP proxy and JPEG multiplexer |
+| `rtsp-ingress` | Go | 8090 | Motion-gated frame capture, MinIO upload, `frames.ready` publishing |
+| `tracking-orchestrator` | Python 3.12 | 8000 | Frame processing pipeline, cross-camera tracking, identity resolution, signal detection |
+| Triton Inference Server | C++/Python | 8701 (gRPC) | ONNX model serving: YOLO, SOLIDER-REID, RTMPose |
+
+### Data flow
+
+```mermaid
+flowchart TB
+    subgraph Ingest["Frame Ingest"]
+        Cameras["IP Cameras<br/>(RTSP)"]
+        Go2RTC["go2rtc<br/>(RTSP proxy, port 1984)"]
+        Ingress["rtsp-ingress<br/>(Go, port 8090)"]
+    end
+
+    subgraph Orchestrator["tracking-orchestrator<br/>(Python, port 8000)"]
+        Pipeline["FrameProcessingPipeline<br/>Detection · Tracking · ReID · Pose<br/>Cross-camera · Identity · Trajectory"]
+        Signals["DementiaSignalWorker"]
+    end
+
+    subgraph GPU["GPU Inference"]
+        Triton["Triton<br/>(gRPC 8701)<br/>YOLO · SOLIDER-REID · RTMPose"]
+        PersonID["person-identification-service<br/>(ArcFace)"]
+    end
+
+    subgraph Storage["Storage"]
+        TimescaleDB["TimescaleDB<br/>continuous_tracking schema"]
+        MinIO["MinIO<br/>(JPEG frames)"]
+        Redis["Redis Streams"]
+    end
+
+    subgraph Consumer["Consumer"]
+        CC["cognitive-companion<br/>(port 8080)"]
+    end
+
+    Cameras -->|"RTSP"| Go2RTC
+    Go2RTC -->|"HTTP JPEG"| Ingress
+    Ingress -->|"JPEG upload"| MinIO
+    Ingress -->|"frames.ready"| Redis
+    Pipeline -->|"YOLO · ReID · Pose"| Triton
+    Pipeline -->|"Face ID"| PersonID
+    Pipeline -->|"frames.ready"| Redis
+    Pipeline -->|"tracking.* streams"| Redis
+    Pipeline -->|"Trajectory · Dwell · Signals"| TimescaleDB
+    Signals -->|"tracking.signals"| Redis
+    Redis -->|"Consume all streams"| CC
+```
+
+### Redis Streams
+
+CTS publishes 5 protobuf-encoded Redis streams consumed by Cognitive Companion:
+
+| Stream | Proto message | Content |
+|--------|---------------|---------|
+| `frames.ready` | `FrameReady` | Frame metadata published by rtsp-ingress |
+| `tracking.events` | `TrackingEvent` | Per-frame detections, identities, pose, trails |
+| `tracking.revisions` | `IdentityRevision` | Identity reassignments with posterior distribution |
+| `tracking.signals` | `DementiaSignal` | Behavioral signal detections with severity and z-scores |
+| `scene.samples` | `SceneSample` | Tagged keyframes for downstream scene analysis |
+
+### Pipeline stages
+
+The orchestrator's `FrameProcessingPipeline` runs 16 stages per frame:
+
+1. Fetch JPEG from MinIO
+2. Person detection via YOLO (Triton) + IoU dedup
+3. Privacy zone enforcement (blur/mask + detection drop)
+4. SOLIDER-REID appearance embedding (Triton)
+5. RTMPose pose estimation (Triton)
+6. Per-camera BoT-SORT tracking (Kalman + IoU + appearance cost)
+7. Tracklet lifecycle management with stability gate
+8. Per-camera face identification (ArcFace, rate-limited)
+9. Cross-camera association via adjacency graph, appearance similarity, and floor geometry
+10. Bayesian identity resolution (face anchors + ReID gallery + temporal prior)
+11. Identity committer (windowed buffered commit with high-confidence face fast-path)
+12. Trajectory writing with floor projection, posture classification, and motion energy
+13. Keyframe sampling (periodic + identity-change triggered)
+14. Identity revision emission and cross-table rewriting
+15. Tracking event publishing to Redis Streams
+16. A periodic signal worker loop (default: 60 s) computes dementia signals from trajectory and dwell data
+
+### Dementia signals
+
+Six signal kinds are detected using robust z-scores against 30-day per-person baselines with hysteresis debounce:
+
+| Kind | Detection method |
+|------|-----------------|
+| `pacing` | Room transition rate normalized for observation density |
+| `sundowning_index` | Evening (17:00-22:00) activity vs 14-day evening baseline |
+| `bathroom_dwell_anomaly` | Current bathroom dwell vs 30-day duration baseline, time-of-day aware |
+| `nighttime_movement` | Room transitions during 22:00-06:00 vs 14-day baseline |
+| `stillness_anomaly` | Sustained low motion energy in non-resting posture, posture-aware severity |
+| `absence` | Gap since last detection exceeding threshold, context-aware via hourly activity |
+
+See [Continuous Tracking](/features/continuous-tracking) for the full architecture, identity resolution model, and integration details.
 
 ## Security Model
 

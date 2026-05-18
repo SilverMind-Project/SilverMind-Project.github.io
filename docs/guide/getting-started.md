@@ -13,7 +13,7 @@ This guide walks you through getting Cognitive Companion running on your local n
 | **vLLM** | Vision model serving | Cosmos-Reason2 via OpenAI-compatible API |
 | **llama.cpp** `llama-server` | General reasoning model | Gemma 4 via OpenAI-compatible API |
 | **Triton Inference Server** | Embedding model for RAG | embeddinggemma-300m for knowledge repository |
-| **Python 3.14** | Backend runtime | |
+| **Python 3.12** | Backend runtime | |
 | **[uv](https://docs.astral.sh/uv/)** | Python package manager | For local development |
 | **Node.js 20+** | Frontend build | For admin console, WebSocket audio interface |
 

@@ -27,15 +27,23 @@ Upload 5-10 reference photos per person through the admin UI (**Members & Enroll
 
 ### Identification Pipeline
 
-The v2 backend sends batched frames to the person-ID service:
+Two identification paths exist, depending on the calling system:
+
+**Cognitive Companion batch path.** The CC backend sends batched frames:
 
 1. Camera uploads a frame via `POST /api/v1/device/recamera`
 2. The event aggregator batches frames (configurable size/window)
 3. When a `person_identification` pipeline step executes, it sends the batch to `POST /api/v1/identify-batch`
-4. The service returns per-frame face detections with:
-   - **Identity**: matched person name or "unknown"
-   - **Confidence**: similarity score (0.0 to 1.0)
-   - **Bounding box**: face location in the frame [x1, y1, x2, y2]
+4. The service returns per-frame face detections with identity, confidence, and bounding box
+
+**Continuous Tracking crop-based path.** The CTS orchestrator sends per-detection person crops:
+
+1. The frame pipeline extracts person crops from YOLO detections at native resolution
+2. Each crop is encoded as a JPEG and sent individually to `POST /api/v1/identify`
+3. The service returns face detections within the crop, with normalized bounding boxes mapped back to the original frame
+4. Face results are rate-limited per camera (default cooldown: 5 s) and associated with tracked individuals via `tracklet_id`
+
+CTS uses only the single-image endpoint so that person crops are sent at full resolution, preserving fine facial detail that would be lost in downscaled full-frame images.
 
 ### Annotated Images
 
@@ -144,27 +152,51 @@ This filter is evaluated against `PersonLocationHistory` records, so it works co
 
 ## Whole-House Location Tracking
 
-The `PersonTrackingService` maintains a real-time location state for each household member by fusing two data sources:
+The presence system maintains a real-time location state for each household member by fusing multiple data sources into a single ranked chain. Each source has a configurable priority; the highest-priority source with a valid reading wins.
 
-### Camera Detections
+### Presence provider chain
 
-When a person is identified by a camera, their location is updated to the room where that camera is installed. This is the primary, high-confidence location signal.
+```mermaid
+flowchart LR
+    A["Night Mode\n(Light Sensor)\npriority 90"]
+    B["Bed Sensor\n(HA binary_sensor)\npriority 70"]
+    C["Continuous Tracking\nSystem\npriority 50"]
+    D["Phone Location\n(HA device tracker)\npriority 30"]
+    E["Last Known\nLocation\n(stale fallback)"]
+    F["No Data"]
 
-### Home Assistant Presence Sensors
+    A -->|"no match"| B
+    B -->|"no match"| C
+    C -->|"no match"| D
+    D -->|"no match"| E
+    E -->|"no match"| F
+```
 
-For rooms without cameras (e.g., bathrooms), HA presence sensors (PIR/mmWave) provide occupancy data. The tracking service correlates presence sensor activations with the most recent camera sighting:
+| Provider | Display name | How it works |
+|----------|-------------|--------------|
+| `night_anchor` | Night Mode (Light Sensor) | Infers bedroom occupancy from bed-occupancy state combined with light sensor readings at night |
+| `ha_bed_sensor` | Bed Sensor | HA `binary_sensor` (pressure or capacitance mat) directly under the mattress |
+| `cts_location` | Continuous Tracking System | Multi-camera tracking pipeline: person detected and identified by the tracking orchestrator, room resolved from the camera's configured location |
+| `ha_device_tracker` | Phone Location | HA `device_tracker` entity (phone GPS or Wi-Fi fingerprint) |
+| `stale_fallback` | Last Known Location | The most recent confirmed location, used when all live sources are absent |
+| `unknown_sentinel` | No Data | No location information available |
 
-1. A person is last seen by a camera in the hallway
-2. The bathroom presence sensor activates
-3. The tracking service infers that person is now in the bathroom
-4. When the bathroom sensor deactivates and a camera picks them up again, the location updates
+The provider chain is configured in `config/presence.yaml` and reloaded without a restart via `POST /api/v1/cts/presence-config/reload`.
+
+### Continuous Tracking System detections
+
+When CTS is enabled, the tracking orchestrator identifies persons across multiple cameras and publishes `TrackingEvent` protos to Redis. The CC-side `TrackingEventSubscriber` writes these to `PersonLocationState`. Room name is taken from the proto when present; when absent, the `LocationWriter` falls back to the camera-to-room mapping configured in the admin UI.
+
+### Home Assistant presence sensors
+
+For rooms without cameras (such as bathrooms), HA presence sensors (PIR/mmWave) provide occupancy data. The `ha_bed_sensor` provider reads from a dedicated bed-occupancy binary sensor. The `ha_device_tracker` provider reads phone or watch location from HA's `device_tracker` entity.
 
 ### Location State
 
 Each person's current location is stored as a `PersonLocationState` record:
 
 - **Room name**: current room
-- **Source**: `camera` or `ha_sensor` (indicates confidence level)
+- **Source**: the provider that supplied the current reading (shown as a human-readable label in the admin UI)
 - **Last updated**: timestamp of the most recent detection
 - **Stale timeout**: locations older than the configured timeout (default from `person_tracking.stale_timeout_minutes`) are considered stale
 

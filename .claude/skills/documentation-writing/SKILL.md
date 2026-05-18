@@ -100,7 +100,44 @@ Use relative paths for internal links: `[Pipeline System](../features/pipeline.m
 
 ---
 
-## 4. Accuracy and maintenance
+## 4. Diagrams
+
+Use Mermaid for all diagrams in documentation. Do not embed raster images (PNG, JPEG) or SVG files — they cannot be reviewed as text and become stale silently.
+
+### Supported diagram types
+
+| Type | Mermaid directive | When to use |
+|------|-------------------|-------------|
+| Architecture / data flow | `flowchart TB` or `flowchart LR` | Service-to-service data paths, component relationships |
+| Sequence | `sequenceDiagram` | Request/response flows, event ordering |
+| State machine | `stateDiagram-v2` | Presence states, signal lifecycle |
+| Entity relationship | `erDiagram` | Database table relationships |
+
+### Usage
+
+Wrap Mermaid source in a fenced code block tagged `mermaid`:
+
+````markdown
+```mermaid
+flowchart LR
+    A[Source] -->|event| B[Consumer]
+```
+````
+
+VitePress renders Mermaid natively. No plugin or extension is required.
+
+### Style conventions
+
+- **Labels**: sentence case, no trailing periods.
+- **Node shapes**: rectangles `[...]` for services, rounded `(...)` for actions, database cylinders `[(DB)]` for storage.
+- **Direction**: prefer top-to-bottom (`TB`) for vertical architectures, left-to-right (`LR`) for pipelines and sequential flows.
+- **Subgraphs**: use for logical groupings (ingest, inference, storage). Title the subgraph with a noun phrase, not a verb.
+- Keep diagrams focused: one diagram per concept. Split rather than overload.
+
+---
+
+## 5. Accuracy and maintenance
+
 
 ### Verify every claim against the codebase
 
@@ -133,7 +170,7 @@ Use `example.com` or descriptive placeholders like `llama-server-host:8100`.
 
 ---
 
-## 5. Common corrections
+## 6. Common corrections
 
 ### Spelling: American English
 
@@ -164,7 +201,7 @@ Use American spelling consistently:
 
 ---
 
-## 6. Edit checklist
+## 7. Edit checklist
 
 Before publishing any documentation change:
 
@@ -177,3 +214,5 @@ Before publishing any documentation change:
 - [ ] Links are relative internal paths; external links are full URLs
 - [ ] The sidebar in `.vitepress/config.mts` includes the new page if applicable
 - [ ] Remove filler words and flowery language
+- [ ] Any new diagram is written in Mermaid, not a raster image or embedded SVG
+- [ ] Mermaid source is directly in the `.md` file, not linked from an external tool

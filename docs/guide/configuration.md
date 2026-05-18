@@ -383,7 +383,7 @@ Added to `settings.yaml` under the `embedding:` and `knowledge:` keys:
 
 ```yaml
 embedding:
-  triton_url: "triton.nanai.khoofia.com:8701"
+  triton_url: "triton-host:8701"
   model_name: "embeddinggemma-300m"
   tokenizer_path: "/opt/models/embeddinggemma/tokenizer.json"
   dim: 768
@@ -413,3 +413,37 @@ knowledge:
 | `knowledge.retrieval_top_k` | 8 | Chunks retrieved per query. |
 | `knowledge.max_upload_bytes` | 15 MB | Per-image upload limit. |
 | `knowledge.max_pixels` | 40 MP | Decoded image dimension cap. |
+
+## CTS signal thresholds {#cts-signal-thresholds}
+
+The tracking orchestrator (`continuous-tracking/tracking-orchestrator/`) exposes dementia signal thresholds via `config/settings.yaml` under the `signal:` key. All values can be overridden with environment variables.
+
+```yaml
+# tracking-orchestrator/config/settings.yaml
+signal:
+  interval_s: "${SIGNAL_INTERVAL_S:-60}"
+  stillness_threshold_minutes: "${SIGNAL_STILLNESS_THRESHOLD_MINUTES:-60}"
+  stillness_emergency_minutes: "${SIGNAL_STILLNESS_EMERGENCY_MINUTES:-120}"
+  stillness_motion_floor: "${SIGNAL_STILLNESS_MOTION_FLOOR:-0.02}"
+  pacing_room_threshold: "${SIGNAL_PACING_ROOM_THRESHOLD:-8}"
+  pacing_window_minutes: "${SIGNAL_PACING_WINDOW_MINUTES:-30}"
+  nighttime_transition_threshold: "${SIGNAL_NIGHTTIME_TRANSITION_THRESHOLD:-3}"
+  absence_threshold_minutes: "${SIGNAL_ABSENCE_THRESHOLD_MINUTES:-60}"
+  bathroom_absolute_threshold_seconds: "${SIGNAL_BATHROOM_COLD_START_S:-2700}"
+```
+
+| Setting | Env var | Default | Description |
+|---------|---------|---------|-------------|
+| `signal.interval_s` | `SIGNAL_INTERVAL_S` | `60` | Signal worker cycle interval in seconds |
+| `signal.stillness_threshold_minutes` | `SIGNAL_STILLNESS_THRESHOLD_MINUTES` | `60` | Minimum stillness duration before `stillness_anomaly` emits at `info` severity. Raise for residents who watch long films or read for extended periods. |
+| `signal.stillness_emergency_minutes` | `SIGNAL_STILLNESS_EMERGENCY_MINUTES` | `120` | Stillness duration that escalates a `lying` (non-bedroom) posture to `emergency` severity |
+| `signal.stillness_motion_floor` | `SIGNAL_STILLNESS_MOTION_FLOOR` | `0.02` | Motion energy floor below which a person is treated as still. Normal breathing and micro-adjustments produce approximately 0.01-0.02. |
+| `signal.pacing_room_threshold` | `SIGNAL_PACING_ROOM_THRESHOLD` | `8` | Minimum room transitions in the pacing window to trigger `pacing`. Purpose-driven indoor activity produces 5-6 transitions; 8+ in 30 min identifies repetitive pacing. |
+| `signal.pacing_window_minutes` | `SIGNAL_PACING_WINDOW_MINUTES` | `30` | Rolling window for pacing transition counting (minutes) |
+| `signal.nighttime_transition_threshold` | `SIGNAL_NIGHTTIME_TRANSITION_THRESHOLD` | `3` | Cold-start flat threshold for `nighttime_movement`. A single bathroom trip produces 2 transitions; 3+ indicates additional nocturnal movement. |
+| `signal.absence_threshold_minutes` | `SIGNAL_ABSENCE_THRESHOLD_MINUTES` | `60` | Minimum undetected duration before `absence` emits at `info` severity. Cameras do not cover all rooms; gaps under 60 min are normal. |
+| `signal.bathroom_absolute_threshold_seconds` | `SIGNAL_BATHROOM_COLD_START_S` | `2700` | Cold-start absolute threshold for `bathroom_dwell_anomaly` before 5+ baseline samples exist (2700 s = 45 min). Constipation and reduced mobility routinely extend bathroom time beyond 30 min. |
+
+::: tip Choosing thresholds
+Start with the defaults, which are grounded in clinical dementia care guidelines (NICE NG97, Alzheimer's Association). Adjust only after observing false-positive patterns in your specific environment. Changes take effect on the next orchestrator restart.
+:::
