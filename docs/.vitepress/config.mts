@@ -41,7 +41,7 @@ export default defineConfig({
       { text: "Development", link: "/development/setup" },
       { text: "Roadmap", link: "/roadmap" },
       {
-        text: "v0.6.122",
+        text: "v0.6.125",
         items: [
           {
             text: "Code",
@@ -81,6 +81,7 @@ export default defineConfig({
               collapsed: true,
               items: [
                 { text: "Overview", link: "/features/continuous-tracking" },
+                { text: "Tracking Concepts", link: "/features/continuous-tracking/tracking-concepts" },
                 { text: "Frame Pipeline", link: "/features/continuous-tracking/frame-pipeline" },
                 { text: "Dementia Signals", link: "/features/continuous-tracking/dementia-signals" },
                 { text: "CC Integration", link: "/features/continuous-tracking/cc-integration" },

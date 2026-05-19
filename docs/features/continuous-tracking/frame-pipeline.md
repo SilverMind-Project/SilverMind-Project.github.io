@@ -114,12 +114,16 @@ cost(i,j) = (1 - α) × IoU_cost(i,j) + α × embedding_distance(i,j)
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `appearance_weight` (α) | 0.5 | Appearance weight in association cost |
-| `match_thresh` | 0.4 | Minimum IoU to accept a match (effective: accept when `IoU >= 0.6`) |
+| `appearance_weight` (α) | 0.15 | Appearance weight in association cost. IoU dominates so that appearance changes (front vs. back view) do not break the spatial match. |
+| `match_thresh` | 0.2 | Minimum IoU to accept a match (accept when `IoU >= 0.2`). Tolerates bbox shift from turning in place. |
 | `track_high_thresh` | 0.6 | Matches above this confidence are treated as confident extensions |
 | `track_low_thresh` | 0.1 | Matches below this are treated as noise |
 
 Tracks without embedding history use IoU-only cost (`α = 0`) to avoid artificial advantage from a neutral zero-vector embedding.
+
+::: tip
+For background on how IoU and the Hungarian algorithm work, see [Tracking Concepts](./tracking-concepts.md).
+:::
 
 ### Track lifecycle
 
@@ -127,8 +131,8 @@ Tracks without embedding history use IoU-only cost (`α = 0`) to avoid artificia
 |-----------|---------|-------------|
 | `max_time_lost` | 30 frames | Frames without a match before termination |
 | `min_hits` | 3 frames | Consecutive matches before a track is "confirmed" |
-| `dedup_iou_threshold` | 0.7 | New tracklets (age = 1) overlapping stable tracks (age >= 5) by more than this IoU are dropped |
-| `dedup_min_age` | 5 frames | Minimum age for a track to be considered "stable" for dedup |
+| `dedup_iou_threshold` | 0.6 | New tracks overlapping stable tracks (age >= `dedup_min_age`) by more than this IoU are dropped |
+| `dedup_min_age` | 3 frames | Minimum age for a track to be considered "stable" for dedup |
 
 The dedup mechanism suppresses ghost re-detections: when the detector produces a double bounding box for a person already being tracked, the younger duplicate is silently dropped.
 
