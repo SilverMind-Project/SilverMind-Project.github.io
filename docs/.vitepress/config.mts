@@ -41,7 +41,7 @@ export default defineConfig({
       { text: "Development", link: "/development/setup" },
       { text: "Roadmap", link: "/roadmap" },
       {
-        text: "v0.6.125",
+        text: "v0.6.140",
         items: [
           {
             text: "Code",
@@ -83,6 +83,7 @@ export default defineConfig({
                 { text: "Overview", link: "/features/continuous-tracking" },
                 { text: "Tracking Concepts", link: "/features/continuous-tracking/tracking-concepts" },
                 { text: "Frame Pipeline", link: "/features/continuous-tracking/frame-pipeline" },
+                { text: "Camera Calibration", link: "/features/continuous-tracking/camera-calibration" },
                 { text: "Dementia Signals", link: "/features/continuous-tracking/dementia-signals" },
                 { text: "CC Integration", link: "/features/continuous-tracking/cc-integration" },
               ],
