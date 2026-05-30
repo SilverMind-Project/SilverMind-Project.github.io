@@ -133,6 +133,10 @@ Cron schedules are managed separately via `CronTrigger` (see Cron Triggers secti
 | `GET` | `/pipeline/step-types` | List all registered step types with metadata and config schemas |
 | `GET` | `/pipeline/channel-types` | List all registered notification channel types |
 | `GET` | `/pipeline/filter-types` | List all registered context filter types |
+| `GET` | `/pipeline/runs` | List recent pipeline runs (`?status=active` for live-only) |
+| `GET` | `/pipeline/runs/{execution_id}` | Single run envelope |
+| `GET` | `/pipeline/ingest/activity` | Recent reCamera ingest events |
+| `WS` | `/ws/pipeline` | Live pipeline execution events (authenticated via `sec-websocket-protocol`) |
 
 These endpoints return metadata from the plugin registries (StepRegistry, ChannelRegistry, FilterRegistry). The frontend uses `/pipeline/step-types` to dynamically populate the step palette and config editor.
 
@@ -201,10 +205,102 @@ The enrollment endpoints proxy requests to the [person-identification-service](h
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/persons/locations` | Current location of all tracked members |
-| `GET` | `/persons/{id}/location` | Current location of a specific member |
+| `GET` | `/persons/locations` | Current location of all tracked members (returns `PersonLocationEnvelope[]`) |
+| `GET` | `/persons/{id}/location` | Current location of a specific member (returns `PersonLocationEnvelope`) |
 | `GET` | `/persons/{id}/history` | Location timeline (`?hours=24`) |
 | `GET` | `/persons/{id}/sightings` | Recent camera sightings (`?limit=20`) |
+
+## CTS Envelopes
+
+All CTS-facing endpoints return typed envelopes that include explicit data-quality fields. These fields are always server-computed and never inferred client-side (design rule D5).
+
+### PersonLocationEnvelope
+
+Returned by `GET /persons/locations` and `GET /persons/{id}/location`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `person_id` | string | Household member identifier |
+| `room_id` | integer | Current room |
+| `room_name` | string | Human-readable room name |
+| `since` | ISO-8601 | When the current segment opened |
+| `entry_source` | string | Raw entry source from the segment state machine |
+| `confidence` | float | Location confidence (0.0-1.0) |
+| `is_inferred` | boolean | Whether the location was inferred from transit |
+| `display_name` | string | Human-readable name from HouseholdMember |
+| `quality` | float | PH mean_quality from the CTS wire (0.0-1.0) |
+| `staleness_seconds` | integer | Seconds since last observation |
+| `source` | string | Canonical provenance badge: `observation`, `transition`, `manual_override`, `ph_continuation` |
+| `floor_point` | object or null | Last known floor position in metres (`x_m`, `y_m`) |
+
+### RoomOccupancyEnvelope
+
+Returned by `GET /cts/occupancy`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `room_id` | integer | Room identifier |
+| `room_name` | string | Room name |
+| `occupants` | PersonLocationEnvelope[] | All persons currently in the room |
+| `as_of` | ISO-8601 | Snapshot timestamp |
+
+### DementiaSignalEnvelope
+
+Returned by `GET /cts/signals` and `GET /cts/signals/unacknowledged`. Extends the base signal shape with:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `confidence` | float | Signal confidence (default 1.0) |
+| `narrative` | string | Plain-language description of the signal |
+| `evidence_ref` | string or null | Link to supporting evidence, when available |
+
+### TrackedPersonSummaryEnvelope
+
+Returned by `GET /cts/persons/summary`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `person_id` | string | Member identifier |
+| `display_name` | string | Member display name |
+| `current_location` | PersonLocationEnvelope or null | Current location with quality metadata |
+| `last_seen` | ISO-8601 or null | Most recent sighting timestamp |
+| `open_signal_count` | integer | Count of unacknowledged dementia signals |
+| `mean_quality` | float | Average observation quality across recent PHs |
+
+### PipelineRunEnvelope
+
+Returned by `GET /pipeline/runs` and `GET /pipeline/runs/{execution_id}`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `execution_id` | integer | Unique execution identifier |
+| `rule_id` | integer | The rule that triggered the run |
+| `rule_name` | string | Rule display name |
+| `status` | string | `running`, `waiting`, `completed`, `failed`, `cancelled` |
+| `triggered_at` | ISO-8601 | UTC start timestamp |
+| `trigger_type` | string | How the run was initiated |
+| `steps` | list | Step summaries: label, type, status, elapsed_ms |
+
+### IngestActivityEnvelope
+
+Returned by `GET /pipeline/ingest/activity`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `sensor_id` | string | reCamera sensor identifier |
+| `room_name` | string | Room where the camera is located |
+| `last_frame_at` | ISO-8601 | Timestamp of most recent ingested frame |
+| `frames_last_hour` | integer | Frame count in the last 60 minutes |
+
+### Error responses
+
+All CTS endpoints return explicit error responses when required data is missing or upstream is unavailable. No fabricated zero values or silent fallbacks are returned. Examples:
+
+| Status | When |
+|--------|------|
+| `404` | Execution or PH not found |
+| `503` | Required service not available (e.g., CTS not enabled) |
+| `502` | Upstream tracking-orchestrator returned an error |
 
 ## Device Endpoints
 

@@ -239,12 +239,12 @@ Import these; never redefine them.
 
 CTS subscribers and services use structural `Protocol` classes from `backend/services.cts._types` instead of `Any`:
 
-- `ConnectionManager` — WebSocket broadcast and disconnect
-- `PipelineExecutor` — event firing interface
-- `MinioClient` — presigned URL generation and object retrieval
-- `SceneAnalysisClient` — YOLO, Florence-2, CLIP analysis
-- `SemanticMemoryClient` — observation creation and queries
-- `DBSessionFactory` — `Callable[[], Session]` type alias for `db_factory` parameters
+- `ConnectionManager`: WebSocket broadcast and disconnect
+- `PipelineExecutor`: event firing interface
+- `MinioClient`: presigned URL generation and object retrieval
+- `SceneAnalysisClient`: YOLO, Florence-2, CLIP analysis
+- `SemanticMemoryClient`: observation creation and queries
+- `DBSessionFactory`: `Callable[[], Session]` type alias for `db_factory` parameters
 
 ### StreamConsumer contract
 
@@ -253,6 +253,30 @@ All four CTS subscribers extend `StreamConsumer[T]`. The `decode` parameter uses
 ### Extraction threshold
 
 When the same logic appears in three or more places, extract it to a shared module. For CTS, this rule produced `_time.py`, `cts_deps.py`, and `_types.py`. For the frontend, it produced `useCtsSeverity.js`, `useFormatRelative.js`, and `useCtsWebSocket.js`.
+
+## No-silent-fallback rule
+
+Every failure path must be explicit. This rule is enforced by the `BLE001` (blind-except) ruff rule at error severity in both CTS and CC. An allowlist of permitted catch-all sites is maintained in each repo's `pyproject.toml`.
+
+| Forbidden | Required instead |
+|-----------|-----------------|
+| `except Exception: pass` | Log and return a typed error or raise `AppError` |
+| `.get("required_key", default_value)` for a required field | Direct dict access or Pydantic validation; raise on missing |
+| `try-old-then-new` fallback shims | Explicit version-aware decoding at the boundary |
+| Returning fabricated zero/empty on missing data | Raise a typed exception or return a documented `None` |
+
+CTS stream consumers that cannot process a message dead-letter it: they XACK the message, log at warning level, and increment a Prometheus counter. The message is never silently skipped.
+
+## MCP and BFF parity (D6)
+
+Any data exposed to the Vue UI through a FastAPI router must be exposed to MCP tools by reading the **same** service function. MCP tools may not contain query logic; they call service methods and adapt the result. Import-linter contracts in `pyproject.toml` enforce that `backend.mcp` may not import from `backend.models` or repository modules directly.
+
+## Frontend visualisation rules (D2/D3)
+
+- **One shared component per data shape.** Time series, bars, heatmaps, scatter, and DAGs are rendered by the shared ECharts components in `components/charts/` and `components/process/`. No view hand-rolls a chart of the same shape.
+- **ECharts via `vue-echarts`, explicit imports only.** No full-bundle ECharts import; no second charting library.
+- **Bespoke canvas only for spatial domains.** Floor-plan overlays and bounding-box-on-keyframe views may use SVG/Canvas, but they must consume `--cc-` design tokens and the `useChartTheme` composable.
+- **Quality is a first-class field (D5).** Confidence, quality, staleness, and source fields travel from CTS through the BFF envelope to the UI. The UI renders them; it never computes them client-side. Use `CcProvenanceBadge` to display source information.
 
 ## Do NOT
 

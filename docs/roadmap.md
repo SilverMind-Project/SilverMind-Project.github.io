@@ -41,6 +41,24 @@ Key capabilities:
 
 See [Knowledge Repository](/features/knowledge-repository) for full documentation.
 
+## ~~Cross-Camera Dedup (Hallway/Bathroom Case)~~ :white_check_mark:
+
+**Status:** Implemented (May 2026)
+
+When a hallway camera and an adjacent camera both observe the same senior at a bathroom door, the pre-association floor-point dedup pass resolves them to a single PersonHypothesis. This ensures the `bathroom_dwell_anomaly` signal starts from the correct time and that the admin live view shows one person rather than two phantom tracks. The integration proof is `test_hallway_bathroom_one_person` replaying `hallway_bathroom_door.bin`.
+
+## ~~Dashboard Unification~~ :white_check_mark:
+
+**Status:** Implemented (May 2026)
+
+The separate CTS Dashboard and Presence Fusion dashboards have been collapsed into a single role-aware Tracking workspace (`TrackingWorkspace.vue`). All six panels (presence map, occupancy table, signal feed, trajectory heatmap, quality gauge, and floor plan) read from `usePersonPresence` as a single data layer. Role-aware panel visibility is controlled by permissions, not separate page code. The previous per-role dashboards and their redundant fetch paths have been removed.
+
+## ~~Live Process Visualisation~~ :white_check_mark:
+
+**Status:** Implemented (May 2026)
+
+The Process Activity view (`/activity/process`) streams real-time pipeline execution events via `GET /ws/pipeline`. It shows active rule pipeline runs as live DAGs (via `CcDagChart`), recent ingest activity from reCamera sensors (via `CcLiveActivityFeed`), and a historical step timeline (via `CcStatusTimeline`). The `useLivePipeline` composable manages connection state with 3-second exponential backoff and never shows a stale DAG as live data.
+
 ## Pipeline Templates / Presets
 
 **Status:** Proposed

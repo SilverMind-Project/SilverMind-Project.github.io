@@ -1192,6 +1192,41 @@ Rules can be exported to portable YAML or JSON bundles and imported across insta
 
 Bundles are also accessible to AI agents through the MCP server (`get_rule_bundle`, `import_rule_bundle`).
 
+## Live Pipeline Activity View
+
+The **Process Activity** view (`/activity/process`) provides real-time visibility into pipeline runs and CTS ingest activity. It is backed by `PipelineRunService` and a dedicated WebSocket channel.
+
+### Pipeline run endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/pipeline/runs` | List recent pipeline runs; `?status=active` returns only running/waiting executions |
+| `GET` | `/api/v1/pipeline/runs/{execution_id}` | Single run envelope (`PipelineRunEnvelope`) |
+| `GET` | `/api/v1/pipeline/ingest/activity` | Recent reCamera ingest events (`IngestActivityEnvelope`) |
+
+### WebSocket live channel
+
+Connect to `GET /ws/pipeline` (authenticated via `sec-websocket-protocol`) for a push feed of `PipelineExecutionEvent` messages. Each event carries the execution ID, rule name, status transition, current step label, and elapsed milliseconds. The `ProcessActivityView` uses the `useLivePipeline` composable to manage connection state and display a live DAG of the running pipeline steps.
+
+Connection-state rendering rules:
+
+- **Connecting**: show a spinner; do not display a stale DAG as live data.
+- **Connected**: stream events and update the step timeline in real time.
+- **Disconnected**: freeze the last known state and show a reconnection indicator; `useLivePipeline` applies 3-second exponential backoff.
+
+### PipelineRunEnvelope
+
+Each run envelope carries:
+
+| Field | Description |
+|-------|-------------|
+| `execution_id` | Unique execution identifier |
+| `rule_id` / `rule_name` | The rule that triggered the run |
+| `status` | `running`, `waiting`, `completed`, `failed`, or `cancelled` |
+| `triggered_at` | ISO-8601 UTC start timestamp |
+| `steps` | List of step summaries with label, type, status, and elapsed_ms |
+| `trigger_type` | How the run was initiated |
+
 ## Workflow Execution
 
 When a rule's pipeline is triggered, a `WorkflowExecution` record tracks the full lifecycle:

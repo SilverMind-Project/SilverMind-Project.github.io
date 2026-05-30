@@ -348,30 +348,40 @@ CTS publishes 5 protobuf-encoded Redis streams consumed by Cognitive Companion:
 | `tracking.signals` | `DementiaSignal` | Behavioral signal detections with severity and z-scores |
 | `scene.samples` | `SceneSample` | Tagged keyframes for downstream scene analysis |
 
+### Admin UI
+
+The Cognitive Companion admin interface is built on a shared visualisation foundation:
+
+- **One role-aware Tracking workspace** (`TrackingWorkspace.vue`, route `/tracking`): a single dashboard whose panels are projections of one data layer via the `usePersonPresence` composable. Administrators, caregivers, and medical reviewers see different default panels, not separately maintained pages.
+- **Shared ECharts component library**: `components/charts/` and `components/dashboard/` provide `CcTimeSeriesChart`, `CcBarChart`, `CcDistributionChart`, `CcGaugeChart`, `CcHeatmapCalendar`, `CcScatterFloorCloud`, `CcMetricTile`, `CcProvenanceBadge`, and `CcSectionCard`. `components/process/` provides `CcDagChart`, `CcLiveActivityFeed`, and `CcStatusTimeline`. Every view uses these shared components; no view hand-rolls a chart of the same data shape.
+- **Process Activity view** (`ProcessActivityView.vue`): real-time pipeline execution feed backed by `useLivePipeline` over the `/ws/pipeline` WebSocket channel and seeded by `GET /pipeline/runs?status=active`.
+- **ECharts via `vue-echarts`**: only explicit module imports; no full-bundle import; no second charting library.
+- **Bespoke canvas only for spatial domains**: floor plan overlays and bounding-box-on-keyframe views use SVG/Canvas, but must consume the same `--cc-` design tokens and the `useChartTheme` composable.
+
 ### Pipeline stages
 
-The orchestrator's `FrameProcessingPipeline` runs 16 stages per frame:
+The orchestrator's `FrameProcessingPipeline` runs 15 stages per frame:
 
 1. Fetch JPEG from MinIO
 2. Person detection via YOLO (Triton) + IoU dedup
 3. Privacy zone enforcement (blur/mask + detection drop)
-4. SOLIDER-REID appearance embedding (Triton)
-5. RTMPose pose estimation (Triton)
-6. Per-camera BoT-SORT tracking (Kalman + IoU + appearance cost)
-7. Tracklet lifecycle management with stability gate
-8. Per-camera face identification (ArcFace, rate-limited)
-9. Cross-camera association via adjacency graph, appearance similarity, and floor geometry
-10. Bayesian identity resolution (face anchors + ReID gallery + temporal prior)
-11. Identity committer (windowed buffered commit with high-confidence face fast-path)
-12. Trajectory writing with floor projection, posture classification, and motion energy
-13. Keyframe sampling (periodic + identity-change triggered)
-14. Identity revision emission and cross-table rewriting
+4. Spatial projection: per-detection floor-point homography
+5. SOLIDER-REID appearance embedding + RTMPose pose estimation (Triton, in parallel)
+6. Per-camera face identification (ArcFace, rate-limited)
+7. World tracking: pre-association cross-camera dedup, BoT-SORT, Bayesian identity resolution, PersonHypothesis management
+8. Detection backfill: enrich detections with ph_id assignments
+9. PH lifecycle: close terminated PersonHypotheses
+10. Posture classification: keypoint geometry analysis
+11. Trajectory writing with floor projection and motion energy
+12. Keyframe sampling (periodic + identity-change triggered)
+13. Identity revision emission and cross-table rewriting
+14. Trail management: per-PH foot-point ring buffer
 15. Tracking event publishing to Redis Streams
 16. A periodic signal worker loop (default: 60 s) computes dementia signals from trajectory and dwell data
 
 ### Dementia signals
 
-Six signal kinds are detected using robust z-scores against 30-day per-person baselines with hysteresis debounce:
+Six signal kinds (seven including `room_revisit_rate`) are detected using robust z-scores against 30-day per-person baselines with hysteresis debounce:
 
 | Kind | Detection method |
 |------|-----------------|

@@ -1,6 +1,6 @@
 # Frame Processing Pipeline
 
-The orchestrator's `FrameProcessingPipeline` (`app/pipeline/frame_pipeline.py`) processes each frame through 15 stages: from JPEG decode through person detection, privacy enforcement, ReID embedding, pose estimation, per-camera tracking, face identification, cross-camera association, Bayesian identity resolution, trajectory writing, keyframe sampling, identity revision, and event publishing.
+The orchestrator's `FrameProcessingPipeline` (`app/pipeline/frame_pipeline.py`) processes each frame through 15 stages: from JPEG decode through person detection, privacy enforcement, spatial floor projection, ReID and pose inference, face identification, world tracking (which includes pre-association cross-camera dedup and Bayesian identity resolution), detection backfill, PH lifecycle management, posture classification, trajectory writing, keyframe sampling, identity revision, trail management, and event publishing.
 
 ```mermaid
 flowchart TB
@@ -8,34 +8,34 @@ flowchart TB
     Fetch["1. Frame fetch\nMinIO JPEG decode"]
     Detect["2. Person detection\nYOLO26L ONNX (Triton)"]
     Privacy["3. Privacy enforcement\nBlur zones, drop zones"]
-    ReID["4. ReID embedding\nSOLIDER-REID ONNX (Triton)"]
-    Pose["5. Pose estimation\nRTMPose ONNX (Triton)"]
-    Tracker["6. Per-camera tracking\nBoT-SORT (Kalman + Hungarian)"]
-    TrackletMgr["7. Tracklet management\nLifecycle, gallery append"]
-    FaceID["8. Face identification\nArcFace (person-id-service)"]
-    CrossCam["9. Cross-camera association\nAppearance + geometry scoring"]
-    Identity["10. Bayesian identity resolution\nPrior × Face × ReID"]
-    Committer["11. Identity committer\nBuffered window + face fast-path"]
-    Trajectory["12. Trajectory writing\nFloor projection, dwells"]
-    Keyframe["13. Keyframe sampling\nPeriodic + identity change"]
-    Revision["14. Identity revisions\nCross-table rewrite"]
+    Spatial["4. Spatial projection\nFloor-point homography per detection"]
+    Inference["5. ReID + Pose inference\nSOLIDER-REID + RTMPose (Triton)"]
+    FaceID["6. Face identification\nArcFace (person-id-service)"]
+    World["7. World tracking\nPre-association dedup, BoT-SORT,\nIdentity resolution (Bayesian)"]
+    Backfill["8. Detection backfill\nEnrich detections with PH assignments"]
+    ClosePH["9. PH lifecycle\nClose terminated PersonHypotheses"]
+    Posture["10. Posture classification\nKeypoint geometry analysis"]
+    Trajectory["11. Trajectory writing\nFloor projection, dwells"]
+    Keyframe["12. Keyframe sampling\nPeriodic + identity change"]
+    Revisions["13. Identity revisions\nCross-table rewrite"]
+    Trails["14. Trail management\nPer-PH foot-point trail buffer"]
     Publish["15. Event publishing\ntracking.events Redis Stream"]
 
     FrameReady --> Fetch
     Fetch --> Detect
     Detect --> Privacy
-    Privacy --> ReID
-    ReID --> Pose
-    Pose --> Tracker
-    Tracker --> TrackletMgr
-    TrackletMgr --> FaceID
-    FaceID --> CrossCam
-    CrossCam --> Identity
-    Identity --> Committer
-    Committer --> Trajectory
+    Privacy --> Spatial
+    Spatial --> Inference
+    Inference --> FaceID
+    FaceID --> World
+    World --> Backfill
+    Backfill --> ClosePH
+    ClosePH --> Posture
+    Posture --> Trajectory
     Trajectory --> Keyframe
-    Keyframe --> Revision
-    Revision --> Publish
+    Keyframe --> Revisions
+    Revisions --> Trails
+    Trails --> Publish
 ```
 
 ## 1. Frame fetch
@@ -57,127 +57,24 @@ Operator-drawn privacy polygons (configured at `/admin/cts/privacy`) are applied
 - **Blur/mask**: pixels inside privacy zones are obscured in the frame before any further processing. This affects crops, keyframes, and the published frame URL.
 - **Detection drop**: detections whose foot-point (bbox bottom-center) falls in a drop zone are discarded before tracking. A Prometheus counter (`privacy_detections_dropped_total`) tracks the drop rate per camera.
 
-## 4. ReID appearance embedding
+## 4. Spatial projection
 
-Per-detection person crops are extracted at native resolution and sent to the SOLIDER-REID ONNX model on Triton. The resulting 768-dimensional L2-normalized embedding is used by:
+`SpatialProjectionStage` computes the calibrated floor-plane coordinate (`FloorPoint`) for every surviving detection using the per-camera 3x3 homography matrix fitted by the calibration tool. The result is carried on the detection's `floor_point` field with `calibrated=True` for cameras that have been calibrated, and `calibrated=False` with `(0, 0)` coordinates for uncalibrated cameras.
 
-- The tracker's appearance cost matrix for within-camera data association
-- The cross-camera associator's gallery similarity scoring
-- The identity resolver's gallery k-NN search for identity evidence
+Floor projection runs **before** ReID and pose inference so that the cross-camera dedup pass (inside the world tracker) can use per-detection floor positions at the time of association.
 
-Crops are extracted as `np.ascontiguousarray(image[y1:y2, x1:x2])` with bounds clamped to the frame dimensions. If the ReID embedder is unavailable, an empty embedding list is returned and the tracker falls back to IoU-only matching.
+## 5. ReID and pose inference
 
-## 5. Pose estimation
+Per-detection person crops are extracted at native resolution and sent in parallel to two Triton models:
 
-Per-detection crops are sent to the RTMPose ONNX model on Triton. The 17 COCO keypoints feed into:
+- **SOLIDER-REID** (768-dimensional L2-normalized embedding): used by the world tracker for cross-camera appearance similarity and by the Bayesian identity resolver for gallery k-NN search.
+- **RTMPose** (17 COCO keypoints): used by the posture classifier and the motion energy tracker. Crops smaller than 16x32 pixels are skipped.
 
-- **Posture classification**: `classify_posture(pose_result, bbox)` uses keypoint geometry (ear-to-hip ratio, ankle visibility, horizontal spine angle) to classify as `lying`, `sitting`, `standing`, or `unknown`.
-- **Motion energy tracking**: `MotionEnergyTracker` computes mean keypoint velocity in pixels per second, used by the stillness anomaly signal.
+If the ReID embedder is unavailable, an empty embedding list is returned and the tracker falls back to geometry-only association.
 
-Crops smaller than 16×32 pixels are skipped with a `pose_skipped` debug log.
+## 6. Face identification
 
-## 6. Per-camera tracking (BoT-SORT)
-
-Each camera gets an isolated `PerCameraTracker` instance. The tracker maintains per-person Kalman filter states and associates detections frame-to-frame using the Hungarian algorithm.
-
-### Kalman filter state
-
-The 8-dimensional state vector follows the BoT-SORT formulation:
-
-```
-x = [cx, cy, aspect_ratio, height, v_cx, v_cy, v_ar, v_h]^T
-```
-
-| Index | Symbol | Description |
-|-------|--------|-------------|
-| 0 | `cx` | Bounding box center x (normalized) |
-| 1 | `cy` | Bounding box center y (normalized) |
-| 2 | `a` | Aspect ratio (width / height) |
-| 3 | `h` | Height (normalized) |
-| 4-7 | `v_*` | Velocities for each observable |
-
-The 4-dimensional observation vector is `z = [cx, cy, a, h]^T`. The state transition matrix `F` is the identity plus `Δt = 1` on the velocity-to-position terms. The observation matrix `H` extracts the first four components.
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| Process noise | 0.05 | Diagonal of `Q` (8×8) |
-| Measurement noise | 0.5 | Diagonal of `R` (4×4) |
-| Initial covariance | 10.0 | Diagonal of `P` (8×8) |
-
-### Association cost
-
-The Hungarian algorithm minimizes a combined cost matrix over detected-to-track assignments:
-
-```
-cost(i,j) = (1 - α) × IoU_cost(i,j) + α × embedding_distance(i,j)
-```
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `appearance_weight` (α) | 0.15 | Appearance weight in association cost. IoU dominates so that appearance changes (front vs. back view) do not break the spatial match. |
-| `match_thresh` | 0.2 | Minimum IoU to accept a match (accept when `IoU >= 0.2`). Tolerates bbox shift from turning in place. |
-| `track_high_thresh` | 0.6 | Matches above this confidence are treated as confident extensions |
-| `track_low_thresh` | 0.1 | Matches below this are treated as noise |
-
-Tracks without embedding history use IoU-only cost (`α = 0`) to avoid artificial advantage from a neutral zero-vector embedding.
-
-::: tip
-For background on how IoU and the Hungarian algorithm work, see [Tracking Concepts](./tracking-concepts.md).
-:::
-
-### Track lifecycle
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `max_time_lost` | 30 frames | Frames without a match before termination |
-| `min_hits` | 3 frames | Consecutive matches before a track is "confirmed" |
-| `dedup_iou_threshold` | 0.6 | New tracks overlapping stable tracks (age >= `dedup_min_age`) by more than this IoU are dropped |
-| `dedup_min_age` | 3 frames | Minimum age for a track to be considered "stable" for dedup |
-
-The dedup mechanism suppresses ghost re-detections: when the detector produces a double bounding box for a person already being tracked, the younger duplicate is silently dropped.
-
-## 7. Tracklet management
-
-The `TrackletManager` bridges per-frame LocalTracks to persistent Tracklets. It runs even with zero detections so tracklets with no corresponding detection are marked lost and eventually closed.
-
-### Lifecycle
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `min_hit_ratio` | 0.5 | Minimum ratio of hits to age for a tracklet to stay active |
-| `close_grace_frames` | 15 | Frames without detection before a tracklet is closed (at 5 fps, 3 seconds) |
-| `min_detection_confidence` | 0.3 | Detections below this confidence do not extend the tracklet |
-
-### Stability gate
-
-Tracklets with `frames_alive < min_frames_to_publish` (default: 3) are withheld from cross-camera association, identity resolution, trajectory writing, and event publishing. They continue accumulating evidence in memory but produce no external outputs until they cross the gate, suppressing false-positive flashes from detector noise.
-
-A Prometheus gauge (`tracklets_held_below_stability_gate`) reports the per-camera count of held tracklets.
-
-### Gallery append
-
-Each frame the tracklet is alive, a quality score is computed from the detection:
-
-```
-quality = 0.4 × size_score + 0.6 × detection_confidence
-```
-
-Where `size_score` is the bbox area normalized by `0.1%` of the camera's resolution. If `quality >= gallery_min_quality` (0.5) and the ReID embedding is present, a `GalleryEmbedding` is persisted:
-
-| Field | Value |
-|-------|-------|
-| `gallery_entry_id` | Random UUID |
-| `identity_id` | `""` (backfilled later by the identity resolver: see [Identity feedback loop](#identity-feedback-loop)) |
-| `embedding` | 768-dim float list |
-| `origin_tracklet_id` | The tracklet's ID |
-| `quality` | Composite quality score |
-| `face_confirmed` | `False` |
-
-Gallery entries are capped at 20 per tracklet. The limit is enforced before persistence; later entries are silently skipped.
-
-## 8. Face identification
-
-Per-camera, rate-limited calls to the person-identification-service. Person crops are sent at native resolution to `POST /api/v1/identify`. The ArcFace-based service returns face detections with identity assignments and confidence scores.
+Per-camera, rate-limited calls to the person-identification-service send person crops to `POST /api/v1/identify`. The ArcFace-based service returns face detections with identity assignments and confidence scores.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
@@ -187,108 +84,72 @@ Per-camera, rate-limited calls to the person-identification-service. Person crop
 | `face_id_enabled` | true | Master switch |
 | Per-camera overrides | camera_id to `FaceIdCameraConfig` | Enable/disable per camera, override min confidence |
 
-Face identification can be disabled per camera (e.g., top-down surveillance views where faces are not visible). Each `FaceAnchor` carries `person_id`, `confidence`, `tracklet_id`, and `camera_id`. The identity resolver uses these as high-weight evidence (3× over ReID).
+Face identification can be disabled per camera (e.g., top-down surveillance views where faces are not visible). Each `FaceAnchor` carries `person_id`, `confidence`, `tracklet_id`, and `camera_id`. The identity resolver uses these as high-weight evidence (3x over ReID).
 
-## 9. Cross-camera association
+## 7. World tracking
 
-The `CrossCameraAssociator` merges tracklets from different cameras into `GlobalTrack` entities. It runs once per frame over all active tracklets that have passed the stability gate.
+`WorldTrackingStage` delegates to `WorldTracker`, which runs three sub-steps in order:
 
-### Scoring function
+### 7a. Pre-association cross-camera dedup
 
-Each candidate pair of tracklets from different cameras is scored:
+Before the Hungarian assignment runs, `dedup_observations()` collapses detections from different cameras that correspond to the same physical person into a single representative observation. This is the hallway-camera-watching-a-bathroom-door fix: when a hallway camera and a bathroom-adjacent camera both see one senior at the door, they must resolve to **one** `PersonHypothesis`, not two.
+
+The dedup gate passes a pair of observations when all three conditions hold:
+
+1. The two detections are from **different** cameras.
+2. Their calibrated floor positions are within `dedup_max_distance_m` (default: 1.0 m) of each other.
+3. When both carry committed face anchors, the face identities do not conflict (`dedup_require_no_face_conflict: true`).
+
+Pairs that pass the gate are joined by a union-find algorithm; each resulting cluster elects one representative via `_select_representative()`, which picks the highest-quality detection (ties broken by camera_id then detection_id for determinism). The representative's floor position is the quality-weighted mean of all calibrated floor points in the cluster; its face anchor is the highest-confidence one across all members.
+
+| Config knob | Default | Description |
+|-------------|---------|-------------|
+| `dedup_enabled` | `true` | Master switch for pre-association dedup |
+| `dedup_max_distance_m` | `0.6` | Floor-plane distance gate in metres |
+| `dedup_require_no_face_conflict` | `true` | Do not collapse observations with conflicting face identities |
+
+The integration proof lives in `tests/integration/test_world_tracker_e2e.py::test_hallway_bathroom_one_person`, using the `tests/fixtures/frame_replays/hallway_bathroom_door.bin` fixture.
+
+### 7b. Per-camera tracking (BoT-SORT)
+
+Each camera has an isolated Kalman-filter tracker that associates detections frame-to-frame using the Hungarian algorithm.
+
+**Association cost:**
 
 ```
-combined = α × appearance_sim + (1 - α) × exp(-(dist_m / sigma)²)
+cost(i,j) = (1 - alpha) x IoU_cost(i,j) + alpha x embedding_distance(i,j)
 ```
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `alpha` | 0.7 | Appearance weight |
-| `sigma_m` | 1.5 | Floor-plane distance decay sigma |
-| `max_floor_distance_m` | 8.0 | Pairs beyond this distance are pruned |
-| `min_link_score` | 0.55 | Minimum combined score to link |
-| `within_group_min_score` | 0.35 | Relaxed threshold for overlap groups |
-| `unknown_merge_appearance_threshold` | 0.92 | Same-camera UNKNOWN merge threshold |
+| `appearance_weight` (alpha) | 0.15 | Appearance weight; IoU dominates so appearance changes do not break the spatial match |
+| `match_thresh` | 0.2 | Minimum IoU to accept a match |
+| `max_time_lost` | 30 frames | Frames without match before termination |
+| `min_hits` | 3 frames | Consecutive matches before a track is confirmed |
 
-### Appearance similarity
+### 7c. PersonHypothesis (PH) management and identity resolution
 
-Gallery entries are queried per tracklet (up to 10 per side, newest first). The mean embedding per tracklet is computed and cosine similarity between the two means is returned. When only one side has gallery entries, a conservative 0.5 is returned instead of 0.0: this allows the geometry component to carry the pair above the threshold when cameras share physical space. When neither side has entries, 0.0 is returned.
+The `WorldTracker` maps confirmed per-camera tracks to `PersonHypothesis` (PH) entities. Each PH:
 
-### Floor geometry
+- carries a `ph_id` (UUID, the single physical-track identifier on the wire after R3).
+- maintains a `mean_quality` field (exponential moving average of per-observation quality scores, added in migration `0002_quality`).
+- is the entity that receives Bayesian identity resolution.
 
-When both tracklets carry calibrated floor points (projected through the per-camera homography matrix), the Euclidean distance on the floor plane is computed. The score follows an exponential decay: `exp(-(dist_m / sigma)²)`. When floor projection is unavailable, geometry returns 1.0 (binary adjacency gate). Pairs exceeding `max_floor_distance_m` are pruned entirely.
+**Quality capture.** Each observation's quality score is computed from the detection's confidence and the crop size, then used to update the PH's `mean_quality`. The same `CropQuality` scorer is used for observations as for gallery entries; there is no parallel scorer. The `mean_quality` field travels to CC via the `IdentitySnapshot` proto and then through the `quality` field on `PersonLocationEnvelope`.
 
-### Adjacency graph and overlap groups
-
-Two mechanisms govern which camera pairs are considered:
-
-- **Adjacency edges**: operator-configured directed edges with min/max transit times. The `reachable()` method uses Dijkstra's algorithm for transitive reachability with a time budget. The budget is the camera pair's `max_transition_seconds`, capped upward by the older tracklet's age.
-- **Overlap groups**: cameras sharing a physical field of view (e.g., two angles of the same room). These are configured at `/admin/cts/overlap-groups`. Within-group pairs skip the transit-time budget entirely and use the relaxed `within_group_min_score` threshold.
-
-### Merge algorithm
-
-Candidate pairs are scored and sorted by combined score descending. A greedy merge algorithm processes them:
-
-1. Both tracklets in the same existing GlobalTrack: skip.
-2. One in an existing GlobalTrack, the other unassigned: extend the existing GlobalTrack.
-3. Both in different new clusters: merge the clusters.
-4. Neither assigned: create a new GlobalTrack.
-
-Remaining unassigned tracklets attempt to join existing GlobalTracks via a second pass with adjacency/overlap checks. Same-camera UNKNOWN tracklets with appearance similarity >= 0.92 are merged to prevent duplicate UNKNOWN GlobalTracks for the same person across tracklet lifecycles.
-
-## 10. Bayesian identity resolution
-
-The `IdentityResolver` maintains a posterior probability distribution for each GlobalTrack over `{known_identities ∪ UNKNOWN}`. Three evidence sources are combined via pointwise multiplication, with missing sources treated as uniform (weight = 1.0) to avoid dilution:
+**Bayesian identity resolution.** The `IdentityResolver` maintains a posterior probability distribution for each PH over `{known_identities u UNKNOWN}`. Three evidence sources are combined via pointwise multiplication, with missing sources treated as uniform (weight = 1.0):
 
 ```
-posterior(identity) ∝ prior(identity) × face_likelihood(identity) × reid_likelihood(identity)
+posterior(identity) proportional to prior(identity) x face_likelihood(identity) x reid_likelihood(identity)
 ```
 
-### Temporal prior
+**Temporal prior.** Encodes continuity from the previous identity assignment. The previous MAP identity receives `prior_weight = 0.6` of the probability mass. Identity persists for `prior_maintenance_max_age_s` (120 s) without new evidence; beyond that window, the prior alone cannot sustain a commit.
 
-Encodes continuity from the previous identity assignment. The previous MAP identity receives `prior_weight = 0.6` of the probability mass. The remaining mass is spread uniformly over other known identities. An `unknown_mass` floor (0.05) ensures UNKNOWN always has at least 5% prior probability.
+**Face likelihood.** Face anchors carry a `p_face` probability derived from a sigmoid of confidence and quality. Face evidence receives a `face_weight_multiplier` of 3.0 over ReID evidence: ArcFace is more reliable than body appearance for disambiguating identities in multi-person households.
 
-Identity persists for `prior_maintenance_max_age_s` (120 s) without new evidence. Beyond that window, the prior alone cannot sustain a commit: all three evidence sources must contribute for the commit rule to fire.
+**ReID likelihood.** Gallery k-NN search (pgvector HNSW with StreamingDiskANN) retrieves similar embeddings and maps them to identities via a logistic curve.
 
-### Face likelihood
-
-Face anchors from the person-identification-service carry a `p_face` probability derived from a sigmoid of confidence and quality. The face anchor with the highest `confidence × quality` product is selected per GlobalTrack. Face evidence receives a `face_weight_multiplier` of 3.0 over ReID evidence: ArcFace is more reliable than body appearance for disambiguating identities in multi-person households.
-
-When multiple face anchors exist for different tracklets in the same GlobalTrack (cross-camera), they vote independently and the highest-confidence anchor is used.
-
-### ReID likelihood
-
-Gallery k-NN search retrieves similar embeddings from the full gallery. The process:
-
-1. Collect gallery entries for all tracklets in the GlobalTrack (up to 20 per tracklet).
-2. Compute the mean embedding as the query vector.
-3. Run `search_similar()` (pgvector HNSW with StreamingDiskANN) against the entire gallery.
-4. Map each result to an identity: entries with a non-empty `identity_id` contribute to that identity's likelihood; entries with empty `identity_id` (tracklet-generated, pre-backfill) map to UNKNOWN.
-5. Similarity scores pass through a logistic curve (midpoint at 0.70 similarity, steepness `k = 10`) to produce per-identity likelihoods.
-
-### Identity feedback loop
-
-A critical design element is the gallery identity backfill mechanism. When a face anchor identifies a person on one camera, the resolved identity is stamped onto all gallery entries for that GlobalTrack's tracklets. This creates a self-reinforcing cycle:
-
-```mermaid
-flowchart LR
-    Face["Face anchor\nCamera A"] -->|"identifies Alice"| Posterior["Bayesian posterior\nP(Alice) > 0.65"]
-    Posterior -->|"commit"| Backfill["Gallery backfill\ntracklet tA entries\ntagged identity_id=Alice"]
-    Backfill -->|"Camera B sees same person"| ReID_Search["ReID gallery search\nfinds tA entries\nmaps to Alice (not UNKNOWN)"]
-    ReID_Search -->|"identity evidence"| Posterior2["Bayesian posterior\nP(Alice) >> 0.65\nCamera B also shows Alice"]
-    Posterior2 -->|"commit"| Backfill2["Gallery backfill\ntracklet tB entries\ntagged identity_id=Alice"]
-    Backfill2 -->|"reinforces"| ReID_Search
-```
-
-Without backfill, all tracklet-generated gallery entries carry `identity_id=""` (empty string). The ReID search maps these to UNKNOWN, providing zero identity evidence. The entire identity burden falls on face anchors alone: when a person's face is not visible, they show as UNKNOWN on all cameras.
-
-With backfill, once a face anchor seeds the identity on one camera, the gallery entries become identity-tagged. When the same person appears on another camera (face hidden), the ReID search finds the tagged entries and provides identity evidence, allowing the posterior to commit the same identity. This is essential for multi-camera, multi-person households.
-
-## 11. Identity committer
-
-The `IdentityCommitter` buffers per-frame posterior evidence and emits commit decisions. Two paths exist:
-
-**Buffered windowed commit.** Posterior evidence accumulates over a configurable window (default: 3 s). At flush, the commit rule is applied:
+**Commit rule:**
 
 ```
 commit if: top_prob >= commit_prob (0.65)
@@ -296,36 +157,54 @@ commit if: top_prob >= commit_prob (0.65)
           AND sensory_evidence_present (face or ReID, not prior alone)
 ```
 
-**High-confidence face fast-path.** Face anchors with confidence >= 0.85 trigger an immediate commit that bypasses the 3-second buffer. The commit rewrites history back to the GlobalTrack's `started_at` time via cross-table identity rewriting.
+High-confidence face anchors (confidence >= 0.85) trigger an immediate commit bypassing the 3-second buffer.
 
-**Dense scene detection.** When two or more candidate identities each have posterior > 0.3, escalated thresholds are used (`commit_prob_dense = 0.80`, `commit_margin_dense = 0.20`) to prevent confident-but-wrong commits from ambiguous ReID evidence in multi-person frames.
+**Identity feedback loop.** When a face anchor identifies a person on one camera, the resolved identity is stamped onto all gallery entries for that PH's detections, creating a self-reinforcing cycle that allows cross-camera identity carry even when a face is not visible on the second camera.
 
-## 12. Trajectory writing
+## 8. Detection backfill
 
-The `TrajectoryWriter` records two types of data in TimescaleDB hypertables:
+`DetectionBackfillStage` enriches each detection in `ctx.domain_detections` with the `ph_id` assigned by the world tracker. This ensures downstream stages (posture, trajectory, publish) all read the same identity from the detection object rather than maintaining separate maps.
+
+## 9. PH lifecycle (ClosePHStage)
+
+`ClosePHStage` closes any PersonHypothesis that was active in the previous frame but no longer has an active detection in this frame. It writes the final trajectory and dwell segments for closed PHs so that dwell intervals are closed promptly rather than on the next detection.
+
+## 10. Posture classification
+
+`PostureStage` runs `classify_posture(pose_result, bbox)` for each detection that has pose keypoints. The 17 COCO keypoints drive a geometry-based classifier (ear-to-hip ratio, ankle visibility, horizontal spine angle) producing: `lying`, `sitting`, `standing`, or `unknown`.
+
+Crops without pose output (smaller than 16x32 px or from cameras with pose disabled) get `unknown` posture.
+
+## 11. Trajectory writing
+
+`TrajectoryStage` records two types of data in TimescaleDB hypertables:
 
 - **`person_trajectories`**: one row per frame per tracked person, with identity, room, floor-projected coordinates (in mm), posture, motion energy, and identity confidence. Points are written regardless of identity status: UNKNOWN trajectories are recorded and relabeled if identity is later resolved.
 - **`room_dwells`**: continuous intervals in a room with entry/exit times, cumulative dwell, still-seconds, min/max/mean motion energy, and dominant posture.
 
-Floor projection uses per-camera 3×3 homography matrices calibrated via OpenCV RANSAC from operator-provided pixel-to-floor correspondences. When homography is unavailable, uncalibrated `(0, 0)` floor points are written.
+When homography is unavailable, uncalibrated `(0, 0)` floor points are written.
 
-## 13. Keyframe sampling
+## 12. Keyframe sampling
 
-The `KeyframeSampler` saves tagged JPEG keyframes to the `tagged_keyframes` table and publishes `SceneSample` protos to the `scene.samples` Redis stream. Two triggers:
+`KeyframeStage` saves tagged JPEG keyframes to the `tagged_keyframes` table and publishes `SceneSample` protos to the `scene.samples` Redis stream. Two triggers:
 
-- **Periodic**: one keyframe per tracklet per configurable sampling interval.
-- **Identity change**: an immediate keyframe when a tracklet's identity is revised, tagged with `tag_reason="identity_changed"`.
+- **Periodic**: one keyframe per PH per configurable sampling interval.
+- **Identity change**: an immediate keyframe when a PH's identity is revised, tagged with `tag_reason="identity_changed"`.
 
-Keyframes carry annotations (tracklet ID, camera ID, identity ID, bounding box) used by the CC-side `SceneSampleSubscriber` for downstream scene analysis.
+Keyframes carry annotations (ph_id, camera_id, identity_id, bounding box) used by the CC-side `SceneSampleSubscriber` for downstream scene analysis.
 
-## 14. Identity revisions
+## 13. Identity revisions
 
-When the committed identity changes (new assignment, reassignment, or demotion to UNKNOWN), an `IdentityRevision` proto is published to `tracking.revisions`. The revision carries the full posterior distribution as `IdentityCandidate` entries, the previous and new identity IDs, and evidence metadata. A rate limiter caps revisions at 3 per GlobalTrack per minute.
+When the committed identity changes (new assignment, reassignment, or demotion to UNKNOWN), an `IdentityRevision` proto is published to `tracking.revisions`. The revision carries the full posterior distribution as `IdentityCandidate` entries, the previous and new identity IDs, and evidence metadata. A rate limiter caps revisions at 3 per PH per minute.
 
-When the identity committer is enabled, the `PostgresIdentityRewriter` performs retroactive cross-table rewriting: trajectory points, room dwells, and dementia signals for the affected GlobalTrack are relabeled from the old identity to the new identity, covering the window from `applies_from` to `applies_to`.
+When the identity committer is enabled, the `PostgresIdentityRewriter` performs retroactive cross-table rewriting: trajectory points, room dwells, and dementia signals for the affected PH are relabeled from the old identity to the new identity, covering the window from `applies_from` to `applies_to`.
+
+## 14. Trail management
+
+`TrailsStage` maintains an in-memory ring buffer of foot-point trail positions per PH (default: last 30 positions). These trails are published in the `TrackingEvent` proto and consumed by the CC live view to render person movement paths on the floor plan.
 
 ## 15. Event publishing
 
-The final `TrackingEvent` proto is published to `tracking.events`. It carries per-frame detections enriched with `tracklet_id` and `global_track_id`, the posterior's top identity per GlobalTrack (published even before formal commit, so the Live View sees the current best guess immediately), pose keypoints, per-tracklet foot-point trails, and posterior evidence (top probability, top-2 probability, face anchor flag).
+`PublishStage` assembles and publishes the final `TrackingEvent` proto to `tracking.events`. It carries per-frame detections enriched with `ph_id`, the posterior's top identity per PH (published even before formal commit, so the live view sees the current best guess immediately), pose keypoints, per-PH foot-point trails, and posterior evidence (top probability, top-2 probability, face anchor flag).
 
-On the CC side, the `TrackingEventSubscriber` decodes this proto, builds a `global_track_id -> identity_id` mapping from the `IdentityRevision` sub-messages, and assigns `identity_id`, `display_name`, and `identity_confidence` to each detection in the WebSocket broadcast.
+On the CC side, the `TrackingEventSubscriber` decodes this proto, builds a `ph_id -> identity_id` mapping from the `IdentityRevision` sub-messages, and assigns `identity_id`, `display_name`, and `identity_confidence` to each detection in the WebSocket broadcast.

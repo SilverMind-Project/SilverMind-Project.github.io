@@ -92,8 +92,7 @@ Key hypertables:
 | `dementia_signals` | Regular | Behavioral signal detections with severity and z-scores |
 | `dementia_signals_daily` | Continuous aggregate | Daily rollup of signal counts by kind and severity |
 | `tagged_keyframes` | Regular | Sampled JPEG keyframes with annotations |
-| `global_tracks` | Regular | Cross-camera track entities with identity assignments |
-| `tracklets` | Regular | Per-camera track fragments with gallery embeddings |
+| `person_hypotheses` | Regular | Physical-track entities (PHs) with identity assignments; `ph_id` is the single cross-camera identifier. Replaced `global_tracks` in migration `0003_ph_native_purge`. |
 
 ## Boundaries
 

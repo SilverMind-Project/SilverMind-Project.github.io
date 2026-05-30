@@ -230,9 +230,16 @@ Composition rules remain the same: within a `context_type` group, contexts are O
 
 ### Adding a New MCP Tool
 
-1. Add a `_tool_<name>` method to `MCPToolRegistry` in `backend/mcp/server.py`
-2. Add the tool definition to `_build_tool_definitions()`
-3. Add the tool name to `config/settings.yaml` under `mcp.tools`
+1. Add a `@_register` decorated async function in `backend/mcp/server.py`. Type hints on parameters auto-generate JSON schemas.
+2. Add the tool name to `config/settings.yaml` under `mcp.tools`.
+3. If the tool should be available in voice conversations, also add it to `mcp.gemini_tools`.
+4. Add the tool name to the smoke test in `backend/tests/mcp/` so the registry assertion stays current.
+
+MCP tools must call a service method; they may not query a repository directly (import-linter enforces this).
+
+### Live pipeline events
+
+When a new step type emits progress events visible in the Process Activity view, it must publish a `PipelineExecutionEvent` through the `PipelineRunService`. The event carries the execution ID, step label, status, and elapsed milliseconds. `PublishStage` handles this automatically for CTS pipeline stages; CC pipeline steps use the `PipelineExecutor` callback. The `/ws/pipeline` WebSocket channel broadcasts these events to the `useLivePipeline` composable in the frontend. A step does not appear in the live DAG unless it publishes at least one event.
 
 ### Adding a New Database Model
 

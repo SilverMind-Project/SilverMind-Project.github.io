@@ -214,6 +214,27 @@ input_text.cc_{person_id}_location = "kitchen"
 
 This allows HA automations and dashboards to display person locations and use them in conditions.
 
+## PersonLocationService: single source of truth
+
+`PersonLocationService` is the single source of truth for person location state in Cognitive Companion (established in R2). All location reads go through this service: the CTS subscriber writes to it, all routers read from it, and MCP tools query it via the same service function. No parallel query path exists.
+
+The service reads from `presence_segments` and `location_observations` as its authoritative tables. The older `person_location_state` and `person_location_history` tables are deprecated (no new code may read or write them from filters or steps) and exist only to support the legacy presence-fusion chain until that chain is migrated.
+
+### Unified location envelopes
+
+Every person-location response carries four explicit data-quality fields that the server computes and the client renders, never invents:
+
+| Field | Description |
+|-------|-------------|
+| `confidence` | Location confidence from the presence provider (0.0-1.0) |
+| `quality` | PH `mean_quality` from the CTS wire, or 0 when location comes from a non-CTS provider |
+| `staleness_seconds` | Seconds since the last observation |
+| `source` | Canonical provenance badge: `observation`, `transition`, `manual_override`, or `ph_continuation` |
+
+The `PersonLocationEnvelope` retains all prior `CurrentLocationOut` fields while adding the four quality fields, so existing consumers continue to work alongside new consumers that read the quality metadata.
+
+MCP tools that return person locations use the same envelope via `envelope_to_mcp()`: the mapping is done once in `backend/schemas/cts_envelopes.py` and both the router and the MCP adapter call the same service function (design rule D6).
+
 ## API Endpoints
 
 ### Member Management
@@ -300,7 +321,7 @@ Each camera sensor is associated with a room. When a face is detected on any cam
 
 1. Place face-level cameras in each room for identification
 2. Configure each camera sensor with the correct room assignment
-3. The `PersonTrackingService` fuses all camera detections into a single location state per person
+3. `PersonLocationService` fuses all camera detections into a single location state per person
 4. Cameras that cannot identify a person (top-down, rear-facing) can still be used for vision analysis; rules should reference the person's last known location from other cameras via the `person_presence` context filter
 
 For doorway cameras that capture motion direction, the `include_motion` flag on the `person_identification` step provides `left-to-right`, `right-to-left`, `towards-camera`, and `away-from-camera` labels that downstream logic steps can use to infer room transitions.

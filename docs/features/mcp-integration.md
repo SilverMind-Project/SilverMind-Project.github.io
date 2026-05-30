@@ -1,6 +1,6 @@
 # MCP Integration
 
-Cognitive Companion includes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, that exposes 31 tools for AI agent integration. Agents can discover system state, query sensor data, inspect enrollment and e-ink status, check person locations, review activity timelines and daily reports, explore semantic memory, trigger rule executions, author new rules, and inspect plugin metadata. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
+Cognitive Companion includes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, that exposes 39 tools for AI agent integration. Agents can discover system state, query sensor data, inspect enrollment and e-ink status, check person locations, review activity timelines and daily reports, explore semantic memory, trigger rule executions, author new rules, and inspect plugin metadata. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
 
 ## What is MCP?
 
@@ -11,6 +11,15 @@ The Model Context Protocol is an open standard for connecting AI models to exter
 - **Receive** structured responses
 
 Cognitive Companion's MCP server allows external AI agents (Claude, GPT, custom agents) to interact with the senior care system as part of their tool-calling workflows.
+
+## MCP and BFF parity guarantee
+
+MCP tools and BFF router endpoints share one service layer (design rule D6). Any data exposed to the Vue UI through a router is exposed to MCP by reading the **same** service function, never a parallel query. Consequences:
+
+- MCP tools contain no query logic of their own; they call service methods.
+- Import-linter contracts enforce that `mcp/` may not import a repository directly.
+- When a service response envelope changes, both the router and the MCP tool reflect the change automatically.
+- Smoke tests in `backend/tests/mcp/` assert that every registered tool name resolves to a callable.
 
 ## Architecture
 
@@ -56,16 +65,23 @@ A `GeminiToolAdapter` reads the same tool definitions and converts them to Gemin
 | `get_person_timeline`      | Chronological timeline of activities and sightings for a person | `person_id`, `minutes` (optional)          |
 | `get_daily_report`         | End-of-day wellness report for one or all members            | `person_id`, `report_date` (optional)       |
 | `get_open_sessions`        | Currently open activity sessions (meals, bathroom, etc.)     | `person_id`, `activity_type` (optional)     |
-| `respond_to_interactive_prompt` | Record user response to an interactive prompt step    | `execution_id`, `step_id`, `action`         |
+| `submit_user_response`          | Record user response to an interactive prompt step    | `execution_id`, `step_id`, `action`         |
 | `get_recent_scene_objects`  | Recent object presence in a room                        | `room_id`, `since_minutes`                   |
 | `get_scene_observations`    | Search scene observations with vector similarity        | `query_text`, `room_id`, `limit` (optional)  |
 | `get_person_movements`      | Movement transitions for a person between rooms         | `person_id`, `semantic`, `since_minutes` (optional) |
 | `get_room_trend`            | Room-level trend state from object presence data        | `room_id`, `since_hours` (optional)          |
 | `search_similar_scenes`     | Vector search across scene embeddings                   | `query_embedding`, `room_id`, `limit` (optional) |
-| `list_rules`            | List all rules with summary info                        | (none) |
-| `list_plugin_metadata`   | Metadata for all registered steps, filters, and channels | `kind` (optional: `"step"`, `"filter"`, `"channel"`) |
-| `get_rule_bundle`        | Export a rule as a portable bundle                   | `rule_id`                                     |
-| `import_rule_bundle`     | Validate or commit a rule bundle                        | `bundle` (RuleBundle dict), `mode` (`"preview"` or `"commit"`) |
+| `get_tracking_status`       | Overall CTS tracking status and active PH count        | (none) |
+| `get_person_location`       | Current location envelope for one person (with quality/staleness) | `person_id` |
+| `get_recent_dementia_signals` | Recent dementia signals for a person with signal envelopes | `person_id`, `limit` (optional) |
+| `query_knowledge_base`      | Semantic search over the knowledge repository           | `query` |
+| `get_current_quiz_question` | Current question in an active quiz session              | `session_id` |
+| `submit_quiz_answer`        | Record an answer to a quiz question                     | `session_id`, `answer` |
+| `complete_quiz_session`     | Close a quiz session                                    | `session_id` |
+| `list_rules`                | List all rules with summary info                        | (none) |
+| `list_plugin_metadata`      | Metadata for all registered steps, filters, and channels | `kind` (optional: `"step"`, `"filter"`, `"channel"`) |
+| `get_rule_bundle`           | Export a rule as a portable bundle                      | `rule_id` |
+| `import_rule_bundle`        | Validate or commit a rule bundle                        | `bundle` (RuleBundle dict), `mode` (`"preview"` or `"commit"`) |
 
 ## Authentication
 

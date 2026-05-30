@@ -1,218 +1,333 @@
 ---
 name: documentation-writing
-description: Technical documentation writing for the SilverMind Project VitePress site. Covers style conventions, structure, and quality standards for docs that read like Google, Microsoft, or Apple documentation.
+description: Write, review, and improve SilverMind Project VitePress documentation, including public product pages, technical guides, feature pages, API references, and page-level layout/style. Use for docs language cleanup, structure revisions, reader journey improvements, and documentation quality reviews.
 ---
 
 # Documentation Writing Standards
 
-Technical documentation for the SilverMind Project follows the same standards as professional systems documentation: precise, concise, and structured for the reader who needs to get something done.
+SilverMind documentation has two jobs: help families and care partners understand why Cognitive Companion matters, and help technical readers deploy, operate, or extend it. Write with empathy, precision, and a clear reader journey.
 
----
+## 1. Start With The Reader
 
-## 1. Voice and tone
+Identify the primary reader before editing:
 
-Write like Google Cloud, Microsoft Learn, or Apple Developer documentation:
+| Reader | What they need first | What can come later |
+| --- | --- | --- |
+| Family caregiver | Safety, dignity, privacy, what the system does at home | Architecture, APIs, model names |
+| Care partner or health plan | Aging-in-place value, risk signals, caregiver burden, privacy posture | Internal implementation details |
+| Operator | Setup path, prerequisites, configuration, verification | Deep internals and extension points |
+| Developer | Contracts, files, data flow, extension seams, tests | Product narrative |
+| API user | Endpoint behavior, auth, schemas, errors | Architecture background |
 
-- **Direct and instructional.** The reader is here to accomplish a task. Lead with the action or the concept, not with marketing prose.
-- **No superlatives.** Never "incredibly fast", "seamlessly integrated", "powerful". Let the architecture and API speak for themselves.
-- **No em-dashes.** Use colons, commas, or separate sentences. Em-dashes are a crutch for stream-of-consciousness writing.
-- **No exclamation marks.** Documentation is not a pitch deck.
-- **No first person.** The documentation is not a person. "The system processes frames" not "We process frames".
-- **No future promises.** Document what exists today. "Pipeline steps support template expressions" not "We plan to add template support soon."
+Do not force one page to serve every reader at once. If a page mixes overview, task, architecture, and reference material, split it or add clear sections.
 
-### Correcting flowery language
+Use "care partners", "health plans", "senior-care providers", or "care organizations" for non-family audiences. Do not target fundraising audiences unless the user asks for fundraising material.
 
-| Flowery | Professional |
-|---------|-------------|
-| "seamlessly integrates with your existing setup" | "connects to Home Assistant over the LAN" |
-| "incredibly powerful rule engine" | "rule engine supporting 20 step types" |
-| "beautiful, intuitive dashboard" | "Vue 3 admin dashboard with live tracking" |
-| "takes privacy seriously" | "all inference runs on-premise; no data leaves the LAN" |
-| "revolutionary AI-powered insights" | "detects behavioral patterns from camera feeds" |
+## 2. Voice And Tone
 
----
+Write like professional product and platform documentation: clear, calm, specific, and respectful.
 
-## 2. Structure
+- **Lead with outcomes, then mechanisms.** Say what a capability helps the reader do before naming the services and models behind it.
+- **Use direct language.** Prefer short sentences and concrete verbs.
+- **Avoid hype.** Do not use "revolutionary", "seamless", "powerful", "incredible", or similar filler.
+- **Avoid fear-based messaging.** Senior care copy should be reassuring, not alarmist.
+- **Use clinical humility.** Cognitive Companion supports care and caregiver awareness. It does not replace professional judgment or clinical diagnosis.
+- **Use American English.** Use `behavior`, `color`, `customize`, and `on-premise` consistently.
+- **Avoid first person.** Use "Cognitive Companion" or "the system", not "we".
+- **Avoid exclamation marks and em dashes.** Use periods, commas, colons, or separate sentences.
+- **Document what exists.** Do not describe planned features as shipped.
 
-### Every page has a purpose
+### Replace This With That
 
-A reader should finish any page knowing exactly what they can do and how to do it. If a page mixes concepts, tasks, and reference material, split it.
+| Avoid | Use |
+| --- | --- |
+| "seamlessly integrates with your home" | "connects to Home Assistant over the LAN" |
+| "powerful AI insights" | "detects changes in room presence, dwell time, and activity patterns" |
+| "keeps your loved one safe" | "helps caregivers notice when a routine changes" |
+| "cloud-grade intelligence" | "local inference for vision, language, embeddings, and recognition" |
+| "revolutionary value-based care" | "aging-in-place infrastructure for earlier risk signals and lower caregiver burden" |
 
-- **Guide pages:** task-oriented. "How to configure a camera", "How to deploy on Kubernetes".
-- **Feature pages:** capability-oriented. "Pipeline system", "Continuous tracking".
-- **API reference:** field-oriented. Tables of endpoints, parameters, responses.
-- **Development pages:** contributor-oriented. "Setting up a dev environment", "Extending the pipeline".
+## 3. Page Types
 
-### Page structure template
+### Public Overview Pages
+
+Use for the home page and high-level introductions.
+
+Structure:
 
 ```markdown
-# Title (noun phrase or gerund)
+# Outcome-focused title
 
-One-sentence description of what this page covers.
+One or two sentences that explain who the system helps and what changes for them.
 
-## Section (concept or task name)
+## Why it matters
 
-Context paragraph. Why this matters, when to use it.
+Care context in plain language.
 
-### Sub-section (detail)
+## What it does
 
-Code block, table, or step-by-step list.
+Three to five outcome-led capabilities.
+
+## Privacy and trust
+
+Local-first, caregiver review, limits, and clinical humility.
+
+## Where to go next
+
+Family, care partner, operator, and developer paths when relevant.
+```
+
+Keep implementation names out of the first screen unless they are essential for trust.
+
+### Guide Pages
+
+Use for tasks such as setup, deployment, configuration, and operation.
+
+Required shape:
+
+```markdown
+# Task title
+
+One-sentence outcome.
+
+## Prerequisites
+
+What the reader needs before starting.
+
+## Steps
+
+Numbered steps with commands, expected output, and verification.
+
+## Troubleshooting
+
+Common failure modes and fixes.
 
 ## Next steps
 
-Link to related pages the reader should visit next.
+Links to related guides or references.
 ```
 
----
+Every guide should tell readers how to verify success.
 
-## 3. Formatting conventions
+### Feature Pages
 
-### Code blocks
+Use for capabilities such as pipelines, continuous tracking, voice companion, notifications, and knowledge repository.
+
+Start with:
+
+1. What the feature does.
+2. When to use it.
+3. What data or services it depends on.
+4. A small example or common workflow.
+5. Detailed reference sections.
+
+Put architecture diagrams, field tables, and plugin internals after the reader understands the capability.
+
+### Architecture Pages
+
+Use architecture pages to explain boundaries, data flow, ownership, and deployment shape.
+
+Good architecture pages include:
+
+- A short "system at a glance" summary.
+- One focused diagram per concept.
+- Clear boundaries: what owns data, what publishes events, what consumes events.
+- Operational implications: what must be running, what fails closed, what degrades.
+
+Avoid giant all-in-one diagrams unless the page first gives readers a simpler mental model.
+
+### API References
+
+Use references for exact contracts.
+
+- Endpoint tables use: Method, Path, Description.
+- Response field tables use: Field, Type, Description, Default when useful.
+- List required fields before optional fields.
+- Document explicit errors. Do not invent silent fallbacks.
+- State auth exceptions explicitly. Otherwise assume endpoints require auth.
+
+## 4. Layout And Scannability
+
+Inner documentation pages should feel lighter than raw implementation notes.
+
+- Use short openings: one to three paragraphs before the first heading.
+- Prefer headings that describe reader tasks or concepts, not internal class names.
+- Keep paragraphs under five lines in the rendered page.
+- Use tables for three or more related fields.
+- Use bullets for options, not for long explanations.
+- Use numbered steps only for ordered tasks.
+- Add "When to use this" near the top of complex feature pages.
+- Add "Related pages" or "Next steps" at the end of every substantial page.
+- Keep one primary idea per section.
+
+### VitePress Presentation
+
+- Prefer Markdown over inline HTML for normal content.
+- Use custom HTML only when the page needs a product-style layout or embedded media.
+- Put reusable styling in `.vitepress/theme/custom.css`, not inline `style` attributes.
+- Keep custom CSS scoped with page-specific class names.
+- Use responsive grids with `minmax()`, `clamp()`, and explicit breakpoints.
+- Do not use emoji as the primary visual language for polished public pages.
+- Use VitePress custom containers sparingly:
+
+```markdown
+::: tip
+Use for shortcuts or best practices.
+:::
+
+::: warning
+Use for prerequisites, gotchas, or potentially destructive behavior.
+:::
+
+::: info
+Use for non-obvious context.
+:::
+```
+
+Use `::: danger` only for data-loss, security, or safety-critical warnings.
+
+## 5. Formatting Conventions
+
+### Code Blocks
 
 Always specify a language:
+
 ```yaml
 cts:
   enabled: true
 ```
 
-Use `bash` for shell commands, `python` for Python, `yaml` for config, `json` for API responses, `typescript` for Vue components.
+Use `bash` for commands, `python` for Python, `yaml` for configuration, `json` for API payloads, `typescript` for Vue or TS code, and `text` for logs or plain output.
 
-### File paths
+### File Paths And Identifiers
 
-Use backticks: `` `config/settings.yaml` ``. Absolute paths from the repo root when the file location matters; relative paths when context is clear.
+Use backticks for files, directories, config keys, endpoints, class names, and identifiers:
 
-### Tables
-
-Use for reference data (env vars, API parameters, config keys). Column order: Name, Type/Value, Description. Align with standard Markdown table syntax.
-
-### Admonitions
-
-Use VitePress custom containers sparingly:
-```markdown
-::: warning
-This feature requires `cts.enabled: true` in settings.yaml.
-:::
-```
+- `config/settings.yaml`
+- `backend/routers/rules.py`
+- `GET /api/v1/pipeline/step-types`
+- `PersonLocationService`
 
 ### Links
 
-Use relative paths for internal links: `[Pipeline System](../features/pipeline.md)`. Use full URLs only for external references.
+- Use relative links for internal pages: `[Composable Pipelines](/features/pipeline)`.
+- Use full URLs for external links.
+- Link meaningful text, not "click here".
+- Keep next-step links short and curated.
 
----
+### Tables
 
-## 4. Diagrams
+Use tables for reference data. Column order should be predictable:
 
-Use Mermaid for all diagrams in documentation. Do not embed raster images (PNG, JPEG) or SVG files — they cannot be reviewed as text and become stale silently.
+- Config: Name, Type, Default, Description.
+- API fields: Field, Type, Description, Default.
+- Endpoints: Method, Path, Description.
+- Concepts: Term, Meaning.
 
-### Supported diagram types
+## 6. Diagrams
 
-| Type | Mermaid directive | When to use |
-|------|-------------------|-------------|
-| Architecture / data flow | `flowchart TB` or `flowchart LR` | Service-to-service data paths, component relationships |
-| Sequence | `sequenceDiagram` | Request/response flows, event ordering |
-| State machine | `stateDiagram-v2` | Presence states, signal lifecycle |
-| Entity relationship | `erDiagram` | Database table relationships |
+Use Mermaid for documentation diagrams. Do not embed raster images or unreviewable SVGs for architecture/reference content.
 
-### Usage
+| Type | Mermaid directive | Use for |
+| --- | --- | --- |
+| Data flow | `flowchart TB` or `flowchart LR` | Component relationships and pipelines |
+| Sequence | `sequenceDiagram` | Request/response and event order |
+| State machine | `stateDiagram-v2` | Presence states and signal lifecycle |
+| Entity relationship | `erDiagram` | Database relationships |
 
-Wrap Mermaid source in a fenced code block tagged `mermaid`:
+Rules:
 
-````markdown
-```mermaid
-flowchart LR
-    A[Source] -->|event| B[Consumer]
-```
-````
+- One diagram per concept.
+- Prefer `LR` for pipelines and `TB` for layered systems.
+- Use sentence case labels with no trailing periods.
+- Split diagrams that require long wrapped labels.
+- Explain the diagram in one paragraph before or after it.
 
-VitePress renders Mermaid natively. No plugin or extension is required.
+## 7. Accuracy And Verification
 
-### Style conventions
+Verify claims against the codebase before publishing.
 
-- **Labels**: sentence case, no trailing periods.
-- **Node shapes**: rectangles `[...]` for services, rounded `(...)` for actions, database cylinders `[(DB)]` for storage.
-- **Direction**: prefer top-to-bottom (`TB`) for vertical architectures, left-to-right (`LR`) for pipelines and sequential flows.
-- **Subgraphs**: use for logical groupings (ingest, inference, storage). Title the subgraph with a noun phrase, not a verb.
-- Keep diagrams focused: one diagram per concept. Split rather than overload.
+| Claim type | Where to verify |
+| --- | --- |
+| Step types | `backend/steps/builtin/` and step registry code |
+| API endpoints | `backend/routers/` and route registration |
+| Config keys | `config/settings.yaml`, `config/*.yaml`, and settings models |
+| Models and columns | `backend/models/` and migrations |
+| Defaults | Source code and config files |
+| Frontend behavior | Vue components and API calls |
+| CTS streams and schemas | `continuous-tracking/` proto, transport, and migrations |
 
----
+Numbers must match across the docs. If a page says "22 step types", grep the docs for every related count before changing it.
 
-## 5. Accuracy and maintenance
+Do not expose internal deployment details:
 
+- Internal IP addresses.
+- Private hostnames.
+- Real-looking secrets.
+- Personal machine paths.
 
-### Verify every claim against the codebase
+Use `example.com`, `llama-server-host:8100`, or descriptive placeholders.
 
-Before writing that something exists, verify it:
-- **Step types:** check `backend/steps/builtin/` for registered handlers.
-- **API endpoints:** check `backend/routers/` and `main.py` for route registration.
-- **Config keys:** check `config/settings.yaml` for the actual key path.
-- **Model columns:** check `backend/models/` for the actual column names and types.
+## 8. Language Cleanup Checklist
 
-### Numbers must match
+Remove filler:
 
-If the introduction says "20 step types", the API reference must also say "20 step types". Hardcoded numbers in docs are a liability. When adding or removing a step type, grep the entire `docs/` tree for that number.
+| Remove | Better |
+| --- | --- |
+| "basically", "essentially", "simply" | Delete |
+| "really", "very", "just" | Delete unless needed for meaning |
+| "it is important to note that" | Delete |
+| "as mentioned previously" | Delete |
+| "in order to" | "to" |
+| "due to the fact that" | "because" |
 
-### Versions and dates
+Prefer verbs over nominalizations:
 
-- Node.js version: verify against `.nvmrc` or `package.json` `engines` field.
-- Python version: verify against `pyproject.toml` `requires-python`.
-- PostgreSQL version: verify against `docker-compose.db.yml` image tag.
-- Model identifiers: verify against `config/settings.yaml`.
+- "configure" instead of "perform configuration of".
+- "decide" instead of "make a decision".
+- "describe" instead of "provide a description of".
+- "detect" instead of "perform detection of".
 
-### No internal deployment details
-
-Public documentation must not contain:
-- Internal IP addresses (192.168.x.x, 10.x.x.x)
-- Internal domain names (nanai.khoofia.com, etc.)
-- Specific hostnames of development machines
-- Placeholder secrets that look like real values
-
-Use `example.com` or descriptive placeholders like `llama-server-host:8100`.
-
----
-
-## 6. Common corrections
-
-### Spelling: American English
-
-Use American spelling consistently:
-- `behavior` not `behaviour`
-- `color` not `colour`
-- `customize` not `customise`
-
-### Terminology
+Keep terminology consistent:
 
 | Term | Use |
-|------|-----|
+| --- | --- |
 | Cognitive Companion | The system as a whole |
 | cognitive-companion | The repository or Docker image |
-| orchestrator | tracking-orchestrator service |
-| CC | Acceptable abbreviation after first use |
-| CTS | Continuous Tracking System |
+| Continuous Tracking System | Full name on first mention |
+| CTS | Abbreviation after first mention |
+| PersonHypothesis / PH | World-level tracked-person entity |
+| `ph_id` | Single physical-track identifier on the wire |
+| PersonLocationService | Source of truth for person location in CC |
 
-### Remove filler words
+## 9. Review Workflow
 
-| Remove | Replace with |
-|--------|-------------|
-| "basically", "essentially", "simply" | (nothing) |
-| "just", "really", "very" | (nothing) |
-| "it is important to note that" | (nothing) |
-| "as mentioned previously" | (nothing; trust the reader) |
-| "in order to" | "to" |
+When reviewing or updating docs:
 
----
+1. Read the page source and, when layout matters, view the rendered page.
+2. Identify the primary reader and job-to-be-done.
+3. Move outcome and usage context above implementation details.
+4. Split long sections with task-focused headings.
+5. Convert long prose lists into tables where appropriate.
+6. Verify technical claims against code before changing them.
+7. Check links, code fences, terminology, and build output.
 
-## 7. Edit checklist
+If the user asks for a "review", lead with findings ordered by impact. If the user asks to "update" or "apply", make the edits and verify them.
 
-Before publishing any documentation change:
+## 10. Publishing Checklist
 
-- [ ] Every claim is verified against the current codebase
-- [ ] No em-dashes, exclamation marks, or first-person pronouns
-- [ ] No internal deployment details (IPs, domain names)
-- [ ] American spelling throughout
-- [ ] All code blocks have language tags
-- [ ] Numbers are consistent across all pages (step counts, version numbers)
-- [ ] Links are relative internal paths; external links are full URLs
-- [ ] The sidebar in `.vitepress/config.mts` includes the new page if applicable
-- [ ] Remove filler words and flowery language
-- [ ] Any new diagram is written in Mermaid, not a raster image or embedded SVG
-- [ ] Mermaid source is directly in the `.md` file, not linked from an external tool
+Before finishing a documentation change:
+
+- [ ] The page has a clear primary reader.
+- [ ] The first section explains the outcome before internals.
+- [ ] Headings are scannable and task- or concept-oriented.
+- [ ] Paragraphs are short in the rendered page.
+- [ ] Code blocks have language tags.
+- [ ] Tables use consistent column order.
+- [ ] Internal links are relative and meaningful.
+- [ ] Public copy avoids hype, fear, and fundraising-oriented targeting.
+- [ ] Privacy and care claims are accurate and not overstated.
+- [ ] Technical claims are verified against source.
+- [ ] No internal IPs, hostnames, or secrets appear.
+- [ ] New pages are added to `.vitepress/config.mts` when needed.
+- [ ] `npm run docs:build` passes.
