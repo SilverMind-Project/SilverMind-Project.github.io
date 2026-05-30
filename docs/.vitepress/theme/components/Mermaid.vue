@@ -1,10 +1,21 @@
 <template>
-  <div ref="container" class="mermaid-container"></div>
+  <div
+    ref="container"
+    class="mermaid-container"
+    @click="openLightbox"
+    title="Click to zoom"
+  ></div>
+  <DiagramLightbox
+    :svg-content="currentSvg"
+    :visible="lightboxVisible"
+    @close="lightboxVisible = false"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from "vue";
 import { useData } from "vitepress";
+import DiagramLightbox from "./DiagramLightbox.vue";
 
 const { isDark } = useData();
 
@@ -12,6 +23,15 @@ const props = defineProps<{ id: string; code: string }>();
 const container = ref<HTMLElement | null>(null);
 
 let renderCount = 0;
+
+// --- lightbox state ---
+const lightboxVisible = ref(false);
+const currentSvg = ref("");
+
+function openLightbox() {
+  if (!currentSvg.value) return;
+  lightboxVisible.value = true;
+}
 
 const lightVars = {
   primaryColor: "#eff6ff",
@@ -70,6 +90,7 @@ async function renderDiagram() {
     decoded
   );
   container.value.innerHTML = svg;
+  currentSvg.value = svg;
 }
 
 onMounted(renderDiagram);
@@ -83,9 +104,17 @@ watch(isDark, renderDiagram);
   justify-content: center;
   margin: 1.5rem 0;
   overflow-x: auto;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+}
+.mermaid-container:hover {
+  box-shadow: 0 0 0 4px var(--vp-c-brand-soft);
+  background: var(--vp-c-brand-softer);
 }
 .mermaid-container svg {
   max-width: 100%;
   height: auto;
+  pointer-events: none;
 }
 </style>
