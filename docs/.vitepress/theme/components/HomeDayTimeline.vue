@@ -159,12 +159,12 @@ onBeforeUnmount(() => {
               <path d="M -8 4 A 8 8 0 0 1 8 4" />
               <path d="M 0 -4 V -9 M -4.5 -2 L -7.5 -5.5 M 4.5 -2 L 7.5 -5.5" />
             </g>
-            <g class="cc-station cc-station-afternoon" transform="translate(299 74)">
+            <g class="cc-station cc-station-afternoon" transform="translate(360 80)">
               <circle r="20" />
               <circle cx="0" cy="0" r="7" />
               <path d="M 0 -13 V -17 M 0 13 V 17 M -13 0 H -17 M 13 0 H 17 M -9 -9 L -12 -12 M 9 -9 L 12 -12 M -9 9 L -12 12 M 9 9 L 12 12" />
             </g>
-            <g class="cc-station cc-station-evening" transform="translate(703 180)">
+            <g class="cc-station cc-station-evening" transform="translate(640 175)">
               <circle r="20" />
               <path d="M -13 3 H 13" />
               <path d="M -7 3 A 7 7 0 0 1 7 3" />

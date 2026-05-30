@@ -26,7 +26,7 @@ hero:
     <div class="home-section-copy">
       <h2>A quieter way to care from home.</h2>
       <p>
-        Aging at home should not require constant surveillance or constant worry.
+        Aging at home should not require constant surveillance or persistent worry.
         Cognitive Companion turns local home signals into useful care context:
         where someone is, what changed, when help may be needed, and which memories
         or routines can support the next moment.
@@ -78,7 +78,7 @@ hero:
 <HomeDayTimeline />
 
 <section class="home-section audience-section">
-  <div class="section-kicker">Designed for the people around care</div>
+  <div class="section-kicker">For everyone in the circle of care</div>
   <div class="audience-grid">
     <article id="families" class="audience-panel">
       <div class="audience-label">For families</div>
@@ -130,7 +130,7 @@ hero:
 <section class="home-section builder-section">
   <div class="builder-copy">
     <div class="section-kicker">For builders</div>
-    <h2>Under the calm surface is a serious local AI stack.</h2>
+    <h2>Beneath the calm surface is a serious local AI stack.</h2>
     <p>
       Computer vision, identity resolution, scene understanding, voice interaction,
       configurable pipelines, and MCP tools remain fully documented for teams who
