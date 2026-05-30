@@ -33,19 +33,11 @@
         <div
           class="diagram-lightbox-viewport"
           ref="viewportRef"
-          @wheel.prevent="onWheel"
-          @mousedown="onPanStart"
-          @dblclick.prevent="resetZoom"
-          @touchstart="onTouchStart"
-          @touchmove="onTouchMove"
-          @touchend="onTouchEnd"
-          @touchcancel="onTouchEnd"
         >
           <div
             class="diagram-lightbox-content"
-            :style="contentStyle"
-            v-html="svgContent"
             ref="contentRef"
+            v-html="svgContent"
           />
         </div>
 
@@ -54,7 +46,6 @@
             class="diagram-lightbox-ctrl-btn"
             @click="zoomOut"
             aria-label="Zoom out"
-            :disabled="scale <= minScale"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
               <line x1="5" y1="12" x2="19" y2="12" />
@@ -65,7 +56,6 @@
             class="diagram-lightbox-ctrl-btn"
             @click="zoomIn"
             aria-label="Zoom in"
-            :disabled="scale >= maxScale"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
               <line x1="12" y1="5" x2="12" y2="19" />
@@ -74,7 +64,7 @@
           </button>
           <button
             class="diagram-lightbox-ctrl-btn diagram-lightbox-reset"
-            @click="resetZoom"
+            @click="fitToScreen"
             aria-label="Fit to screen"
           >
             Fit
@@ -86,7 +76,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onBeforeUnmount, nextTick } from "vue";
+import { ref, watch, onBeforeUnmount, nextTick } from "vue";
+import type Panzoom from "panzoom";
 
 const props = defineProps<{
   svgContent: string;
@@ -101,241 +92,25 @@ const backdropRef = ref<HTMLElement | null>(null);
 const viewportRef = ref<HTMLElement | null>(null);
 const contentRef = ref<HTMLElement | null>(null);
 
-// --- SVG natural dimensions ---
+// --- SVG natural dimensions (populated by fixupSvgDimensions) ---
 const svgNaturalW = ref(800);
 const svgNaturalH = ref(600);
 
-// --- zoom / pan state ---
-const scale = ref(1);
-const tx = ref(0); // translate-x in px (applied before scale)
-const ty = ref(0); // translate-y in px
-const minScale = 0.2;
-const maxScale = 10;
+// --- panzoom instance ---
+let pz: ReturnType<typeof Panzoom> | null = null;
+const currentScale = ref(1);
+const displayZoom = ref("100%");
 
-const displayZoom = computed(() => `${Math.round(scale.value * 100)}%`);
-
-// transform: translate first, then scale (both around 0,0)
-const contentStyle = computed(() => ({
-  transform: `translate(${tx.value}px, ${ty.value}px) scale(${scale.value})`,
-  transformOrigin: "0 0",
-}));
-
-// --- pan tracking ---
-let dragging = false;
-let panStartX = 0;
-let panStartY = 0;
-let panStartTx = 0;
-let panStartTy = 0;
-
-function onPanStart(e: MouseEvent) {
-  if (e.button !== 0) return;
-  dragging = true;
-  panStartX = e.clientX;
-  panStartY = e.clientY;
-  panStartTx = tx.value;
-  panStartTy = ty.value;
-  document.addEventListener("mousemove", onPanMove);
-  document.addEventListener("mouseup", onPanEnd);
+function onPanzoomTransform(e: { x: number; y: number; scale: number }) {
+  currentScale.value = e.scale;
+  displayZoom.value = `${Math.round(e.scale * 100)}%`;
 }
 
-function onPanMove(e: MouseEvent) {
-  if (!dragging) return;
-  // Cursor movement in screen space → content-space movement is divided by scale
-  tx.value = panStartTx + (e.clientX - panStartX) / scale.value;
-  ty.value = panStartTy + (e.clientY - panStartY) / scale.value;
-}
-
-function onPanEnd() {
-  dragging = false;
-  document.removeEventListener("mousemove", onPanMove);
-  document.removeEventListener("mouseup", onPanEnd);
-}
-
-// --- touch pinch / pan ---
-interface TouchPoint {
-  identifier: number;
-  clientX: number;
-  clientY: number;
-}
-let activeTouches: TouchPoint[] = [];
-let lastPinchDist = 0;
-let pinchStartScale = 1;
-let pinchStartTx = 0;
-let pinchStartTy = 0;
-let pinchMidX = 0;
-let pinchMidY = 0;
-
-function onTouchStart(e: TouchEvent) {
-  activeTouches = Array.from(e.touches).map((t) => ({
-    identifier: t.identifier,
-    clientX: t.clientX,
-    clientY: t.clientY,
-  }));
-
-  if (e.touches.length === 2) {
-    const [t1, t2] = [e.touches[0], e.touches[1]];
-    lastPinchDist = Math.hypot(
-      t2.clientX - t1.clientX,
-      t2.clientY - t1.clientY,
-    );
-    pinchStartScale = scale.value;
-    pinchStartTx = tx.value;
-    pinchStartTy = ty.value;
-
-    const rect = viewportRef.value!.getBoundingClientRect();
-    pinchMidX = (t1.clientX + t2.clientX) / 2 - rect.left;
-    pinchMidY = (t1.clientY + t2.clientY) / 2 - rect.top;
-  }
-}
-
-function onTouchMove(e: TouchEvent) {
-  // Prevent the browser from scrolling or pinching the page itself
-  if (e.cancelable) e.preventDefault();
-
-  if (e.touches.length === 1 && activeTouches.length === 1) {
-    // Single-touch pan — drag the diagram
-    const prev = activeTouches[0];
-    const curr = e.touches[0];
-    const dx = curr.clientX - prev.clientX;
-    const dy = curr.clientY - prev.clientY;
-    tx.value += dx / scale.value;
-    ty.value += dy / scale.value;
-  } else if (e.touches.length === 2) {
-    // Pinch zoom
-    const [t1, t2] = [e.touches[0], e.touches[1]];
-    const newDist = Math.hypot(
-      t2.clientX - t1.clientX,
-      t2.clientY - t1.clientY,
-    );
-
-    if (lastPinchDist > 0) {
-      const factor = newDist / lastPinchDist;
-      const newScale = Math.min(
-        maxScale,
-        Math.max(minScale, pinchStartScale * factor),
-      );
-
-      // Zoom toward the midpoint between the two fingers
-      tx.value =
-        pinchMidX -
-        ((pinchMidX - pinchStartTx) / pinchStartScale) * newScale;
-      ty.value =
-        pinchMidY -
-        ((pinchMidY - pinchStartTy) / pinchStartScale) * newScale;
-      scale.value = newScale;
-    }
-
-    lastPinchDist = newDist;
-  }
-
-  // Update tracking state
-  activeTouches = Array.from(e.touches).map((t) => ({
-    identifier: t.identifier,
-    clientX: t.clientX,
-    clientY: t.clientY,
-  }));
-}
-
-function onTouchEnd(e: TouchEvent) {
-  if (e.touches.length === 0) {
-    activeTouches = [];
-    lastPinchDist = 0;
-  } else {
-    activeTouches = Array.from(e.touches).map((t) => ({
-      identifier: t.identifier,
-      clientX: t.clientX,
-      clientY: t.clientY,
-    }));
-  }
-}
-
-// --- cursor-relative zoom ---
-function onWheel(e: WheelEvent) {
-  const viewport = viewportRef.value;
-  if (!viewport) return;
-
-  const rect = viewport.getBoundingClientRect();
-  // Cursor position relative to the viewport's top-left corner
-  const cx = e.clientX - rect.left;
-  const cy = e.clientY - rect.top;
-
-  const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-  const oldScale = scale.value;
-  const newScale = Math.min(maxScale, Math.max(minScale, oldScale * factor));
-
-  // The content point currently under the cursor (in content coordinate space):
-  //   contentX = (cx - tx) / oldScale
-  // After zooming to newScale, we want that same content point to stay under
-  // the cursor:
-  //   cx = contentX * newScale + newTx
-  // → newTx = cx - contentX * newScale
-  const newTx = cx - ((cx - tx.value) / oldScale) * newScale;
-  const newTy = cy - ((cy - ty.value) / oldScale) * newScale;
-
-  tx.value = newTx;
-  ty.value = newTy;
-  scale.value = newScale;
-}
-
-function zoomIn() {
-  zoomTowardCenter(1.4);
-}
-
-function zoomOut() {
-  zoomTowardCenter(1 / 1.4);
-}
-
-function zoomTowardCenter(factor: number) {
-  const viewport = viewportRef.value;
-  if (!viewport) return;
-  const rect = viewport.getBoundingClientRect();
-  // Zoom toward the center of the viewport
-  const cx = rect.width / 2;
-  const cy = rect.height / 2;
-  const oldScale = scale.value;
-  const newScale = Math.min(maxScale, Math.max(minScale, oldScale * factor));
-  tx.value = cx - ((cx - tx.value) / oldScale) * newScale;
-  ty.value = cy - ((cy - ty.value) / oldScale) * newScale;
-  scale.value = newScale;
-}
-
-function computeFitScale(): { s: number; fitTx: number; fitTy: number } {
-  const viewport = viewportRef.value;
-  if (!viewport) return { s: 1, fitTx: 0, fitTy: 0 };
-
-  const vw = viewport.clientWidth;
-  const vh = viewport.clientHeight;
-  const sw = svgNaturalW.value;
-  const sh = svgNaturalH.value;
-
-  // Fit the diagram within 90% of the viewport, preserving aspect ratio
-  const fitScale = Math.min((vw * 0.9) / sw, (vh * 0.9) / sh, 1.5);
-  const s = Math.max(0.3, Math.min(fitScale, 1.5));
-
-  // Center the scaled content in the viewport
-  const fitTx = (vw - sw * s) / 2;
-  const fitTy = (vh - sh * s) / 2;
-
-  return { s, fitTx, fitTy };
-}
-
-function resetZoom() {
-  const { s, fitTx, fitTy } = computeFitScale();
-  scale.value = s;
-  tx.value = fitTx;
-  ty.value = fitTy;
-}
-
-function close() {
-  emit("close");
-}
-
-// --- fix up the SVG: remove percentage sizing, set pixel dimensions from viewBox ---
+// --- fix up the SVG: strip percentage sizing, set pixel dimensions from viewBox ---
 function fixupSvgDimensions() {
   const svg = contentRef.value?.querySelector("svg");
   if (!svg) return;
 
-  // Read the viewBox to get the diagram's natural dimensions
   const viewBox = svg.getAttribute("viewBox");
   if (viewBox) {
     const parts = viewBox.split(/\s+/);
@@ -347,8 +122,6 @@ function fixupSvgDimensions() {
     }
   }
 
-  // Override percentage / constraint sizing so the SVG renders at its
-  // natural pixel size inside the zoom/pan container.
   svg.style.maxWidth = "none";
   svg.style.width = svgNaturalW.value + "px";
   svg.style.height = svgNaturalH.value + "px";
@@ -356,7 +129,64 @@ function fixupSvgDimensions() {
   svg.removeAttribute("height");
 }
 
-// --- body scroll lock, focus, init ---
+// --- fit-to-viewport ---
+function computeFit() {
+  const viewport = viewportRef.value;
+  if (!viewport) return { s: 1, x: 0, y: 0 };
+
+  const vw = viewport.clientWidth;
+  const vh = viewport.clientHeight;
+  const sw = svgNaturalW.value;
+  const sh = svgNaturalH.value;
+
+  const fitScale = Math.min((vw * 0.9) / sw, (vh * 0.9) / sh, 1.5);
+  const s = Math.max(0.3, Math.min(fitScale, 1.5));
+
+  // Center the scaled content
+  const x = (vw - sw * s) / 2;
+  const y = (vh - sh * s) / 2;
+
+  return { s, x, y };
+}
+
+function fitToScreen() {
+  if (!pz) return;
+  const { s, x, y } = computeFit();
+  pz.moveTo(x, y);
+  pz.zoomAbs(x, y, s);
+}
+
+// --- control buttons ---
+const ZOOM_STEP = 1.4;
+const MIN_SCALE = 0.2;
+const MAX_SCALE = 10;
+
+function zoomIn() {
+  if (!pz) return;
+  const s = Math.min(MAX_SCALE, currentScale.value * ZOOM_STEP);
+  // Zoom toward viewport center
+  const vp = viewportRef.value;
+  if (!vp) return;
+  const cx = vp.clientWidth / 2;
+  const cy = vp.clientHeight / 2;
+  pz.smoothZoom(cx, cy, s);
+}
+
+function zoomOut() {
+  if (!pz) return;
+  const s = Math.max(MIN_SCALE, currentScale.value / ZOOM_STEP);
+  const vp = viewportRef.value;
+  if (!vp) return;
+  const cx = vp.clientWidth / 2;
+  const cy = vp.clientHeight / 2;
+  pz.smoothZoom(cx, cy, s);
+}
+
+function close() {
+  emit("close");
+}
+
+// --- lifecycle ---
 watch(
   () => props.visible,
   async (v) => {
@@ -364,16 +194,35 @@ watch(
       document.body.style.overflow = "hidden";
       await nextTick();
       fixupSvgDimensions();
-      // Compute a fit-to-viewport scale and center
-      const { s, fitTx, fitTy } = computeFitScale();
-      scale.value = s;
-      tx.value = fitTx;
-      ty.value = fitTy;
+
+      // Create panzoom instance
+      const { default: createPanzoom } = await import("panzoom");
+      pz = createPanzoom(contentRef.value!, {
+        maxZoom: MAX_SCALE,
+        minZoom: MIN_SCALE,
+        bounds: false,
+        smoothScroll: false,
+        zoomDoubleClickSpeed: 1,
+        // Let wheel + double-click be handled by panzoom
+        // (we keep our own wheel handler for cursor-relative zoom,
+        //  but panzoom does this natively too)
+      });
+      pz.on("transform", onPanzoomTransform);
+
+      // Apply initial fit-to-viewport
+      const { s, x, y } = computeFit();
+      pz.moveTo(x, y);
+      pz.zoomAbs(x, y, s);
+
       backdropRef.value?.focus();
       document.addEventListener("keydown", onKeyDown);
     } else {
       document.body.style.overflow = "";
       document.removeEventListener("keydown", onKeyDown);
+      if (pz) {
+        pz.dispose();
+        pz = null;
+      }
     }
   }
 );
@@ -387,8 +236,10 @@ function onKeyDown(e: KeyboardEvent) {
 onBeforeUnmount(() => {
   document.body.style.overflow = "";
   document.removeEventListener("keydown", onKeyDown);
-  document.removeEventListener("mousemove", onPanMove);
-  document.removeEventListener("mouseup", onPanEnd);
+  if (pz) {
+    pz.dispose();
+    pz = null;
+  }
 });
 </script>
 
@@ -447,12 +298,9 @@ onBeforeUnmount(() => {
     0 24px 80px -20px rgba(0, 0, 0, 0.55),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
   cursor: grab;
-  /* Establish a positioning context for the absolutely-placed content */
   position: relative;
-  /* Prevent the viewport itself from capturing wheel events after the
-     content handles them (especially on trackpad fling). */
   overscroll-behavior: none;
-  /* Tell the browser to leave touch gestures alone — we handle pan & pinch. */
+  /* Let panzoom handle all touch gestures */
   touch-action: none;
 }
 
@@ -462,15 +310,14 @@ onBeforeUnmount(() => {
 
 /* ---- content (wraps the SVG) ---- */
 .diagram-lightbox-content {
-  /* Absolute: we control position entirely via transform */
   position: absolute;
   left: 0;
   top: 0;
   will-change: transform;
-  /* Prevent the browser from treating the SVG as a percentage-sized
-     replaced element — it has fixed pixel dimensions now. */
   width: max-content;
   height: max-content;
+  /* Use smooth transform when zooming via buttons */
+  transition: transform 0.3s ease-out;
 }
 
 /* ---- zoom controls bar ---- */
@@ -507,11 +354,6 @@ onBeforeUnmount(() => {
 
 .diagram-lightbox-ctrl-btn:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.18);
-}
-
-.diagram-lightbox-ctrl-btn:disabled {
-  opacity: 0.3;
-  cursor: default;
 }
 
 .diagram-lightbox-ctrl-btn:focus-visible {
