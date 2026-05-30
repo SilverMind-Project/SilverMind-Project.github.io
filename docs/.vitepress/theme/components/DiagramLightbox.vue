@@ -36,6 +36,10 @@
           @wheel.prevent="onWheel"
           @mousedown="onPanStart"
           @dblclick.prevent="resetZoom"
+          @touchstart="onTouchStart"
+          @touchmove="onTouchMove"
+          @touchend="onTouchEnd"
+          @touchcancel="onTouchEnd"
         >
           <div
             class="diagram-lightbox-content"
@@ -145,6 +149,104 @@ function onPanEnd() {
   dragging = false;
   document.removeEventListener("mousemove", onPanMove);
   document.removeEventListener("mouseup", onPanEnd);
+}
+
+// --- touch pinch / pan ---
+interface TouchPoint {
+  identifier: number;
+  clientX: number;
+  clientY: number;
+}
+let activeTouches: TouchPoint[] = [];
+let lastPinchDist = 0;
+let pinchStartScale = 1;
+let pinchStartTx = 0;
+let pinchStartTy = 0;
+let pinchMidX = 0;
+let pinchMidY = 0;
+
+function onTouchStart(e: TouchEvent) {
+  activeTouches = Array.from(e.touches).map((t) => ({
+    identifier: t.identifier,
+    clientX: t.clientX,
+    clientY: t.clientY,
+  }));
+
+  if (e.touches.length === 2) {
+    const [t1, t2] = [e.touches[0], e.touches[1]];
+    lastPinchDist = Math.hypot(
+      t2.clientX - t1.clientX,
+      t2.clientY - t1.clientY,
+    );
+    pinchStartScale = scale.value;
+    pinchStartTx = tx.value;
+    pinchStartTy = ty.value;
+
+    const rect = viewportRef.value!.getBoundingClientRect();
+    pinchMidX = (t1.clientX + t2.clientX) / 2 - rect.left;
+    pinchMidY = (t1.clientY + t2.clientY) / 2 - rect.top;
+  }
+}
+
+function onTouchMove(e: TouchEvent) {
+  // Prevent the browser from scrolling or pinching the page itself
+  if (e.cancelable) e.preventDefault();
+
+  if (e.touches.length === 1 && activeTouches.length === 1) {
+    // Single-touch pan — drag the diagram
+    const prev = activeTouches[0];
+    const curr = e.touches[0];
+    const dx = curr.clientX - prev.clientX;
+    const dy = curr.clientY - prev.clientY;
+    tx.value += dx / scale.value;
+    ty.value += dy / scale.value;
+  } else if (e.touches.length === 2) {
+    // Pinch zoom
+    const [t1, t2] = [e.touches[0], e.touches[1]];
+    const newDist = Math.hypot(
+      t2.clientX - t1.clientX,
+      t2.clientY - t1.clientY,
+    );
+
+    if (lastPinchDist > 0) {
+      const factor = newDist / lastPinchDist;
+      const newScale = Math.min(
+        maxScale,
+        Math.max(minScale, pinchStartScale * factor),
+      );
+
+      // Zoom toward the midpoint between the two fingers
+      tx.value =
+        pinchMidX -
+        ((pinchMidX - pinchStartTx) / pinchStartScale) * newScale;
+      ty.value =
+        pinchMidY -
+        ((pinchMidY - pinchStartTy) / pinchStartScale) * newScale;
+      scale.value = newScale;
+    }
+
+    lastPinchDist = newDist;
+  }
+
+  // Update tracking state
+  activeTouches = Array.from(e.touches).map((t) => ({
+    identifier: t.identifier,
+    clientX: t.clientX,
+    clientY: t.clientY,
+  }));
+}
+
+function onTouchEnd(e: TouchEvent) {
+  if (e.touches.length === 0) {
+    activeTouches = [];
+    lastPinchDist = 0;
+  } else {
+    activeTouches = Array.from(e.touches).map((t) => ({
+      identifier: t.identifier,
+      clientX: t.clientX,
+      clientY: t.clientY,
+    }));
+  }
 }
 
 // --- cursor-relative zoom ---
@@ -350,6 +452,8 @@ onBeforeUnmount(() => {
   /* Prevent the viewport itself from capturing wheel events after the
      content handles them (especially on trackpad fling). */
   overscroll-behavior: none;
+  /* Tell the browser to leave touch gestures alone — we handle pan & pinch. */
+  touch-action: none;
 }
 
 .diagram-lightbox-viewport:active {
