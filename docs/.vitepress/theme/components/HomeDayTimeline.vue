@@ -640,7 +640,7 @@ onBeforeUnmount(() => {
 
   .cc-day-item {
     min-height: 154px;
-    padding: 16px 0 0 16px;
+    padding: 15px 15px 5px 15px;
     border: 0;
   }
 
