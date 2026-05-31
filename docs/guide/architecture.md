@@ -368,7 +368,7 @@ The orchestrator's `FrameProcessingPipeline` runs 15 stages per frame:
 4. Spatial projection: per-detection floor-point homography
 5. SOLIDER-REID appearance embedding + RTMPose pose estimation (Triton, in parallel)
 6. Per-camera face identification (ArcFace, rate-limited)
-7. World tracking: pre-association cross-camera dedup, BoT-SORT, Bayesian identity resolution, PersonHypothesis management
+7. World tracking: Kalman predict, pre-association cross-camera dedup, Hungarian association, PH update/spawn/close, Bayesian identity resolution
 8. Detection backfill: enrich detections with ph_id assignments
 9. PH lifecycle: close terminated PersonHypotheses
 10. Posture classification: keypoint geometry analysis

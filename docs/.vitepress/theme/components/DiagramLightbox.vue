@@ -77,7 +77,6 @@
 
 <script setup lang="ts">
 import { ref, watch, onBeforeUnmount, nextTick } from "vue";
-import type Panzoom from "panzoom";
 
 const props = defineProps<{
   svgContent: string;
@@ -97,13 +96,15 @@ const svgNaturalW = ref(800);
 const svgNaturalH = ref(600);
 
 // --- panzoom instance ---
-let pz: ReturnType<typeof Panzoom> | null = null;
+let pz: ReturnType<typeof import("panzoom").default> | null = null;
 const currentScale = ref(1);
 const displayZoom = ref("100%");
 
-function onPanzoomTransform(e: { x: number; y: number; scale: number }) {
-  currentScale.value = e.scale;
-  displayZoom.value = `${Math.round(e.scale * 100)}%`;
+function onPanzoomTransform() {
+  if (!pz) return;
+  const s = pz.getTransform().scale;
+  currentScale.value = s;
+  displayZoom.value = `${Math.round(s * 100)}%`;
 }
 
 // --- fix up the SVG: strip percentage sizing, set pixel dimensions from viewBox ---

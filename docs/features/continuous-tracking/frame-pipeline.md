@@ -11,7 +11,7 @@ flowchart TB
     Spatial["4. Spatial projection\nFloor-point homography per detection"]
     Inference["5. ReID + Pose inference\nSOLIDER-REID + RTMPose (Triton)"]
     FaceID["6. Face identification\nArcFace (person-id-service)"]
-    World["7. World tracking\nPre-association dedup, BoT-SORT,\nIdentity resolution (Bayesian)"]
+    World["7. World tracking\nKalman predict, pre-association dedup,\nHungarian association, identity resolution"]
     Backfill["8. Detection backfill\nEnrich detections with PH assignments"]
     ClosePH["9. PH lifecycle\nClose terminated PersonHypotheses"]
     Posture["10. Posture classification\nKeypoint geometry analysis"]
@@ -88,19 +88,41 @@ Face identification can be disabled per camera (e.g., top-down surveillance view
 
 ## 7. World tracking
 
-`WorldTrackingStage` delegates to `WorldTracker`, which runs three sub-steps in order:
+`WorldTrackingStage` builds `WorldObservation` objects for each detection (using a synthetic virtual-tile floor point when a camera is uncalibrated), then calls `WorldTracker.step`. The tracker runs 10 numbered steps:
 
-### 7a. Pre-association cross-camera dedup
+```mermaid
+flowchart TD
+  s1["1. Load open PHs\nKalman predict each to now"] --> s2
+  s2["2. dedup_observations()\ncollapse cross-camera duplicates\nrepresentatives + cluster_map"] --> s3
+  s3["3. associate()\nHungarian over cost matrix with gating"] --> s4
+  s4["4. Update matched PHs\nKalman update, gallery-mean EMA, height EMA,\nmean_quality EMA, expand active_cameras"] --> s5
+  s5["5. Spawn PHs for unmatched obs\ngated by room polygon if configured\ninit Kalman; seed identity from face anchor"] --> s6
+  s6["6. Emit PHContinuationCandidate\nfor each spawn near a recently-closed PH"] --> s7
+  s7["7. Close unmatched PHs past ph_close_grace_s\nelse keep open with predicted state"] --> s8
+  s8["8. Persist all updated PHs"] --> s9
+  s9["9. Identity resolution\napply decisions, collect revisions"] --> s10
+  s10["10. Build WorldFrameSnapshot per PH\nobservation_count >= min_observations_to_publish"]
+```
 
-Before the Hungarian assignment runs, `dedup_observations()` collapses detections from different cameras that correspond to the same physical person into a single representative observation. This is the hallway-camera-watching-a-bathroom-door fix: when a hallway camera and a bathroom-adjacent camera both see one senior at the door, they must resolve to **one** `PersonHypothesis`, not two.
+**Steps 1-3: predict and associate.** All open PHs are loaded and their Kalman states predicted forward to the current timestamp. `dedup_observations()` then collapses detections from different calibrated cameras that are within `dedup_max_distance_m` (default: 0.6 m) and not in identity conflict into single representative observations. The Hungarian algorithm solves the assignment over a cost matrix (geometric + appearance + height) with a Mahalanobis gate (`gate_chi2 = 9.21`, chi-squared 99%, 2 dof) and an identity-conflict hard gate.
+
+**Steps 4-5: update and spawn.** Matched PHs receive a Kalman update, gallery-mean EMA (`alpha = 1 / min(count+1, 100)`), height EMA (`alpha = 0.1`), mean-quality EMA (`0.1 * obs.quality + 0.9 * prev`), and accumulate all contributing camera IDs. Unmatched observations spawn new PHs (gated by room polygon when configured), seeded with face anchor identity if present.
+
+**Steps 6-7: continuations and grace.** For each spawn, recently closed PHs within `inferred_handoff_max_s` (600 s) and `inferred_handoff_max_distance_m` (5.0 m) emit a `PHContinuationCandidate`. Unmatched PHs past `ph_close_grace_s` (5.0 s) are closed; those within the grace window keep their predicted state.
+
+**Steps 8-10: persist, resolve, snapshot.** All updated PHs are persisted. The Bayesian identity resolver runs on every PH that received an observation. `WorldFrameSnapshot` objects are built for PHs with `observation_count >= min_observations_to_publish` (3).
+
+### Pre-association cross-camera dedup
+
+Before the Hungarian assignment runs, `dedup_observations()` (`app/tracking/world/dedup.py`) collapses detections from different cameras that correspond to the same physical person into a single representative observation.
 
 The dedup gate passes a pair of observations when all three conditions hold:
 
 1. The two detections are from **different** cameras.
-2. Their calibrated floor positions are within `dedup_max_distance_m` (default: 1.0 m) of each other.
+2. Both have `calibrated=True` floor points within `dedup_max_distance_m` (default: 0.6 m) of each other.
 3. When both carry committed face anchors, the face identities do not conflict (`dedup_require_no_face_conflict: true`).
 
-Pairs that pass the gate are joined by a union-find algorithm; each resulting cluster elects one representative via `_select_representative()`, which picks the highest-quality detection (ties broken by camera_id then detection_id for determinism). The representative's floor position is the quality-weighted mean of all calibrated floor points in the cluster; its face anchor is the highest-confidence one across all members.
+Pairs that pass the gate are joined by a union-find algorithm; each resulting cluster elects one representative via `_select_representative()` (highest quality, ties broken deterministically). The cluster membership map propagates all source camera IDs back to the winning PH.
 
 | Config knob | Default | Description |
 |-------------|---------|-------------|
@@ -108,26 +130,11 @@ Pairs that pass the gate are joined by a union-find algorithm; each resulting cl
 | `dedup_max_distance_m` | `0.6` | Floor-plane distance gate in metres |
 | `dedup_require_no_face_conflict` | `true` | Do not collapse observations with conflicting face identities |
 
-The integration proof lives in `tests/integration/test_world_tracker_e2e.py::test_hallway_bathroom_one_person`, using the `tests/fixtures/frame_replays/hallway_bathroom_door.bin` fixture.
+Uncalibrated cameras: `dedup_observations()` skips observations with `calibrated=False`. For uncalibrated home cameras, identity crosses cameras only through the shared ReID gallery, cross-GT face propagation, and PH continuation.
 
-### 7b. Per-camera tracking (BoT-SORT)
+The integration proof lives in `tests/integration/test_world_tracker_e2e.py::test_hallway_bathroom_one_person`.
 
-Each camera has an isolated Kalman-filter tracker that associates detections frame-to-frame using the Hungarian algorithm.
-
-**Association cost:**
-
-```
-cost(i,j) = (1 - alpha) x IoU_cost(i,j) + alpha x embedding_distance(i,j)
-```
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `appearance_weight` (alpha) | 0.15 | Appearance weight; IoU dominates so appearance changes do not break the spatial match |
-| `match_thresh` | 0.2 | Minimum IoU to accept a match |
-| `max_time_lost` | 30 frames | Frames without match before termination |
-| `min_hits` | 3 frames | Consecutive matches before a track is confirmed |
-
-### 7c. PersonHypothesis (PH) management and identity resolution
+### PersonHypothesis (PH) management and identity resolution
 
 The `WorldTracker` maps confirmed per-camera tracks to `PersonHypothesis` (PH) entities. Each PH:
 

@@ -54,7 +54,7 @@ flowchart TB
 
     subgraph CTS_["continuous-tracking/"]
         Ingress["rtsp-ingress (Go)<br/>→ go2rtc + motion gate + MinIO<br/>&nbsp;"]
-        Orchestrator["tracking-orchestrator<br/>→ YOLO + SOLIDER-REID + RTMPose<br/>+ BoT-SORT + Bayesian identity<br/>+ dementia signal worker<br/>&nbsp;"]
+        Orchestrator["tracking-orchestrator<br/>→ YOLO + SOLIDER-REID + RTMPose<br/>+ floor-plane Kalman world tracker<br/>+ Bayesian identity resolver<br/>+ dementia signal worker<br/>&nbsp;"]
         Redis["Redis Streams<br/>→ CC subscribers<br/>(events / revisions / signals)<br/>&nbsp;"]
         Ingress --> Orchestrator --> Redis
     end
@@ -83,7 +83,7 @@ flowchart TB
 | 13 context filters | `room`, `time_range`, `day_of_week`, `person_presence`, `person_activity`, `room_transition`, `person_movement_memory`, `scene_contains`, `scene_trend`, `home_state`, `presence_status`, `presence_dwell`, `dementia_signal`. |
 | 6 trigger types | `sensor_event`, `cron`, `manual`, `webhook` (HMAC), `telegram` (bot command), `occupancy_duration`. |
 | Person tracking | ArcFace face recognition fused with HA presence sensors, with whole-house location. |
-| Multi-camera tracking | Optional `continuous-tracking-service` for BoT-SORT tracking, Bayesian identity resolution, and dementia signal generation. |
+| Multi-camera tracking | Optional `continuous-tracking-service` for floor-plane Kalman world tracking, Bayesian identity resolution, and dementia signal generation. |
 | Activity tracking | Detect and record activities; duration-aware sessions; end-of-day wellness rollup with optional LLM summary. |
 | Voice companion | Realtime conversations via Google Gemini Live with WebSocket audio and tool calling. |
 | Knowledge repository | Caregiver-curated facts with narrated info cards, review-gated quizzes, and voice Q&A backed by RAG (Triton embeddings + pgvector + LLM synthesis). |
@@ -108,7 +108,7 @@ flowchart TB
 | Scene analysis | YOLO11x, Florence-2-large, CLIP ViT-L/14 |
 | Semantic memory | PostgreSQL + pgvectorscale |
 | Knowledge embeddings | embeddinggemma-300m via Triton Inference Server |
-| Multi-camera tracking | YOLO26L + SOLIDER-REID + RTMPose + BoT-SORT (Triton) |
+| Multi-camera tracking | YOLO26L + SOLIDER-REID + RTMPose + floor-plane Kalman world tracker (Triton for inference) |
 | Object storage | MinIO (S3-compatible) |
 | Logging | Python stdlib logging via a thin `BoundLogger` |
 
