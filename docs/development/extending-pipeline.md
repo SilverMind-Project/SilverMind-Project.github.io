@@ -73,7 +73,7 @@ class YourStepHandler(StepHandler):
         )
 ```
 
-That's it. The step is auto-discovered at startup and appears in the frontend StepPalette (loaded dynamically from `GET /api/v1/pipeline/step-types`).
+That's it. The step is auto-discovered at startup and appears in the rule canvas palette, loaded dynamically from `GET /api/v1/pipeline/step-types`.
 
 ### StepMetadata Fields
 
@@ -87,6 +87,7 @@ That's it. The step is auto-discovered at startup and appears in the frontend St
 | `config_schema` | Yes | JSONSchema for config validation and form generation |
 | `default_config` | Yes | Default config values for new steps |
 | `output_schema` | **Required** for data-emitting steps | JSONSchema describing step outputs; feeds autocomplete and contract tests |
+| `output_ports` | No (default `("main",)`) | Output ports available in the graph canvas |
 | `schema_version` | No (default 1) | Bump when `config_schema` shape changes; enables migration chains |
 | `ui_hints_version` | No (default 1) | Version of `x-ui` widget hints; frontend falls back to generic editor for unknown versions |
 | `ui_hints` | No | `x-ui` widget hints for the `SchemaForm` generic renderer |
@@ -123,10 +124,10 @@ All core types live in `backend/steps/base.py`:
   - `success`: whether the step succeeded
   - `data`: dict merged into `pipeline_data` for downstream steps
   - `should_continue`: set to `False` to halt the pipeline
-  - `next_step_id`: for conditional branching (jump to a specific step)
+  - `output_ports`: tuple of runtime output ports to traverse. Defaults to `("main",)`
   - `wait_until`: for delayed resume (pause and resume later)
 - **`TriggerContext`**: trigger metadata:
-  - `trigger_type`: `"sensor_event"`, `"cron"`, `"manual"`, `"webhook"`, `"telegram"`, `"occupancy_duration"`, or `"resume"`
+  - `trigger_type`: `"sensor_event"`, `"cron"`, `"manual"`, `"webhook"`, `"telegram"`, `"occupancy_duration"`, `"cts_window"`, `"dementia_signal"`, or `"resume"`
   - `sensor_id`, `room_name`: where the event came from
   - `media_paths`: list of media file paths
   - `media_type`: type of media
@@ -140,7 +141,35 @@ All core types live in `backend/steps/base.py`:
 3. Add your new step type from the palette
 4. Configure the step settings
 5. Trigger the pipeline (manually or via sensor event)
-6. Check the **Workflows** view for execution results
+6. Check the **Executions** view for live and historical results
+
+### Branching and graph ports
+
+Branching is graph-based. Do not store downstream step IDs in a step's config. Declare ports in `StepMetadata.output_ports`, return the activated port from `StepResult.output_ports`, and connect those ports through `PUT /api/v1/rules/{rule_id}/edges`.
+
+For example, a condition-like step can expose two ports:
+
+```python
+return StepMetadata(
+    type_name="your_condition",
+    display_name="Your Condition",
+    category="flow",
+    icon="mdi-source-branch",
+    description="Branch based on a custom check.",
+    config_schema={...},
+    default_config={...},
+    output_ports=("true", "false"),
+)
+```
+
+At runtime:
+
+```python
+return StepResult(
+    data={"your_condition": {"result": matched}},
+    output_ports=("true",) if matched else ("false",),
+)
+```
 
 ## Adding a Notification Channel
 
@@ -223,10 +252,15 @@ Composition rules remain the same: within a `context_type` group, contexts are O
 
 ### Adding a New API Endpoint
 
-1. Create or edit a router file in `backend/routers/`
-2. Add Pydantic request/response schemas in `backend/schemas/`
-3. Register the router in `backend/main.py`
-4. Add permission patterns in `config/auth.yaml`
+Browser-visible endpoints follow the BFF API design rule.
+
+1. Define a Pydantic response envelope in `backend/schemas/`
+2. Implement the business logic once in `backend/services/`
+3. Wire the service in `backend/main.py` lifespan and expose a typed router dependency when useful
+4. Create or edit a router file in `backend/routers/`
+5. Add permission patterns in `config/auth.yaml`
+6. If agents need the same data, expose an MCP tool that calls the same service function
+7. Add router tests, and add MCP parity tests when the endpoint has an MCP counterpart
 
 ### Adding a New MCP Tool
 
@@ -239,13 +273,17 @@ MCP tools must call a service method; they may not query a repository directly (
 
 ### Live pipeline events
 
-When a new step type emits progress events visible in the Process Activity view, it must publish a `PipelineExecutionEvent` through the `PipelineRunService`. The event carries the execution ID, step label, status, and elapsed milliseconds. `PublishStage` handles this automatically for CTS pipeline stages; CC pipeline steps use the `PipelineExecutor` callback. The `/ws/pipeline` WebSocket channel broadcasts these events to the `useLivePipeline` composable in the frontend. A step does not appear in the live DAG unless it publishes at least one event.
+CC pipeline steps publish live execution events through the `PipelineExecutor` event publisher. Events are typed as `PipelineExecutionEvent` and include execution ID, rule ID, step ID, step label, status, output port, elapsed milliseconds, and a sequence number. The `/ws/pipeline` WebSocket channel broadcasts these events to the frontend.
+
+Rich inspection data comes from `GET /api/v1/workflows/{execution_id}/detail`. Lightweight live lists come from `GET /api/v1/pipeline/runs`.
 
 ### Adding a New Database Model
 
 1. Define the model in `backend/models/` (inherit from `Base`)
 2. Import it in `backend/models/__init__.py` and add to `__all__`
-3. Delete `data/cognitive_companion.db`. Tables are auto-created on restart.
+3. Generate an Alembic migration with `make migration`
+4. Review the migration and apply it with `make migrate`
+5. Add model, service, or router tests that exercise the new table
 
 ### Frontend Widget System
 

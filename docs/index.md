@@ -133,7 +133,7 @@ hero:
     <h2>Beneath the calm surface is a serious local AI stack.</h2>
     <p>
       Computer vision, identity resolution, scene understanding, voice interaction,
-      configurable pipelines, and MCP tools remain fully documented for teams who
+      configurable graph pipelines, execution inspection, and MCP tools remain fully documented for teams who
       want to deploy, inspect, or extend the system.
     </p>
   </div>

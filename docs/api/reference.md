@@ -1,522 +1,229 @@
 # API Reference
 
-All endpoints are under `/api/v1/` and require authentication unless otherwise noted. Authentication is resolved from `X-API-Key` header, `?api_key` query parameter, or `device_key` in the JSON body.
+All endpoints are under `/api/v1`. Endpoints require authentication unless the route uses a documented device key or webhook secret flow.
 
-## Rooms
+Authentication is resolved from API keys, device keys, or route-specific secrets. Authorization uses permission patterns from `config/auth.yaml`.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/rooms` | List all rooms |
-| `POST` | `/rooms` | Create a room |
-| `PUT` | `/rooms/{id}` | Update a room |
-| `DELETE` | `/rooms/{id}` | Delete a room |
+## Execution observability
 
-Rooms represent physical spaces in the household (kitchen, bedroom, hallway). Each sensor and rule context filter references a room.
-
-## Sensors
+Use `GET /workflows/{execution_id}/detail` for inspection. Use `/pipeline/runs` for lightweight live lists and dashboards.
 
 | Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/sensors` | List sensors (filter by `room_id`, `sensor_type`, `source`) |
-| `POST` | `/sensors` | Register a sensor |
-| `PUT` | `/sensors/{id}` | Update a sensor |
-| `DELETE` | `/sensors/{id}` | Delete a sensor |
+| --- | --- | --- |
+| `GET` | `/workflows` | List executions with optional `rule_id`, `status`, and `limit` filters |
+| `GET` | `/workflows/{execution_id}` | Return raw execution data and `pipeline_data_json` |
+| `GET` | `/workflows/{execution_id}/detail` | Return the canonical execution inspector model |
+| `POST` | `/workflows/{execution_id}/cancel` | Cancel a running or waiting execution |
+| `POST` | `/workflows/{execution_id}/rerun` | Start a new execution from the original trigger |
+| `GET` | `/pipeline/runs` | List recent runs. `status=active` returns running and waiting runs |
+| `GET` | `/pipeline/runs/{execution_id}` | Return one lightweight run envelope |
+| `GET` | `/pipeline/ingest/activity` | Return recent frame and rule-trigger activity |
+| `WS` | `/ws/pipeline` | Stream live execution events |
 
-### Sensor Types
+### Execution detail fields
 
-| Type | Description |
-|------|-------------|
-| `camera` | Video camera (reCamera or IP camera) |
-| `presence` | PIR/mmWave occupancy sensor (via Home Assistant) |
-| `button` | Physical button (reTerminal) |
-| `light` | Illuminance sensor (via Home Assistant) |
-| `eink` | E-ink display device |
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | integer | Workflow execution ID |
+| `rule_id` | integer | Rule that ran |
+| `status` | string | `running`, `waiting`, `completed`, `failed`, or `cancelled` |
+| `started_at` | datetime or null | Start time |
+| `completed_at` | datetime or null | Completion time |
+| `rule_name` | string | Rule display name |
+| `trigger_type` | string | Trigger type from the execution payload |
+| `trigger_summary` | string | Server-computed trigger summary |
+| `graph` | object or null | Immutable graph snapshot captured at execution start |
+| `timeline` | list | Step timeline, including skipped graph nodes |
+| `cooloff_triggered` | boolean | Whether the run consumed the rule cool-off window |
+| `error` | string or null | Execution error |
+| `can_cancel` | boolean | Whether cancel is available |
+| `can_rerun` | boolean | Whether rerun is available |
+
+### Pipeline run fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `execution_id` | integer | Workflow execution ID |
+| `rule_id` | integer | Rule ID |
+| `rule_name` | string | Rule display name |
+| `status` | string | Execution status |
+| `started_at` | datetime | Start time |
+| `completed_at` | datetime or null | Completion time |
+| `error` | string or null | Error summary |
+| `nodes` | list | DAG nodes with `id`, `label`, `step_type`, and `status` |
+| `edges` | list | DAG edges with source and target handles |
 
 ## Rules
 
 | Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/rules` | List all rules |
+| --- | --- | --- |
+| `GET` | `/rules` | List rules with recent execution counts |
 | `POST` | `/rules` | Create a rule |
-| `GET` | `/rules/{id}` | Get a rule with pipeline steps, contexts, and dependencies |
-| `PUT` | `/rules/{id}` | Update a rule |
-| `DELETE` | `/rules/{id}` | Delete a rule and its pipeline steps |
-| `POST` | `/rules/{id}/execute` | Manually trigger a rule's pipeline (returns execution ID) |
+| `GET` | `/rules/{rule_id}` | Get a rule with steps, contexts, dependencies, and cron triggers |
+| `PUT` | `/rules/{rule_id}` | Update a rule |
+| `DELETE` | `/rules/{rule_id}` | Delete a rule and related executions |
+| `POST` | `/rules/{rule_id}/execute` | Manually trigger a rule |
+| `GET` | `/rules/{rule_id}/export` | Export a portable rule bundle |
+| `POST` | `/rules/import/preview` | Validate an import bundle |
+| `POST` | `/rules/import` | Import a bundle |
 
-### Rule Fields
+### Rule fields
 
 | Field | Type | Description |
-|-------|------|-------------|
+| --- | --- | --- |
 | `name` | string | Rule name |
-| `description` | string | Human-readable description |
-| `enabled` | boolean | Whether the rule is active |
-| `trigger_types` | list[string] | Trigger types this rule responds to: `sensor_event`, `cron`, `manual`, `webhook`, `telegram`, `occupancy_duration` |
-| `primary_sensor_id` | string | Fallback sensor for context filters (no longer required for cron triggers) |
-| `cron_trigger_ids` | list[int] | IDs of `CronTrigger` rows that schedule this rule (many-to-many via `rule_cron_triggers`) |
-| `cool_off_minutes` | integer | Minimum minutes between triggers |
-| `max_daily_triggers` | integer | Maximum triggers per day |
-| `max_concurrent_executions` | integer | Maximum simultaneous executions (default 1) |
-| `execution_timeout_minutes` | integer | Maximum minutes a pipeline can run (default 5) |
-| `webhook_config` | object | Webhook settings: `{secret}` (rule responds to webhook when `"webhook"` is in `trigger_types`) |
-| `occupancy_config` | object | Occupancy threshold: `{min_minutes: int}` (rule responds when `"occupancy_duration"` is in `trigger_types`) |
-| `telegram_trigger_config` | object | Telegram settings: `{command, allowed_chat_ids, respond_with_ack}` |
+| `description` | string or null | Optional description |
+| `enabled` | boolean | Whether the rule can run |
+| `trigger_types` | list[string] | Trigger types: `sensor_event`, `cron`, `manual`, `webhook`, `telegram`, `occupancy_duration`, `cts_window`, `dementia_signal` |
+| `cron_trigger_ids` | list[integer] | Shared cron schedules linked to the rule |
+| `primary_sensor_id` | string or null | Fallback sensor for context and manual media lookup |
+| `cool_off_minutes` | integer | Minimum time between completed cool-off-worthy runs |
+| `max_daily_triggers` | integer | Daily execution cap |
+| `max_concurrent_executions` | integer | Concurrent execution cap |
+| `execution_timeout_minutes` | integer | Execution timeout |
+| `webhook_config` | object or null | Webhook secret and settings |
+| `occupancy_config` | object or null | Occupancy duration settings |
+| `telegram_trigger_config` | object or null | Telegram command settings |
 
-Cron schedules are managed separately via `CronTrigger` (see Cron Triggers section). Rules link to cron schedules through the `cron_trigger_ids` field.
+## Pipeline authoring
 
-### Pipeline Steps
+Pipelines are directed graphs. `order` is a deterministic tiebreaker, not the runtime sequence.
 
 | Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/rules/{id}/steps` | List pipeline steps for a rule (ordered) |
-| `POST` | `/rules/{id}/steps` | Add a step (auto-assigned to end of sequence) |
-| `PUT` | `/rules/{id}/steps/{step_id}` | Update a step's type, config, label, or enabled flag |
-| `DELETE` | `/rules/{id}/steps/{step_id}` | Remove a step (remaining steps re-ordered) |
-| `PUT` | `/rules/{id}/steps/reorder` | Bulk reorder steps: `[{id, order}, ...]` |
+| --- | --- | --- |
+| `GET` | `/rules/{rule_id}/steps` | List steps |
+| `POST` | `/rules/{rule_id}/steps` | Add a step |
+| `PUT` | `/rules/{rule_id}/steps/{step_id}` | Update a step |
+| `DELETE` | `/rules/{rule_id}/steps/{step_id}` | Delete a step |
+| `PUT` | `/rules/{rule_id}/steps/positions` | Batch update canvas positions |
+| `GET` | `/rules/{rule_id}/edges` | List graph edges |
+| `PUT` | `/rules/{rule_id}/edges` | Replace all graph edges atomically |
+| `POST` | `/rules/{rule_id}/validate` | Validate templates and graph structure |
 
-### Pipeline Step Fields
+### Pipeline step fields
 
 | Field | Type | Description |
-|-------|------|-------------|
-| `step_type` | string | One of the 22 step types |
-| `label` | string | Display label |
-| `config_json` | object | Step-type-specific configuration |
-| `enabled` | boolean | Whether the step is active |
-| `order` | integer | Execution order within the pipeline |
-| `next_step_on_true` | integer | Step ID to jump to when condition is true |
-| `next_step_on_false` | integer | Step ID to jump to when condition is false |
+| --- | --- | --- |
+| `id` | integer | Step ID |
+| `rule_id` | integer | Parent rule ID |
+| `order` | integer | Stable ordering and graph tiebreaker |
+| `step_type` | string | Registered step type |
+| `label` | string or null | Slug label used by template references |
+| `config_json` | object | Step-specific configuration |
+| `enabled` | boolean | Whether the step can run |
+| `position_x` | number | Canvas x-coordinate |
+| `position_y` | number | Canvas y-coordinate |
 
-### Contexts and Dependencies
+### Pipeline edge fields
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/rules/{id}/contexts` | List context filters |
-| `POST` | `/rules/{id}/contexts` | Add a context filter |
-| `DELETE` | `/rules/{id}/contexts/{ctx_id}` | Remove a context filter |
-| `GET` | `/rules/{id}/dependencies` | List rule dependencies |
-| `POST` | `/rules/{id}/dependencies` | Add a dependency on another rule |
-| `DELETE` | `/rules/{id}/dependencies/{dep_id}` | Remove a dependency |
+| Field | Type | Description |
+| --- | --- | --- |
+| `source_step_id` | integer | Source step |
+| `source_port` | string | Source output port. Defaults to `main` |
+| `target_step_id` | integer | Target step |
+| `target_port` | string | Target input port. Defaults to `main` |
 
-### Context Filter Types
+The validator rejects unknown step IDs, unknown ports, invalid graph structure, and duplicate outgoing edges for the same source port.
 
-| Type | Description |
-|------|-------------|
-| `room` | Rule only fires for events from specified rooms |
-| `time_range` | Rule only fires within a time window (e.g., 08:00-22:00) |
-| `day_of_week` | Rule only fires on specified days |
-| `person_presence` | Rule requires specified persons to be present (or absent) |
-| `person_activity` | Rule requires a recent activity (or absence thereof) for a person |
-| `room_transition` | Rule fires only on specific room transitions (entering/exiting) for a person |
-| `scene_trend` | Rule fires based on object trend anomaly severity in specified rooms |
-
-## Workflows
+## Pipeline metadata
 
 | Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/workflows` | List workflow executions (filter by `rule_id`, `status`, `limit`) |
-| `GET` | `/workflows/{id}` | Get execution detail with full pipeline data |
-| `POST` | `/workflows/{id}/cancel` | Cancel a running or waiting execution |
+| --- | --- | --- |
+| `GET` | `/pipeline/step-types` | Registered step types with schemas, UI hints, output schemas, tags, and output ports |
+| `GET` | `/pipeline/channel-types` | Registered notification channel types |
+| `GET` | `/pipeline/filter-types` | Registered context filter types |
+| `GET` | `/pipeline/llm-models` | Named LLM registry entries |
+| `GET` | `/pipeline/data-keys` | Template autocomplete variables and step output schemas |
+| `POST` | `/pipeline/cron/preview` | Validate a cron expression and preview next runs |
 
-### Workflow Statuses
-
-| Status | Description |
-|--------|-------------|
-| `running` | Pipeline is actively executing |
-| `waiting` | Paused at a wait step, will resume at `resume_at` |
-| `completed` | All steps finished successfully |
-| `failed` | A step failed and pipeline halted |
-| `cancelled` | Manually cancelled |
-
-## Pipeline Metadata
+## Contexts, dependencies, and cron
 
 | Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/pipeline/step-types` | List all registered step types with metadata and config schemas |
-| `GET` | `/pipeline/channel-types` | List all registered notification channel types |
-| `GET` | `/pipeline/filter-types` | List all registered context filter types |
-| `GET` | `/pipeline/runs` | List recent pipeline runs (`?status=active` for live-only) |
-| `GET` | `/pipeline/runs/{execution_id}` | Single run envelope |
-| `GET` | `/pipeline/ingest/activity` | Recent reCamera ingest events |
-| `WS` | `/ws/pipeline` | Live pipeline execution events (authenticated via `sec-websocket-protocol`) |
+| --- | --- | --- |
+| `GET` | `/rules/{rule_id}/contexts` | List context filters |
+| `POST` | `/rules/{rule_id}/contexts` | Add a context filter |
+| `DELETE` | `/rules/{rule_id}/contexts/{context_id}` | Delete a context filter |
+| `GET` | `/rules/{rule_id}/dependencies` | List dependencies |
+| `POST` | `/rules/{rule_id}/dependencies` | Add a dependency |
+| `DELETE` | `/rules/{rule_id}/dependencies/{dependency_id}` | Delete a dependency |
+| `GET` | `/cron-triggers` | List cron triggers |
+| `POST` | `/cron-triggers` | Create a cron trigger |
+| `PUT` | `/cron-triggers/{trigger_id}` | Update a cron trigger |
+| `DELETE` | `/cron-triggers/{trigger_id}` | Delete a cron trigger |
 
-These endpoints return metadata from the plugin registries (StepRegistry, ChannelRegistry, FilterRegistry). The frontend uses `/pipeline/step-types` to dynamically populate the step palette and config editor.
+## Rooms and sensors
+
+| Resource | Endpoints |
+| --- | --- |
+| Rooms | `GET /rooms`, `POST /rooms`, `PUT /rooms/{id}`, `DELETE /rooms/{id}` |
+| Sensors | `GET /sensors`, `POST /sensors`, `PUT /sensors/{id}`, `DELETE /sensors/{id}` |
+| Home Assistant sync | `POST /ha/sync/rooms`, `POST /ha/sync/sensors`, `GET /ha/entities`, `GET /ha/media-players` |
+
+## People and presence
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/persons` | List household members |
+| `POST` | `/persons` | Create a member |
+| `GET` | `/persons/{person_id}` | Get member details |
+| `PATCH` | `/persons/{person_id}` | Update a member |
+| `DELETE` | `/persons/{person_id}` | Delete a member |
+| `POST` | `/persons/{person_id}/enroll` | Upload face enrollment photos |
+| `GET` | `/persons/{person_id}/enrollment` | Get enrollment status |
+| `DELETE` | `/persons/{person_id}/enrollment` | Delete enrollment |
+| `GET` | `/persons/locations` | Current location envelopes for all tracked members |
+| `GET` | `/persons/{person_id}/location` | Current location envelope for one member |
+| `GET` | `/persons/{person_id}/presence-history` | Presence history |
+| `GET` | `/rooms/{room_id}/occupants` | Current room occupants |
+| `GET` | `/persons/{person_id}/dwell` | Dwell summary |
+
+## CTS endpoints
+
+CTS routes cover camera admin, calibration, PH identity review, presence, signals, trajectories, live data, overlap groups, and CTS window triggers. They require CTS enablement and the appropriate API permissions.
+
+Representative paths include:
+
+| Path | Purpose |
+| --- | --- |
+| `/cts/cameras` | CTS camera registration and health |
+| `/cts/calibration/*` | Homography, visibility, privacy zones, and adjacency |
+| `/cts/ph/*` | Person hypothesis lists, details, corrections, merges, splits, and deletes |
+| `/cts/presence/*` | Presence configuration and snapshots |
+| `/cts/signals/*` | Dementia and routine-change signals |
+| `/cts/window-triggers` | CTS window trigger configuration |
+
+## Knowledge and resident content
+
+| Resource | Representative endpoints |
+| --- | --- |
+| Knowledge documents | `POST /knowledge`, `GET /knowledge`, `GET /knowledge/{doc_id}`, `PATCH /knowledge/{doc_id}`, approval, archive, restore, delete, re-embed |
+| Knowledge images | `POST /knowledge/{doc_id}/images`, `PATCH /knowledge/{doc_id}/images/{img_id}`, `DELETE /knowledge/{doc_id}/images/{img_id}` |
+| Info cards | CRUD, approve, archive, restore, suggest, and slot update endpoints under `/info-cards` |
+| Interactions | `GET /knowledge-interactions/queries`, `/quiz-sessions`, and `/info-card-deliveries` |
 
 ## Webhooks
 
 | Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/webhooks/{rule_id}` | Trigger a rule's pipeline via webhook |
-| `POST` | `/webhooks/{rule_id}/generate-secret` | Generate or regenerate a webhook secret for a rule |
-
-Webhook requests require an `X-Webhook-Secret` header matching the rule's configured secret (validated via HMAC constant-time comparison). The JSON request body becomes `pipeline_data["trigger_input"]` in the triggered pipeline.
-
-## Activities
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/activities` | List detected person activities (filter by `person_id`, `activity_type`, `room_name`) |
-
-## Alerts
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/alerts` | List alerts (filter by `resolved`, `room_name`, `alert_type`) |
-| `GET` | `/alerts/{id}` | Get a single alert |
-| `POST` | `/alerts/{id}/action` | Dismiss or request assistance for an alert |
-
-### Alert Actions
-
-| Action | Description |
-|--------|-------------|
-| `dismiss` | Mark the alert as resolved |
-| `assist` | Request assistance (escalates the alert) |
-
-## Events
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/events` | List event logs (filter by `rule_name`, `status`, `limit`) |
-
-Event logs contain the full `pipeline_data_json` from each rule execution, providing a complete audit trail.
-
-## Persons
-
-### Member Management
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/persons` | List all household members (includes enrollment status) |
-| `POST` | `/persons` | Register a new member |
-| `GET` | `/persons/{id}` | Get member details |
-| `PATCH` | `/persons/{id}` | Update a member |
-| `DELETE` | `/persons/{id}` | Remove a member and their data |
-
-### Face Enrollment
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/persons/enrolled` | List face enrollment status from person-ID service |
-| `POST` | `/persons/{id}/enroll` | Upload reference photos to enroll a face (multipart) |
-| `GET` | `/persons/{id}/enrollment` | Get enrollment details (embedding count, created date) |
-| `DELETE` | `/persons/{id}/enrollment` | Remove face enrollment data |
-
-The enrollment endpoints proxy requests to the [person-identification-service](https://github.com/SilverMind-Project/person-identification-service). Upload 5-10 reference photos per person through the admin UI (**Members & Enrollment** page) or via the API.
-
-### Location Tracking
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/persons/locations` | Current location of all tracked members (returns `PersonLocationEnvelope[]`) |
-| `GET` | `/persons/{id}/location` | Current location of a specific member (returns `PersonLocationEnvelope`) |
-| `GET` | `/persons/{id}/history` | Location timeline (`?hours=24`) |
-| `GET` | `/persons/{id}/sightings` | Recent camera sightings (`?limit=20`) |
-
-## CTS Envelopes
-
-All CTS-facing endpoints return typed envelopes that include explicit data-quality fields. These fields are always server-computed and never inferred client-side (design rule D5).
-
-### PersonLocationEnvelope
-
-Returned by `GET /persons/locations` and `GET /persons/{id}/location`.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `person_id` | string | Household member identifier |
-| `room_id` | integer | Current room |
-| `room_name` | string | Human-readable room name |
-| `since` | ISO-8601 | When the current segment opened |
-| `entry_source` | string | Raw entry source from the segment state machine |
-| `confidence` | float | Location confidence (0.0-1.0) |
-| `is_inferred` | boolean | Whether the location was inferred from transit |
-| `display_name` | string | Human-readable name from HouseholdMember |
-| `quality` | float | PH mean_quality from the CTS wire (0.0-1.0) |
-| `staleness_seconds` | integer | Seconds since last observation |
-| `source` | string | Canonical provenance badge: `observation`, `transition`, `manual_override`, `ph_continuation` |
-| `floor_point` | object or null | Last known floor position in metres (`x_m`, `y_m`) |
-
-### RoomOccupancyEnvelope
-
-Returned by `GET /cts/occupancy`.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `room_id` | integer | Room identifier |
-| `room_name` | string | Room name |
-| `occupants` | PersonLocationEnvelope[] | All persons currently in the room |
-| `as_of` | ISO-8601 | Snapshot timestamp |
-
-### DementiaSignalEnvelope
-
-Returned by `GET /cts/signals` and `GET /cts/signals/unacknowledged`. Extends the base signal shape with:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `confidence` | float | Signal confidence (default 1.0) |
-| `narrative` | string | Plain-language description of the signal |
-| `evidence_ref` | string or null | Link to supporting evidence, when available |
-
-### TrackedPersonSummaryEnvelope
-
-Returned by `GET /cts/persons/summary`.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `person_id` | string | Member identifier |
-| `display_name` | string | Member display name |
-| `current_location` | PersonLocationEnvelope or null | Current location with quality metadata |
-| `last_seen` | ISO-8601 or null | Most recent sighting timestamp |
-| `open_signal_count` | integer | Count of unacknowledged dementia signals |
-| `mean_quality` | float | Average observation quality across recent PHs |
-
-### PipelineRunEnvelope
-
-Returned by `GET /pipeline/runs` and `GET /pipeline/runs/{execution_id}`.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `execution_id` | integer | Unique execution identifier |
-| `rule_id` | integer | The rule that triggered the run |
-| `rule_name` | string | Rule display name |
-| `status` | string | `running`, `waiting`, `completed`, `failed`, `cancelled` |
-| `triggered_at` | ISO-8601 | UTC start timestamp |
-| `trigger_type` | string | How the run was initiated |
-| `steps` | list | Step summaries: label, type, status, elapsed_ms |
-
-### IngestActivityEnvelope
-
-Returned by `GET /pipeline/ingest/activity`.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `sensor_id` | string | reCamera sensor identifier |
-| `room_name` | string | Room where the camera is located |
-| `last_frame_at` | ISO-8601 | Timestamp of most recent ingested frame |
-| `frames_last_hour` | integer | Frame count in the last 60 minutes |
-
-### Error responses
-
-All CTS endpoints return explicit error responses when required data is missing or upstream is unavailable. No fabricated zero values or silent fallbacks are returned. Examples:
-
-| Status | When |
-|--------|------|
-| `404` | Execution or PH not found |
-| `503` | Required service not available (e.g., CTS not enabled) |
-| `502` | Upstream tracking-orchestrator returned an error |
-
-## Device Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/device/recamera` | Upload image from reCamera (device key auth) |
-| `POST` | `/device/reterminal` | reTerminal button/command endpoint |
-
-Device endpoints accept authentication via `device_key` in the JSON body.
-
-## Image (E-Ink Display)
-
-### Active Image
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/image/active` | Active image for the authenticated device |
-| `GET` | `/image/active/{sensor_id}` | Active image for a specific sensor (admin) |
-
-### Templates
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/image/templates` | List all templates |
-| `POST` | `/image/templates` | Create a template (multipart upload) |
-| `PUT` | `/image/templates/{id}` | Update regions or metadata |
-| `DELETE` | `/image/templates/{id}` | Remove a template |
-
-### Rendering
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/image/render` | Render text onto a template for target devices |
-| `POST` | `/image/preview` | Preview a render without saving (returns PNG) |
-| `POST` | `/image/reset` | Reset a device's display to default template |
-
-## Occupancy
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/occupancy` | Room occupancy from presence sensors |
-
-## Knowledge Repository
-
-See [Knowledge Repository](/features/knowledge-repository) for full feature documentation.
-
-### Documents
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/v1/knowledge/documents` | Create document (multipart: title, source_text, tags, images[]) |
-| `GET` | `/api/v1/knowledge/documents` | List documents (filters: status, tag, q) |
-| `GET` | `/api/v1/knowledge/documents/{id}` | Get document with images and chunk count |
-| `PATCH` | `/api/v1/knowledge/documents/{id}` | Update title, source_text, tags |
-| `DELETE` | `/api/v1/knowledge/documents/{id}` | Hard delete (409 if active artifacts reference it) |
-| `POST` | `/api/v1/knowledge/documents/{id}/approve` | Approve document for use |
-| `POST` | `/api/v1/knowledge/documents/{id}/archive` | Soft-delete (restorable) |
-| `POST` | `/api/v1/knowledge/documents/{id}/restore` | Restore from archive |
-| `POST` | `/api/v1/knowledge/documents/{id}/reembed` | Force re-chunk and re-embed |
-| `POST` | `/api/v1/knowledge/documents/{id}/images` | Attach image to document |
-| `PATCH` | `/api/v1/knowledge/documents/{id}/images/{img_id}` | Update image alt_text, ord |
-| `DELETE` | `/api/v1/knowledge/documents/{id}/images/{img_id}` | Delete image from document |
-
-### Info Cards
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/v1/info-cards` | Create info card (layout_id, title, body_text, voice_instruction) |
-| `POST` | `/api/v1/info-cards/suggest` | LLM-generated paraphrase from document |
-| `GET` | `/api/v1/info-cards` | List info cards (filters: status, tag, document_id) |
-| `GET` | `/api/v1/info-cards/{id}` | Get info card with resolved slot manifest |
-| `PATCH` | `/api/v1/info-cards/{id}` | Update fields; layout change re-renders variants |
-| `DELETE` | `/api/v1/info-cards/{id}` | Hard delete (409 if referenced by active step) |
-| `POST` | `/api/v1/info-cards/{id}/approve` | Approve card (validates min_images for layout) |
-| `POST` | `/api/v1/info-cards/{id}/archive` | Soft-delete |
-| `POST` | `/api/v1/info-cards/{id}/restore` | Restore from archive |
-| `PUT` | `/api/v1/info-cards/{id}/slots/{i}` | Set/replace slot image (triggers variant render) |
-| `PATCH` | `/api/v1/info-cards/{id}/slots/{i}` | Update slot alt_text, crop_hints |
-| `DELETE` | `/api/v1/info-cards/{id}/slots/{i}` | Clear slot and purge variants |
-| `POST` | `/api/v1/info-cards/{id}/rerender` | Force re-render all slot variants |
-
-### Quizzes
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/v1/quizzes` | Create quiz (title, question_layout_id, intro_voice_template, voice_instruction) |
-| `POST` | `/api/v1/quizzes/suggest` | LLM-generated quiz draft from document |
-| `POST` | `/api/v1/quizzes/voice-instruction-suggest` | LLM-generated voice instruction |
-| `GET` | `/api/v1/quizzes` | List quizzes (filters: status, tag) |
-| `GET` | `/api/v1/quizzes/{id}` | Get quiz with ordered questions |
-| `PATCH` | `/api/v1/quizzes/{id}` | Update quiz fields |
-| `DELETE` | `/api/v1/quizzes/{id}` | Hard delete (409 if referenced by active step) |
-| `POST` | `/api/v1/quizzes/{id}/approve` | Approve quiz |
-| `POST` | `/api/v1/quizzes/{id}/archive` | Soft-delete |
-| `POST` | `/api/v1/quizzes/{id}/restore` | Restore from archive |
-| `POST` | `/api/v1/quizzes/{id}/questions` | Create question |
-| `PATCH` | `/api/v1/quizzes/{id}/questions/{qid}` | Update question |
-| `DELETE` | `/api/v1/quizzes/{id}/questions/{qid}` | Delete question |
-| `POST` | `/api/v1/quizzes/{id}/questions/reorder` | Bulk reorder (items: [{id, ord}]) |
-| `POST` | `/api/v1/quizzes/{id}/questions/{qid}/regenerate` | LLM-regenerate single question |
-| `PUT` | `/api/v1/quizzes/{id}/questions/{qid}/image` | Set question image |
-| `DELETE` | `/api/v1/quizzes/{id}/questions/{qid}/image` | Remove question image |
-
-### Layouts and Voice Defaults
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/knowledge/layouts` | List all layouts (filter: applies_to) |
-| `GET` | `/api/v1/knowledge/layouts/{id}` | Single layout detail |
-| `GET` | `/api/v1/knowledge/voice-defaults` | Default voice instructions per type |
-
-### Interactions
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/knowledge-interactions/queries` | Senior knowledge queries (filters: date, answered_via, q) |
-| `GET` | `/api/v1/knowledge-interactions/quiz-sessions` | Quiz sessions (filters: date, status) |
-| `GET` | `/api/v1/knowledge-interactions/quiz-sessions/{id}` | Session detail with responses |
-| `GET` | `/api/v1/knowledge-interactions/info-card-deliveries` | Info card deliveries (filters: date) |
-
-### Analytics
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/v1/knowledge/analytics/tags` | Per-tag stats (doc count, quiz count, avg score) |
-
-## MCP Tools
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/mcp/tools` | List available MCP tools with schemas |
-| `POST` | `/mcp/tools/{name}` | Execute an MCP tool |
-
-The knowledge repository adds 3 MCP tools: `query_knowledge_base`, `submit_quiz_answer`, `complete_quiz_session`. See [MCP Integration](/features/mcp-integration) for the full tool reference.
-
-## Interactive Responses
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/interactive-responses` | Record user response to an interactive prompt step |
-
-Used by the frontend to record responses from interactive prompt steps. The request body includes:
-
-```json
-{
-  "execution_id": 123,
-  "step_id": 456,
-  "channel": "pwa_popup_text",
-  "action": "dismiss",
-  "raw_response": {}
-}
-```
-
-Valid channels: `pwa_popup_text`, `pwa_realtime_ai`, `timeout`  
-Valid actions: `escalate`, `dismiss`
-
-The service records the response, updates `pipeline_data`, cancels any pending timeout task, and triggers immediate pipeline resumption.
-
-## Home Assistant Sync
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/ha/sync/rooms` | Import rooms (areas) from Home Assistant |
-| `POST` | `/ha/sync/sensors` | Import sensors from Home Assistant areas |
-
-## Other Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/health` | Health check (no auth required) |
-| `WS` | `/ws` | WebSocket for audio streaming and notifications |
-| `GET` | `/admin/config` | Inspect active configuration |
-
-## Authentication
-
-### Request Authentication
-
-Keys are resolved in priority order:
-
-1. `X-API-Key` HTTP header
-2. `?api_key` query parameter
-3. `device_key` field in JSON request body
-
-### Roles
-
-| Role | Access Level |
-|------|-------------|
-| `admin` | Full access to all endpoints |
-| `caregiver` | Read access + alert actions |
-| `mcp_readonly` | Read access + MCP tools + rule triggering |
-
-### Permission Patterns
-
-Permissions use `fnmatch` syntax matching against `METHOD /path`:
-
-```yaml
-caregiver:
-  - "GET /api/v1/*"
-  - "POST /api/v1/alerts/*/action"
-```
-
-## Error Responses
-
-All errors follow a consistent format:
-
-```json
-{
-  "detail": "Error message describing what went wrong"
-}
-```
-
-| Status Code | Meaning |
-|-------------|---------|
-| 401 | Authentication required or invalid API key |
-| 403 | Permission denied for this endpoint |
-| 404 | Resource not found |
-| 409 | Conflict (e.g., duplicate resource) |
-| 422 | Validation error (invalid request body) |
-| 500 | Internal server error |
+| --- | --- | --- |
+| `POST` | `/webhooks/{rule_id}` | Trigger a rule with the configured webhook secret |
+| `POST` | `/webhooks/{rule_id}/generate-secret` | Generate or rotate the rule webhook secret |
+
+Webhook requests use `X-Webhook-Secret`. The JSON body is available to the pipeline as `trigger_input`.
+
+## Errors
+
+| Status | Meaning |
+| --- | --- |
+| `400` | Invalid operation for the resource state |
+| `401` | Missing or invalid authentication |
+| `403` | Authenticated key lacks permission |
+| `404` | Resource not found |
+| `409` | Conflict, such as a duplicate rule name or step label |
+| `422` | Validation error, including template or graph validation failures |
+| `503` | Required service unavailable |
+
+## Related pages
+
+- [Architecture](/guide/architecture)
+- [Composable Pipelines](/features/pipeline)
+- [Extending the Pipeline](/development/extending-pipeline)

@@ -72,7 +72,11 @@ CTS publishes and consumes raw protobuf bytes: no JSON, no base64. All streams u
 | `tracking.events` | publish (CTS writes) | `"event"` | `TrackingEvent` |
 | `tracking.revisions` | publish | `"revision"` | `IdentityRevision` |
 | `tracking.signals` | publish | `"signal"` | `DementiaSignal` |
+| `tracking.presence` | publish | `"event"` | `PresenceEvent` (appeared / disappeared) |
+| `tracking.dwell` | publish | `"event"` | `DwellEvent` (started / ended with duration) |
 | `scene.samples` | publish | `"sample"` | `SceneSample` |
+
+`tracking.events` is a high-rate live feed for the UI, throttled per camera by `live_publish_max_hz` (default 3 Hz; inference still runs every frame). `tracking.presence` and `tracking.dwell` are low-rate semantic state-change streams, so downstream rule load tracks human activity rather than camera frame rate.
 
 ::: warning
 Redis clients must set `decode_responses=False` so binary payloads round-trip unchanged.
@@ -92,7 +96,10 @@ Key hypertables:
 | `dementia_signals` | Regular | Behavioral signal detections with severity and z-scores |
 | `dementia_signals_daily` | Continuous aggregate | Daily rollup of signal counts by kind and severity |
 | `tagged_keyframes` | Regular | Sampled JPEG keyframes with annotations |
-| `person_hypotheses` | Regular | Physical-track entities (PHs) with identity assignments; `ph_id` is the single cross-camera identifier. Replaced `global_tracks` in migration `0003_ph_native_purge`. |
+| `person_hypotheses` | Regular | Physical-track entities (PHs) with identity assignments and per-orientation view prototypes; `ph_id` is the single cross-camera identifier. |
+| `reid_gallery` | Regular | Body-appearance embeddings per identity, orientation-tagged; seeded online from recognized-face frames. |
+| `camera_topology_edges` | Regular | Learned directed handoff edges with transit-time distributions, used to gate cross-camera revival. |
+| `co_presence_links` | Regular | Same-identity links between open PHs in an overlap group (opposite-perspective cameras). |
 
 ## Boundaries
 

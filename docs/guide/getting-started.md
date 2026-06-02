@@ -13,9 +13,9 @@ This guide walks you through getting Cognitive Companion running on your local n
 | **vLLM** | Vision model serving | Cosmos-Reason2 via OpenAI-compatible API |
 | **llama.cpp** `llama-server` | General reasoning model | Gemma 4 via OpenAI-compatible API |
 | **Triton Inference Server** | Embedding model for RAG | embeddinggemma-300m for knowledge repository |
-| **Python 3.12** | Backend runtime | |
+| **Python 3.14** | Backend runtime | |
 | **[uv](https://docs.astral.sh/uv/)** | Python package manager | For local development |
-| **Node.js 20+** | Frontend build | For admin console, WebSocket audio interface |
+| **Node.js 24.16.x** | Frontend build | For admin console, WebSocket audio interface |
 
 ### Optional Components
 
@@ -142,7 +142,7 @@ docker run -p 80:80 cognitive-companion-ui
 3. **Create rooms.** Define the physical spaces in your home (kitchen, bedroom, etc.)
 4. **Register sensors.** Add cameras and presence sensors, assigning each to a room
 5. **Enroll household members.** Go to **Members & Enrollment**, register each person, then click the face-recognition icon to upload 5-10 reference photos per person
-6. **Create rules.** Use the visual pipeline builder to assemble step sequences
+6. **Create rules.** Use the visual pipeline builder to assemble step graphs
 
 ### Your First Rule
 
@@ -154,7 +154,7 @@ person_identification → llm_call (vision) → llm_call (reasoning) → notific
 
 1. Go to **Rules** → **New Rule**, enter a name, and click **Create**  -  you'll land on the rule detail page
 2. On the **Settings** tab, set the trigger type to `sensor_event` and bind it to a camera sensor
-3. Switch to the **Pipeline** tab and add steps from the palette in order:
+3. Switch to the **Pipeline** tab, add nodes from the palette, and connect them with edges:
    - **Person Identification**: identify who is in the frame
    - **LLM Call** (vision, e.g. Cosmos Reason2): describe what is happening
    - **LLM Call** (reasoning, e.g. Gemma 4): decide if a notification is warranted
@@ -162,5 +162,4 @@ person_identification → llm_call (vision) → llm_call (reasoning) → notific
 4. Configure each step's settings in its config dialog
 5. Enable the rule and save
 
-The rule will now execute whenever the bound camera sends an event. You can monitor execution in the **Workflows** view and inspect pipeline data in the **Events** log.
-
+The rule will now execute whenever the bound camera sends an event. You can monitor live and historical runs in the **Executions** view and inspect pipeline data in the **Events** log.

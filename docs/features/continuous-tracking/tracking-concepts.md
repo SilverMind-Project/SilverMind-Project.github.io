@@ -106,34 +106,41 @@ cost(PH i, observation j) = alpha_geo * geo_cost + alpha_app * app_cost + alpha_
 | Component | Default weight | Measurement |
 |-----------|----------------|-------------|
 | `geo_cost` | `alpha_geo = 0.5` | Normalized Mahalanobis distance on the floor plane |
-| `app_cost` | `alpha_app = 0.4` | Cosine distance between PH gallery mean and observation embedding |
+| `app_cost` | `alpha_app = 0.4` | Cosine distance to the best-matching PH view prototype (max-over-views), falling back to the single gallery mean when no prototypes exist |
 | `height_cost` | `alpha_height = 0.1` | Gaussian score on height difference |
 
 Two hard gates return `GATE_INF` (never match):
-- Geometric gate: squared Mahalanobis distance `> gate_chi2 (9.21)`.
-- Identity-conflict gate: the observation carries a committed face `person_id` that differs from the PH's identity at confidence `>= face_conflict_threshold (0.70)`.
+
+- Geometric gate: squared Mahalanobis distance `> gate_chi2 (9.21)`. For uncalibrated observations the gate is widened to `uncalibrated_gate_chi2 (21.0)` and appearance is weighted more heavily, because synthetic floor points are not metric.
+- Identity-conflict gate: the observation carries a recognized face `person_id` that differs from the PH's identity at confidence `>= face_conflict_threshold (0.70)`.
 
 ### PH lifecycle
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Active: unmatched calibrated obs\ninside room polygon (spawn)
+    [*] --> Active: unmatched obs (spawn)\nor revival of a closed PH
     Active --> Active: matched obs\n(Kalman update, EMAs)
     Active --> Coasting: no match this frame\n(grace not yet exceeded)
     Coasting --> Active: re-matched
     Coasting --> Closed: unobserved > ph_close_grace_s
+    Closed --> Active: revival reuses ph_id\n(same or adjacent camera)
     Closed --> [*]
-    Closed --> Continuation: new PH spawns nearby\nwithin inferred_handoff_max_s
 ```
 
 | Parameter | Default | Meaning |
 |-----------|---------|---------|
 | `min_observations_to_publish` | 3 | Minimum observations before a PH appears in downstream outputs |
-| `ph_close_grace_s` | 5.0 s | Grace period before an unmatched PH is closed |
-| `inferred_handoff_max_s` | 600 s | Window for linking a new PH to a recently closed one |
-| `inferred_handoff_max_distance_m` | 5.0 m | Max floor distance for a continuation link |
+| `ph_close_grace_s` | 15.0 s | Grace period before an unmatched PH is closed |
+| `revive_max_age_s` | 30.0 s | A closed PH older than this is not revived |
+| `revive_max_distance_m` | 2.0 m | Spawn point versus closed PH last position (same-camera revival) |
+| `revive_appearance_min_sim` | 0.55 | Minimum appearance cosine for same-camera revival |
+| `inferred_handoff_max_s` | 600 s | Window for publishing a continuation candidate to CC |
 
 A PH with `observation_count < min_observations_to_publish` is tracked internally but produces no `WorldFrameSnapshot` and no downstream output, filtering out single-frame detection noise.
+
+### PH revival (continuity)
+
+Before spawning a brand-new UNKNOWN PH for an unmatched observation, the tracker tries to revive a recently-closed PH that matches on space, time, and appearance, reusing its `ph_id`, identity, and gallery state. This keeps one person mapped to one PH through brief occlusions, turns, and association gaps, instead of fragmenting into many short-lived hypotheses. Same-camera revival uses `revive_*` thresholds above; cross-camera revival is gated by the learned camera topology and multi-view appearance (see [How identity crosses cameras](#how-identity-crosses-cameras)).
 
 ## PersonHypothesis (PH)
 
@@ -155,7 +162,7 @@ Key PH fields:
 | `height_estimate_m` | EMA of height estimates (`alpha = 0.1`) |
 | `mean_quality` | EMA of per-observation `CropQuality` scores: `0.1 * obs.quality + 0.9 * prev`. Travels to CC as the `quality` field on `PersonLocationEnvelope`. |
 
-**Uncalibrated cameras.** When a camera has no homography, `SpatialProjectionStage` yields `FloorPoint(calibrated=False)`. `WorldTrackingStage._synthetic_floor_point` maps the bbox centre into a 4 m virtual room offset into a per-camera 200 m tile, still flagged `calibrated=False`. The Kalman filter and per-camera tracking work on the virtual tile; `dedup_observations` skips uncalibrated observations. For uncalibrated home cameras, identity crosses cameras only through the shared ReID gallery, cross-GT face propagation, and PH continuation.
+**Uncalibrated cameras.** When a camera has no homography, `SpatialProjectionStage` yields `FloorPoint(calibrated=False)`. `WorldTrackingStage._synthetic_floor_point` maps the bbox centre into a 4 m virtual room offset into a per-camera 200 m tile, still flagged `calibrated=False`. Because synthetic floor points jump as a person walks, the association gate is widened for uncalibrated observations (`uncalibrated_gate_chi2 = 21.0`) and appearance is weighted over geometry, so a turning or walking person is not dropped and respawned. Floor-distance dedup still skips uncalibrated observations, but appearance dedup within a declared overlap group does not. For uncalibrated home cameras, identity crosses cameras through the shared ReID gallery, recognized-face propagation, PH continuation, group-appearance dedup, and cross-camera revival.
 
 ### Quality and provenance
 
@@ -173,7 +180,7 @@ See [Frame Pipeline stage 7](./frame-pipeline.md#7-world-tracking) for the confi
 
 When a person leaves the camera field and then re-enters, the world tracker detects the handoff via `PHContinuationCandidate`. When a new PH spawns, the tracker looks back at recently closed PHs: if a closed PH is within `inferred_handoff_max_s` (600 s) and `inferred_handoff_max_distance_m` (5.0 m), a `PHContinuationCandidate` is emitted with both PH IDs, the elapsed time, and the spatial distance.
 
-The continuation candidate carries `predecessor_identity_id`, so the CC side can inherit the prior identity without waiting for the Bayesian resolver to re-accumulate evidence. The Bayesian identity resolver then runs normally on the new PH; the prior built from the inherited gallery and face lock maintains the identity across the gap.
+The continuation candidate carries `predecessor_identity_id`, so the CC side can inherit the prior identity without waiting for the Bayesian resolver to re-accumulate evidence. CTS also acts on the handoff internally through cross-camera revival (carrier 6 in [How identity crosses cameras](#how-identity-crosses-cameras)): when the appearance and learned topology agree, the closed PH is revived on the new camera and keeps its `ph_id` and identity, rather than spawning a fresh UNKNOWN track. The Bayesian identity resolver then runs normally; the inherited gallery and face lock maintain the identity across the gap.
 
 ## Identity resolver
 
@@ -194,6 +201,27 @@ flowchart TD
 Commit thresholds: `commit_prob = 0.65`, `commit_margin = 0.15`; in dense scenes (2 or more identities with posterior > 0.3) `commit_prob_dense = 0.80`, `commit_margin_dense = 0.20`. The temporal prior alone cannot commit an identity: at least one sensory source (face or ReID) must support the top identity unless the PH is inside its maintenance window.
 
 **Face lock and maintenance window.** When a face anchor's confidence clears `face_commit_min_confidence = 0.70`, the resolver sets a face lock on the PH. A face-locked identity is held without fresh face evidence for `face_lock_maintenance_max_age_s = 300 s`. Without a face lock, an existing identity is held by the prior for `prior_maintenance_max_age_s = 120 s`. After the window expires with no sensory evidence, the identity decays.
+
+**Sticky maintenance (favor continuity).** When a person turns away, the face anchor vanishes and body ReID drifts, so the per-frame posterior argmax can flip to UNKNOWN even though the PH persists. Sticky maintenance holds the committed identity within the maintenance window unless it is strongly contradicted: a recognized face for a different identity at or above `contradiction_face_confidence = 0.70`, or a different identity that clears the dense-scene posterior thresholds. A candidate or unrecognized face never contradicts a held identity, so a resident at a bad angle keeps their label instead of dropping to UNKNOWN. Two enrolled people in one room still separate, because a recognized different-identity face does contradict.
+
+### Three-valued face evidence and head pose
+
+The person-identification-service already distinguishes a face that was detected but not recognized from no face region at all, and it computes head pose. CTS consumes all three states (`recognized` / `candidate` / `unrecognized`) plus head yaw:
+
+| State | Similarity | Effect on the posterior |
+|-------|-----------|--------------------------|
+| `recognized` | at or above `recognition.threshold` | Strong positive for the matched identity, weighted `face_weight_multiplier = 3.0`, scaled by frontality |
+| `candidate` | between `unknown_threshold` and `threshold` | Weak positive for the best candidate (`candidate_face_weight_multiplier`); corroborates a held identity through near-profile frames; never negative |
+| `unrecognized` | below `unknown_threshold` | Small mass toward UNKNOWN (`face_present_unknown_unknown_mass = 0.10`); never subtracts from a held identity |
+| no face region | n/a | Neutral; rely on body ReID, the prior, and sticky maintenance |
+
+A frontality factor down-weights off-axis matches: full weight at or below `frontality_full_yaw_deg = 15` degrees yaw, ramping to a floor (`frontality_min_factor = 0.3`) at or above `frontality_zero_yaw_deg = 60` degrees. This reduces false commits from a glancing match while leaving frontal matches at full strength.
+
+### Multi-view ReID gallery query
+
+A single averaged body embedding cannot retrieve a person who turned around, because front and back are far apart in SOLIDER-REID space. The resolver estimates body orientation per observation from pose keypoints (front, back, left, right, unknown) and represents appearance as a small set of view-binned prototypes per PH and per identity. The gallery query runs once per orientation bin and takes the maximum logistic similarity across views, so a back-facing query that matches an identity's back entries scores high even when the front entries do not. A weak match leaves residual probability mass on UNKNOWN, so a non-matching body cannot be normalized onto the only enrolled identity.
+
+Non-frontal gallery coverage grows online: once a PH has a recognized-face committed identity, subsequent observation embeddings are written to that identity's gallery tagged with their estimated orientation, subject to quality and orientation-confidence gates. Seeding requires a recognized face lock, so a candidate or unknown face never poisons the shared gallery.
 
 ## How a face signal updates a PH
 
@@ -224,14 +252,20 @@ The key detail: `FaceIdentityStage` produces anchors keyed by `detection_id` (th
 ```mermaid
 flowchart TD
   subgraph paths["Cross-camera identity carriers"]
-    d["1. Pre-association dedup\ncalibrated overlapping cameras only\none PH carries both camera_ids"]
-    g["2. Shared ReID gallery\nPH on camera B matches identity entries\nwritten from camera A"]
-    p["3. Cross-GT face propagation\nface match on A creates synthetic anchor on B\nscaled by gallery similarity"]
-    c["4. PH continuation\nnon-overlapping handoff via\nPHContinuationCandidate"]
+    d["1. Pre-association dedup\ncalibrated overlapping cameras\none PH carries both camera_ids"]
+    e["5. Group-appearance dedup\nuncalibrated cameras in a declared\noverlap group, merged by appearance"]
+    g["2. Shared ReID gallery\nPH on camera B matches identity entries\nfrom camera A; per-orientation max-over-views"]
+    p["3. Cross-GT face propagation\nrecognized face on A creates synthetic anchor on B\nscaled by gallery similarity"]
+    c["4. PH continuation candidate\nnon-overlapping handoff published to CC"]
+    r["6. Cross-camera revival\nCTS reuses a closed PH id across cameras\ngated by learned topology + multi-view appearance"]
   end
 ```
 
-Path 1 requires calibration (dedup skips uncalibrated observations). Paths 2 to 4 are the only carriers for uncalibrated home cameras. Propagation (path 3) is gated twice: gallery similarity `>= cross_gt_face_propagation_threshold (0.78)` and `synthetic_confidence = source_confidence * gallery_sim >= face_commit_min_confidence (0.70)`.
+Path 1 requires calibration. For uncalibrated home cameras, identity crosses through the ReID gallery (path 2), recognized-face propagation (path 3, gated twice: gallery similarity `>= cross_gt_face_propagation_threshold (0.72)` and `synthetic_confidence = source_confidence * gallery_sim >= face_commit_min_confidence (0.70)`), continuation candidates published to CC (path 4), appearance dedup within a declared overlap group (path 5), and cross-camera revival acted on inside CTS (path 6).
+
+**Cross-camera revival (path 6)** extends PH revival across cameras. A closed PH may be revived on a different camera when the learned camera topology says the transit is plausible (`plausible_transit >= cross_camera_min_plausibility = 0.05`, with a floor so a first handoff is never blocked) and the multi-view appearance similarity clears `cross_camera_revive_appearance_min_sim = 0.60`. A recognized different-identity face blocks revival. When the predecessor PH is still open (a genuine co-presence on two overlapping cameras), CTS does not merge the PHs; it adopts the identity onto the new PH and records a co-presence link, so the dashboard shows one person on two views rather than two people.
+
+**Camera topology** is learned online: each accepted handoff records a directed edge with a running transit-time distribution (`camera_topology_edges`). Until an edge has enough samples it returns the plausibility floor, so topology widens linking over time without blocking legitimate first handoffs.
 
 ## Next steps
 

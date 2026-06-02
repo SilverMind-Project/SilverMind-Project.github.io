@@ -15,7 +15,7 @@ Seniors experiencing cognitive decline face a difficult tradeoff: full-time moni
 Cognitive Companion addresses this through six design choices:
 
 1. **Context-aware perception.** Vision LLMs analyze what is happening in each frame rather than flagging all motion. A person in the kitchen at noon is routine; at 3 AM, it warrants attention.
-2. **Composable pipelines.** Each rule assembles its own sequence of steps in any order. Rules are not constrained to a fixed trigger-action template.
+2. **Composable pipelines.** Each rule assembles its own graph of steps and edges. Rules are not constrained to a fixed trigger-action template.
 3. **Reminders over automation.** The system delivers suggestions and alerts without acting on the senior's behalf, preserving daily routines and decision-making agency.
 4. **Local inference.** All models run on-premise through vLLM, llama.cpp, and sibling services. Camera frames stay in local MinIO storage. No footage leaves the network unless an outbound channel is explicitly configured.
 5. **Multigenerational interfaces.** Caregivers receive alerts through Telegram, webhooks, or the admin console. Seniors interact through voice, popup notifications, e-ink displays, and TTS.
@@ -36,7 +36,7 @@ flowchart TB
         direction TB
         Aggregator["EventAggregator"]
         RulesEngine["RulesEngine"]
-        Executor["PipelineExecutor<br/>(22 step types)"]
+        Executor["PipelineExecutor<br/>(23 step types)"]
         Dispatcher["NotificationDispatcher<br/>(7 channels)"]
         CTS["CTSRuntime<br/>(Redis Streams)"]
         Presence["PresenceService<br/>(fused)"]
@@ -78,16 +78,16 @@ flowchart TB
 
 | Capability | Description |
 | --- | --- |
-| 22 pipeline step types | `llm_call`, `person_identification`, `scene_analysis`, `semantic_memory_query`, `semantic_memory_write`, `object_trend_analysis`, `presence_query`, `home_state`, `notification`, `ha_action`, `activity_detection`, `activity_session_start`, `activity_session_end`, `daily_report`, `verification`, `condition`, `wait`, `interactive_prompt`, `info_card`, `quiz_start`, `recamera_media_poll`, `cts_window_poll`. |
+| 23 pipeline step types | `llm_call`, `person_identification`, `scene_analysis`, `image_crop`, `semantic_memory_query`, `semantic_memory_write`, `object_trend_analysis`, `presence_query`, `home_state`, `notification`, `ha_action`, `activity_detection`, `activity_session_start`, `activity_session_end`, `daily_report`, `verification`, `condition`, `wait`, `interactive_prompt`, `info_card`, `quiz_start`, `recamera_media_poll`, `cts_window_poll`. |
 | 7 notification channels | `pwa_popup_text`, `pwa_realtime_ai`, `pwa_tts_announcement`, `telegram`, `eink`, `ha_speaker_tts`, `webhook`. |
 | 13 context filters | `room`, `time_range`, `day_of_week`, `person_presence`, `person_activity`, `room_transition`, `person_movement_memory`, `scene_contains`, `scene_trend`, `home_state`, `presence_status`, `presence_dwell`, `dementia_signal`. |
-| 6 trigger types | `sensor_event`, `cron`, `manual`, `webhook` (HMAC), `telegram` (bot command), `occupancy_duration`. |
+| 8 trigger types | `sensor_event`, `cron`, `manual`, `webhook` (HMAC), `telegram` (bot command), `occupancy_duration`, `cts_window`, `dementia_signal`. |
 | Person tracking | ArcFace face recognition fused with HA presence sensors, with whole-house location. |
 | Multi-camera tracking | Optional `continuous-tracking-service` for floor-plane Kalman world tracking, Bayesian identity resolution, and dementia signal generation. |
 | Activity tracking | Detect and record activities; duration-aware sessions; end-of-day wellness rollup with optional LLM summary. |
 | Voice companion | Realtime conversations via Google Gemini Live with WebSocket audio and tool calling. |
 | Knowledge repository | Caregiver-curated facts with narrated info cards, review-gated quizzes, and voice Q&A backed by RAG (Triton embeddings + pgvector + LLM synthesis). |
-| Visual pipeline builder | Drag-and-drop step ordering, dynamic step palette, per-step config dialogs. |
+| Visual pipeline builder | Graph canvas with nodes, edges, output ports, dynamic step palette, and per-step config dialogs. |
 | Presence fusion | Priority-ordered chain: bed sensor, CTS, HA device tracker, fallback. Configured in `config/presence.yaml`. |
 | E-ink displays | Per-device notification images with template editor and refresh suppression. |
 | MCP tool server | Over 30 tools (read-only plus rule triggering, rule authoring, and interactive response recording). |
@@ -98,7 +98,7 @@ flowchart TB
 
 | Layer | Technology |
 | --- | --- |
-| Backend | Python 3.12, FastAPI, SQLAlchemy 2.0, Pydantic 2, APScheduler |
+| Backend | Python 3.14, FastAPI, SQLAlchemy 2.0, Pydantic 2, APScheduler |
 | Frontend | Vue 3, Vuetify 3, Vite |
 | Database | PostgreSQL 18 (TimescaleDB, PostGIS, pgvectorscale) with Alembic migrations |
 | Vision LLM | Cosmos-Reason2-8B via vLLM |

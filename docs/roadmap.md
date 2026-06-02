@@ -59,6 +59,12 @@ The separate CTS Dashboard and Presence Fusion dashboards have been collapsed in
 
 The Process Activity view (`/activity/process`) streams real-time pipeline execution events via `GET /ws/pipeline`. It shows active rule pipeline runs as live DAGs (via `CcDagChart`), recent ingest activity from reCamera sensors (via `CcLiveActivityFeed`), and a historical step timeline (via `CcStatusTimeline`). The `useLivePipeline` composable manages connection state with 3-second exponential backoff and never shows a stale DAG as live data.
 
+## ~~CTS Robustness: Continuity, Multi-View ReID, and Zero-Calibration Cross-Camera~~ :white_check_mark:
+
+**Status:** Implemented (June 2026)
+
+Tracking now holds identity through turns, walks, and camera handoffs instead of fragmenting into many short-lived UNKNOWN tracks. PersonHypothesis revival reuses a recently-closed track instead of spawning a new one; sticky maintenance holds a committed identity through evidence gaps unless a recognized different-identity face contradicts it. Face evidence is three-valued (recognized, candidate, unrecognized) and pose-aware, so a resident at a bad angle corroborates their own identity rather than vanishing. Multi-view ReID represents body appearance per orientation and matches by the best view, so a person who turned around is still re-identified. Cross-camera linking works without homography: a learned camera-adjacency topology plus multi-view appearance carries identity across uncalibrated cameras, and overlapping opposite-perspective cameras are joined at the identity level with a co-presence link. CTS also emits low-rate semantic state-change events (presence, dwell) so the rule-trigger load is decoupled from camera frame rate. Each mechanism shipped behind a config flag with a frame-replay proof and a guardrail that a stranger never inherits a resident's identity.
+
 ## Pipeline Templates / Presets
 
 **Status:** Proposed

@@ -1,6 +1,6 @@
 # Composable Pipelines
 
-The pipeline system is the core of Cognitive Companion. Each rule defines its own ordered sequence of pipeline steps executed by the `PipelineExecutor`. Rather than a fixed linear chain, administrators configure exactly which steps run and in what order, including conditional branching and wait/resume for multi-stage workflows.
+The pipeline system is the core of Cognitive Companion. Each rule defines its own graph of pipeline steps executed by the `PipelineExecutor`. Caregivers and operators connect steps on a visual canvas, branch through output ports, and review live or historical runs in the execution inspector.
 
 Step handlers are self-contained plugins, each in its own file under `backend/steps/builtin/`, auto-discovered at startup via `StepRegistry`. The frontend loads available step types dynamically from the `GET /api/v1/pipeline/step-types` endpoint, so new plugins appear automatically in the step palette and config editor. See [Extending the Pipeline](/development/extending-pipeline) for how to add custom step types.
 
@@ -10,9 +10,11 @@ When a rule is triggered, the executor:
 
 1. Creates a `WorkflowExecution` record to track progress
 2. Initializes a shared `pipeline_data` dictionary
-3. Executes each enabled step in order
-4. Merges each step's output into `pipeline_data` for downstream steps
-5. Handles branching, waiting, and error states
+3. Captures an immutable graph snapshot for later inspection
+4. Finds entry nodes and executes enabled steps through `PipelineEdge` rows
+5. Merges each step's output into `pipeline_data` for downstream steps
+6. Traverses the output ports returned by each step
+7. Handles waiting, cancellation, completion, and error states
 
 ```python
 @dataclass
@@ -20,7 +22,7 @@ class StepResult:
     success: bool = True
     data: dict = field(default_factory=dict)   # Merged into pipeline_data
     should_continue: bool = True
-    next_step_id: int | None = None            # For conditional branching
+    output_ports: tuple[str, ...] = ("main",)  # Runtime ports to traverse
     wait_until: datetime | None = None         # For wait/resume
 ```
 
@@ -29,7 +31,7 @@ Every step receives the full `pipeline_data` dictionary and a `TriggerContext` w
 ```python
 @dataclass
 class TriggerContext:
-    trigger_type: str              # "sensor_event", "cron", "manual", "webhook", "occupancy_duration", "telegram", "dementia_signal"
+    trigger_type: str              # "sensor_event", "cron", "manual", "webhook", "occupancy_duration", "telegram", "cts_window", "dementia_signal"
     sensor_id: str | None
     room_name: str | None
     media_paths: list[str]
@@ -80,6 +82,21 @@ The executor also injects a localized `system` object into `pipeline_data` using
 ```
 
 This makes local wall-clock values available to prompts and notification templates without requiring each step to compute them independently. The complete list of keys is served by `GET /api/v1/pipeline/data-keys` and surfaced as autocomplete suggestions in the admin UI template editors.
+
+## Graph Authoring
+
+The rule canvas stores two resources: `PipelineStep` nodes and `PipelineEdge` connections.
+
+| Resource | API | Purpose |
+| --- | --- | --- |
+| Steps | `GET/POST/PUT/DELETE /api/v1/rules/{rule_id}/steps` | Create and configure pipeline nodes |
+| Positions | `PUT /api/v1/rules/{rule_id}/steps/positions` | Persist canvas coordinates |
+| Edges | `GET/PUT /api/v1/rules/{rule_id}/edges` | Read or atomically replace graph connections |
+| Validation | `POST /api/v1/rules/{rule_id}/validate` | Check templates and graph structure |
+
+Most step types expose one `main` output port. The `condition` step exposes `true` and `false`, so the canvas can connect each branch to a different downstream step. A source step can have one outgoing edge per output port.
+
+Execution review uses `GET /api/v1/workflows/{execution_id}/detail`, which returns the graph snapshot, timeline, skipped nodes, activated output ports, outputs, and errors. Lightweight live lists use `GET /api/v1/pipeline/runs`.
 
 ## Cool-Off Behavior
 
@@ -380,24 +397,6 @@ The output payload shape is symmetric with the `cts_window` trigger so downstrea
 The CTS event bucketizer is the upstream feed for this step. When the bucketizer is not wired into the service container, `cts_window_poll` logs a warning and returns an empty window with `partial: true`. Downstream steps can branch on `partial` to handle the degraded path.
 :::
 
-#### `vision_analysis` _(deprecated)_
-
-::: warning Deprecated: use `llm_call` instead
-The `llm_call` step with `output_key: vision_response` is a superset of `vision_analysis`. It supports the same image-source options plus model selection, sensor-ordered image assembly for inter-frame analysis, and a configurable output key.
-:::
-
-Sends media frames with a prompt to the vision LLM (Cosmos Reason2) for scene description and analysis.
-
-**Config fields:**
-
-- `prompt`: the analysis prompt sent to the vision model (supports [prompt templates](#prompt-templates))
-- `image_source`: `"trigger"` (default), `"additional"`, or `"both"`
-- `max_images`: max total images (default `5`)
-- `additional_sensor_ids` / `additional_room_names`: pull images from extra cameras or rooms
-- `response_format`: `"default"` (text) or `"custom"` (JSON)
-
-**Output keys:** `vision_response`
-
 ### Reasoning
 
 #### `llm_call`
@@ -495,13 +494,12 @@ config:
 
 #### `condition`
 
-Evaluates a boolean expression against `pipeline_data` to control execution flow. Can branch to different steps based on the result.
+Evaluates a boolean expression against `pipeline_data` to control execution flow. The step activates the `true` or `false` output port, and graph edges decide which downstream step runs next.
 
 **Config fields:**
 
 - `expression`: the condition expression to evaluate
 - `trigger_cooloff`: whether a `true` result should mark the run as cool-off-worthy. Defaults to `false`.
-- Uses `next_step_on_true` / `next_step_on_false` fields on the `PipelineStep` model for branching
 
 **Output keys:** `condition.expression`, `condition.result`, `condition.branch`, optional `_cooloff_triggered`
 
@@ -962,7 +960,7 @@ The `llm_call` step localises the message before the `notification` step dispatc
 
 ### Dementia Signal Trigger {#dementia-signal-triggers}
 
-Rules with `trigger_type: dementia_signal` fire when the CTS subscriber receives a behavioral signal from the tracking orchestrator that passes the per-person alert configuration gate. This allows caregivers to author rules that respond to pacing, sundowning, bathroom dwell anomalies, absence, or other CTS-detected behavioral patterns.
+Rules with `trigger_types` containing `"dementia_signal"` fire when the CTS subscriber receives a behavioral signal from the tracking orchestrator that passes the per-person alert configuration gate. This allows caregivers to author rules that respond to pacing, sundowning, bathroom dwell anomalies, absence, or other CTS-detected behavioral patterns.
 
 **Dispatch path:** `DementiaSignalSubscriber` persists every signal to the database, then checks whether the signal is enabled for that person via `HouseholdMember.cts_alert_config`. If allowed, it calls `PipelineExecutor.fire_event`, which queries all rules with `trigger_types` containing `"dementia_signal"` and evaluates their `dementia_signal` context filters against the event payload.
 

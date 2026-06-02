@@ -65,6 +65,10 @@ When `cts.enabled` is true, the CC backend starts four Redis Streams subscribers
 | `DementiaSignalSubscriber` | `tracking.signals` | Persists `DementiaSignal` via `SignalStore`. Before calling `fire_event`, checks the person's `cts_alert_config` in `household_members`. If the signal kind or severity is disabled for that person, the signal is stored for history but no rule is triggered. |
 | `SceneSampleSubscriber` | `scene.samples` | Decodes tagged keyframe `SceneSample` protos, pulls the JPEG from MinIO, runs scene analysis (YOLO + Florence-2 + CLIP + hazards), and persists observations to semantic memory. |
 
+::: info
+CTS also publishes low-rate semantic state-change streams `tracking.presence` (appeared / disappeared) and `tracking.dwell` (started / ended). These let CC rules trigger on state changes instead of per frame, so rule load no longer scales with camera frame rate. The CTS-side emission and the per-camera throttle on `tracking.events` (`live_publish_max_hz`) are in place; migrating the CC rule triggers from per-frame `tracking.events` to these Tier-2 streams is a planned CC-side change, specified in the `CTS_ROBUSTNESS_M6` documents.
+:::
+
 ```mermaid
 sequenceDiagram
     participant Orch as tracking-orchestrator

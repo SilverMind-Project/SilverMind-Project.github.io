@@ -162,6 +162,15 @@ flowchart TB
 
 In the calibration UI, when the operator selects two cameras that belong to the same overlap group, a hint appears: "These cameras share overlap group X. Apply overlap defaults (0–2 s)." This helps configure adjacency for cameras that cover the same physical area.
 
+### Declared overlap groups (uncalibrated cross-camera)
+
+The IoU clustering above is a calibration-time hint and needs visibility polygons. For uncalibrated cameras that have no homography but still view the same space (a common home case: two shelf-top cameras seeing one room from opposite angles), an operator can declare an overlap group directly. Declared groups are stored in `cts_camera_overlap_groups` and served to the orchestrator at `GET /api/v1/cts/overlap_groups`. CTS uses a declared group two ways:
+
+- **Group-appearance dedup**: two same-perspective uncalibrated observations from different cameras in the group are merged by appearance similarity (`dedup_group_appearance_min_sim = 0.75`), with a face-conflict block, since synthetic-tile floor distance cannot be compared across cameras.
+- **Co-presence linking**: when two open PHs in the group resolve to the same committed identity at the same time (the opposite-perspective case, where direct appearance similarity is low), CTS writes a co-presence link instead of merging, so the system shows one person on two views rather than two people.
+
+Operator declaration takes precedence; CTS can also mark a group as learned when two uncalibrated cameras consistently show co-present, identity-consistent PHs.
+
 ## Cross-camera association
 
 When a person leaves camera A and appears in camera B, the cross-camera associator computes:
@@ -185,6 +194,15 @@ combined = α × appearance_sim + (1 − α) × geo_score
 | Adjacency edge missing for this direction | Neutral `geo_score = 0.5` |
 
 Without homography and adjacency, every cross-camera pair uses neutral geo scoring and relies solely on appearance similarity to decide merges.
+
+### Zero-calibration cross-camera (learned topology)
+
+The default design point is zero-calibration: cross-camera linking does not require homography. When a person crosses between cameras, CTS reuses the recently-closed PersonHypothesis on the new camera (cross-camera revival) instead of spawning a fresh UNKNOWN track. Two signals gate the link, so it stays safe without geometry:
+
+- **Learned camera topology.** Each accepted handoff records a directed edge with a running transit-time distribution (`camera_topology_edges`). A candidate link must clear `plausible_transit >= cross_camera_min_plausibility = 0.05`. Unseen edges return the floor, so the first legitimate handoff is never blocked, and topology tightens as it learns.
+- **Multi-view appearance.** The best cosine across the closed PH's view-binned prototypes and the new observation must clear `cross_camera_revive_appearance_min_sim = 0.60`. A recognized different-identity face blocks the link.
+
+Homography, where it exists, remains an accuracy boost (full geometric scoring above), but it is optional. For opposite-perspective overlap, appearance similarity is intrinsically low, so identity travels through the shared multi-view gallery and the two views are joined by a co-presence link rather than a merge.
 
 ## End-to-end setup workflow
 
