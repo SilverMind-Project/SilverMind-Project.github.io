@@ -176,6 +176,66 @@ Before the Hungarian assignment runs, all detections with calibrated floor posit
 
 See [Frame Pipeline stage 7](./frame-pipeline.md#7-world-tracking) for the configuration knobs and the integration proof.
 
+## Handling noisy readings
+
+A single camera's view of a person is noisy. Detection boxes jitter frame to frame, homography projection adds error near the edges of a calibrated floor, and two cameras watching the same person from different angles disagree about both where the person is and what posture they hold. CTS does not persist any single camera's raw reading. Both floor position and posture are recomputed every frame as a fused estimate that combines overlapping cameras in the same time window and smooths across time.
+
+The cadence is per frame, but the value is filtered, not raw.
+
+### Floor position
+
+Position fusion happens in three layers before a value is written.
+
+1. **Per-camera measurement.** `SpatialProjectionStage` projects each detection's foot point (the bottom-centre of the bounding box) through that camera's homography to a calibrated `FloorPoint`. Uncalibrated cameras yield a synthetic per-camera tile point instead.
+2. **Cross-camera collapse, same window.** Before association, `dedup_observations()` merges observations from different cameras that fall within a residual-aware distance gate into one representative. The representative's floor point is the quality-weighted mean of the cluster's calibrated points, so two cameras seeing one person contribute one averaged position rather than two competing tracks. See [Cross-camera dedup](#cross-camera-dedup).
+3. **Temporal fusion.** The representative drives one Kalman update for the PH. The filter blends the measurement with the motion model, weighted by `observation_noise_m`. See [Kalman filter](#kalman-filter).
+
+Two more mechanisms suppress outliers and premature output. The Mahalanobis gate (`gate_chi2 = 9.21`) prevents a wild measurement from matching a PH at all, and `min_observations_to_publish` (default: 3) withholds a PH from downstream output until it has accumulated enough evidence to be more than a single-frame spike.
+
+The persisted trajectory point uses `state_mean`, the Kalman posterior, not any camera's measurement. Raw per-camera observations are still saved for trails and audit, but they are not the authoritative position.
+
+| Mechanism | Scope | Parameter | Default |
+| --- | --- | --- | --- |
+| Quality-weighted dedup mean | Cross-camera, same frame | `dedup_max_distance_m` | 0.9 m |
+| Residual-widened dedup gate | Cross-camera, same frame | `dedup_residual_coeff_k`, `dedup_max_distance_ceiling_m` | 1.0, 1.5 m |
+| Kalman blend | Per camera and over time | `observation_noise_m`, `process_noise_accel_m_s2` | 0.25 m, 0.5 m/s² |
+| Velocity decay on coasting | Over time | `velocity_decay_s` | 3.0 s |
+| Mahalanobis outlier gate | Per frame | `gate_chi2` | 9.21 |
+| Publication threshold | Per PH | `min_observations_to_publish` | 3 |
+
+### Posture
+
+Posture follows the same shape: soft per-camera evidence, quality-weighted fusion across overlapping cameras, then temporal smoothing.
+
+```mermaid
+flowchart LR
+    Score["Per-detection soft score\nlying / sitting / standing-walking\n+ keypoint confidence"]
+    Ingest["Per-camera ingest\nrecord_snapshot keyed by camera"]
+    Fuse["Quality-weighted fusion\nweight = keypoint confidence\nstale cameras dropped"]
+    Resolve["Clinical-priority winner\nlying > sitting > standing/walking"]
+    Smooth["Hysteresis\n2 consecutive frames to flip"]
+    Write["Trajectory point posture"]
+    Score --> Ingest --> Fuse --> Resolve --> Smooth --> Write
+```
+
+**Soft scoring.** `PostureStage` scores every detection into a `PostureScores` record (`lying`, `sitting`, `standing_walking`, and `keypoint_confidence`) rather than committing to one label per camera. Additive soft evidence lets several weak geometric cues accumulate instead of firing on a single threshold, which is the first layer of jitter reduction. In a bedroom, a small lying prior is added when the body is occluded.
+
+**Multi-camera fusion.** `GlobalPostureTracker` keeps the latest score snapshot per camera per person. Every camera that sees a person in a frame contributes its own snapshot, keyed by that camera. Fusion is a quality-weighted average across the person's active cameras, where the weight is each camera's keypoint confidence, so a clear full-body view outweighs a partial or occluded one. Depth-only cameras keep a small floor weight. A camera that has lost sight of the person stops contributing after `camera_stale_after_s` (default: 10 s).
+
+The resolve-and-smooth step runs once per person per frame on the dedup-representative frame. Non-representative cameras ingest their evidence without advancing the smoother, so adding cameras never distorts the temporal hysteresis.
+
+**Temporal smoothing.** The fused soft scores resolve to a label by clinical priority, then a hysteresis gate requires the new label to persist for `required_consecutive` frames (default: 2) before the committed posture flips. This prevents a single ambiguous frame from toggling posture.
+
+The persisted posture on each trajectory point is the fused, smoothed value. `room_dwells` records the dominant posture across the interval.
+
+| Mechanism | Scope | Parameter | Default |
+| --- | --- | --- | --- |
+| Soft additive scoring | Per detection | `_MIN_EVIDENCE` | 0.5 |
+| Quality-weighted fusion | Cross-camera | weight = keypoint confidence | n/a |
+| Depth-only floor weight | Cross-camera | `depth_weight` | 0.15 |
+| Stale-camera expiry | Cross-camera | `camera_stale_after_s` | 10.0 s |
+| Hysteresis flip threshold | Over time | `required_consecutive` | 2 frames |
+
 ## PH continuation
 
 When a person leaves the camera field and then re-enters, the world tracker detects the handoff via `PHContinuationCandidate`. When a new PH spawns, the tracker looks back at recently closed PHs: if a closed PH is within `inferred_handoff_max_s` (600 s) and `inferred_handoff_max_distance_m` (5.0 m), a `PHContinuationCandidate` is emitted with both PH IDs, the elapsed time, and the spatial distance.

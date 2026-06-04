@@ -178,9 +178,9 @@ High-confidence face anchors (confidence >= 0.85) trigger an immediate commit by
 
 ## 10. Posture classification
 
-`PostureStage` runs `classify_posture(pose_result, bbox)` for each detection that has pose keypoints. The 17 COCO keypoints drive a geometry-based classifier (ear-to-hip ratio, ankle visibility, horizontal spine angle) producing: `lying`, `sitting`, `standing`, or `unknown`.
+`PostureStage` produces soft posture evidence for each detection rather than a single hard label. The 17 COCO keypoints drive geometric scorers (torso angle, knee bend, head-spine alignment, shin-drop geometry) into a `PostureScores` record with continuous evidence for `lying`, `sitting`, and `standing_walking`, plus a keypoint-confidence value. Soft scoring lets several weak cues accumulate instead of firing on one threshold. In a bedroom, a lying prior is added when the body is occluded.
 
-Crops without pose output (smaller than 16x32 px or from cameras with pose disabled) get `unknown` posture.
+Fusion and the final label happen in stage 11. `GlobalPostureTracker` keeps each camera's latest scores, fuses them quality-weighted across the person's active cameras, and applies hysteresis before committing a posture. Crops without pose output (smaller than 16x32 px or from cameras with pose disabled) contribute `unknown`. See [Handling noisy readings](./tracking-concepts.md#handling-noisy-readings) for the full position and posture fusion model.
 
 ## 11. Trajectory writing
 

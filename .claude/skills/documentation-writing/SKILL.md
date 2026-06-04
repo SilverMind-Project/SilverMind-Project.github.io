@@ -29,12 +29,13 @@ Write like professional product and platform documentation: clear, calm, specifi
 
 - **Lead with outcomes, then mechanisms.** Say what a capability helps the reader do before naming the services and models behind it.
 - **Use direct language.** Prefer short sentences and concrete verbs.
+- **Combine tightly related thoughts.** A short sentence earns its place when the break adds emphasis or marks a turn. Splitting every clause into its own sentence is its own tell. "The term works. It names the pattern." is usually weaker than "The term works: it names the pattern."
 - **Avoid hype.** Do not use "revolutionary", "seamless", "powerful", "incredible", or similar filler.
 - **Avoid fear-based messaging.** Senior care copy should be reassuring, not alarmist.
 - **Use clinical humility.** Cognitive Companion supports care and caregiver awareness. It does not replace professional judgment or clinical diagnosis.
 - **Use American English.** Use `behavior`, `color`, `customize`, and `on-premise` consistently.
 - **Avoid first person.** Use "Cognitive Companion" or "the system", not "we".
-- **Avoid exclamation marks and em dashes.** Use periods, commas, colons, or separate sentences.
+- **Avoid em dashes, en dashes, and exclamation marks.** This is a house-style choice for the portal, not a claim that the dash is an AI tell. Use commas, colons, or separate sentences. Also use straight ASCII quotes and apostrophes, not curly ones.
 - **Document what exists.** Do not describe planned features as shipped.
 
 ### Replace This With That
@@ -46,6 +47,24 @@ Write like professional product and platform documentation: clear, calm, specifi
 | "keeps your loved one safe" | "helps caregivers notice when a routine changes" |
 | "cloud-grade intelligence" | "local inference for vision, language, embeddings, and recognition" |
 | "revolutionary value-based care" | "aging-in-place infrastructure for earlier risk signals and lower caregiver burden" |
+
+### Avoid AI-writing tells
+
+The deepest tell is regularity: the same word, sentence shape, or punctuation move reaching for the page by reflex. No single feature is a tell on its own. A semicolon, a colon, or a plain "however" is fine in its place; the problem is using a move as a default, or stacking several tells in one passage. (The portal avoids em dashes by house style, which is a separate brand choice, not a claim that the dash is a tell.) Fix the pattern, not the instance. A single one of these, used on purpose, is fine. The signal is the cluster.
+
+Watch for, and usually rewrite:
+
+- **Inflated or fallback vocabulary.** Treat as scrutiny flags, not bans (the hard-avoid hype words above are the exception): `crucial`, `pivotal`, `vital`, `key` (adjective), `robust`, `comprehensive`, `delve`, `leverage`, `utilize`, `underscore`, `showcase`, `foster`, `enhance`, `intricate`, `tapestry`, `testament`, `realm`, `landscape` (figurative), `vibrant`, `rich` (figurative), `harness`, `unlock`, `empower`, `holistic`, `groundbreaking`. Use the plain word when it is the right word: `use` not `leverage`, `shows` not `showcases`, `complex` not `intricate`. Repeating an ordinary word like `change`, `system`, or `problem` beats chasing synonyms.
+- **Copula avoidance.** Write "PresenceService is the source of truth", not "serves as the source of truth". Avoid `serves as`, `stands as`, `acts as`, `represents`, `boasts`, `features`, `offers` when `is` or `has` is what you mean.
+- **Significance and legacy framing.** No "plays a vital role in", "serves as a testament to", "underscores the importance of", "in today's fast-paced landscape". State the function and attach a consequence.
+- **Reflexive rule of three.** Do not pad ideas into triads ("fast, reliable, and scalable") unless all three are real and load-bearing.
+- **Negative parallelism.** Avoid "it's not just X, it's Y" and "this isn't about X, it's about Y". State the point: "the read model answers occupancy in one query", not "this isn't just a table, it's a strategy".
+- **Promotional tone**, especially on public pages: `nestled in`, `in the heart of`, `breathtaking`, `must-have`, `renowned`, `rich ecosystem`. Describe what the system does and let the reader judge.
+- **Performed endings.** No keynote cadence, applause-line closings, or "I hope this helps". Start where the answer starts, stop where it stops. A curated Next steps or Related pages section is not a performed ending; a paragraph of mission-statement uplift is.
+
+**Anchor each substantial paragraph.** Carry one concrete thing a reader can check: a number, a config key, a component name, an observed behavior. A milestone name or a date standing alone, with no consequence attached, does not count. Prefer "the read model answers occupancy in one query instead of three joins" to "the read model improves performance".
+
+**Do not flatten structure to look less templated.** Documentation is meant to be scanned. Keep the headings, tables, numbered steps, descriptive links, and next-step sections that help the reader. The fix for templated prose is concrete content and varied sentences, not stripping out useful structure. De-generic the words, not the scaffolding.
 
 ## 3. Page Types
 
@@ -152,6 +171,7 @@ Inner documentation pages should feel lighter than raw implementation notes.
 
 - Use short openings: one to three paragraphs before the first heading.
 - Prefer headings that describe reader tasks or concepts, not internal class names.
+- Use sentence case for headings (`## Configure the pipeline`, not `## Configure The Pipeline`). Title Case reads as templated and is not the portal convention.
 - Keep paragraphs under five lines in the rendered page.
 - Use tables for three or more related fields.
 - Use bullets for options, not for long explanations.
@@ -224,6 +244,15 @@ Use tables for reference data. Column order should be predictable:
 - Endpoints: Method, Path, Description.
 - Concepts: Term, Meaning.
 
+### Compound modifiers
+
+LLM prose tends to hyphenate any two words that act like a modifier. Human usage is positional. Hyphenate a compound before the noun, open it after a linking verb:
+
+- Before the noun: `a well-known limitation`, `a high-quality crop`, `a long-term plan`.
+- After the verb: `the limitation is well known`, `the crop is high quality`, `the plan is long term`.
+
+Do not hyphenate `-ly` adverb compounds: `highly available`, not `highly-available`; `newly added`, not `newly-added`. Keep hyphens that prevent ambiguity or are conventional: `state-of-the-art`, `cost-effective`, `on-premise`, `read-only`.
+
 ## 6. Diagrams
 
 Use Mermaid for documentation diagrams. Do not embed raster images or unreviewable SVGs for architecture/reference content.
@@ -269,6 +298,8 @@ Do not expose internal deployment details:
 Use `example.com`, `llama-server-host:8100`, or descriptive placeholders.
 
 ## 8. Language Cleanup Checklist
+
+Run a cleanup pass against the AI-writing tells in section 2 (inflated vocabulary, copula avoidance, forced triads, negative parallelism) alongside the filler below.
 
 Remove filler:
 
@@ -326,6 +357,9 @@ Before finishing a documentation change:
 - [ ] Tables use consistent column order.
 - [ ] Internal links are relative and meaningful.
 - [ ] Public copy avoids hype, fear, and fundraising-oriented targeting.
+- [ ] No clustered AI-writing tells: fallback vocabulary, copula avoidance, forced triads, negative parallelism, performed endings.
+- [ ] Each substantial paragraph has a concrete anchor; useful structure (headings, tables, steps) was kept, not flattened.
+- [ ] House style holds: sentence-case headings, straight ASCII quotes, no em or en dashes.
 - [ ] Privacy and care claims are accurate and not overstated.
 - [ ] Technical claims are verified against source.
 - [ ] No internal IPs, hostnames, or secrets appear.
