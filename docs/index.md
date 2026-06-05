@@ -52,24 +52,21 @@ hero:
       <span class="card-number">01</span>
       <h3>Notice meaningful changes</h3>
       <p>
-        Detect prolonged stillness, unusual room transitions, pacing, sundowning,
-        and routine anomalies without sending camera frames to the cloud.
+        Reliably detect routine anomalies, prolonged stillness, pacing, and unusual room transitions. The system uses stable presence tracking to provide calm, reliable awareness.
       </p>
     </article>
     <article class="outcome-card">
       <span class="card-number">02</span>
       <h3>Keep identity close</h3>
       <p>
-        Store family facts, biography, medication notes, preferences, and routines
-        in a personal knowledge repository that can be spoken back naturally.
+        Store family facts, medication notes, and preferences in a personal knowledge repository. This powers grounded voice responses, family-approved info cards, and interactive memory quizzes delivered to the senior via the companion web app, e-ink displays, and Home Assistant speakers.
       </p>
     </article>
     <article class="outcome-card">
       <span class="card-number">03</span>
       <h3>Give caregivers context</h3>
       <p>
-        Route calm alerts, daily summaries, and reviewable care signals through
-        voice, displays, Telegram, Home Assistant, and webhooks.
+        Route behavioral signals, daily summaries, and reviewable alerts directly to caregivers. The system integrates with Telegram and custom webhooks to keep families informed with actionable context, rather than a constant stream of raw camera footage.
       </p>
     </article>
   </div>
@@ -84,20 +81,15 @@ hero:
       <div class="audience-label">For families</div>
       <h2>Support independence without losing touch.</h2>
       <p>
-        Cognitive Companion is for households where care is shared by family members.
-        It helps you understand routines, preserve personal history, support natural
-        conversation, and stay aware when something deserves attention.
+        Cognitive Companion is for households where care is shared. It helps you understand daily rhythms, preserve personal history, support natural conversation, and stay aware when a routine shifts unexpectedly.
       </p>
       <a href="/guide/introduction.html">Read the family overview</a>
     </article>
     <article id="care-partners" class="audience-panel">
       <div class="audience-label">For care partners</div>
-      <h2>A home intelligence layer for value-based care.</h2>
+      <h2>Care infrastructure for the home.</h2>
       <p>
-        For health plans, senior-care providers, and care organizations, Cognitive Companion
-        points toward privacy-preserving aging-in-place infrastructure: earlier risk
-        signals, lower caregiver burden, richer longitudinal context, and care that
-        can stay closer to the home.
+        For health plans, senior-care providers, and care organizations, Cognitive Companion is privacy-preserving aging-in-place infrastructure. Local-by-default inference improves unit economics, while consistent reliability drives long-term retention and earlier risk signals.
       </p>
       <a href="/guide/architecture.html">Explore the architecture</a>
     </article>
@@ -110,15 +102,15 @@ hero:
   <div class="trust-grid">
     <div>
       <h3>Local-first intelligence</h3>
-      <p>Vision, recognition, language, embeddings, and reasoning can run on your hardware.</p>
+      <p>Privacy is an architectural requirement. Vision, language, embeddings, and reasoning process entirely on local hardware to build lasting trust.</p>
     </div>
     <div>
       <h3>Caregiver review</h3>
-      <p>Rules and pipelines are configurable so sensitive actions can stay human-in-the-loop.</p>
+      <p>Rules and pipelines are configurable so sensitive actions stay human-in-the-loop.</p>
     </div>
     <div>
       <h3>Open architecture</h3>
-      <p>Pipelines, notification channels, context filters, and MCP tools can be extended.</p>
+      <p>The system is built to adapt. Pipelines, notification channels, context filters, and agent tools can be extended.</p>
     </div>
     <div>
       <h3>Clinical humility</h3>
@@ -132,9 +124,7 @@ hero:
     <div class="section-kicker">For builders</div>
     <h2>Beneath the calm surface is a serious local AI stack.</h2>
     <p>
-      Computer vision, identity resolution, scene understanding, voice interaction,
-      configurable graph pipelines, execution inspection, and MCP tools remain fully documented for teams who
-      want to deploy, inspect, or extend the system.
+      Cognitive Companion combines distributed systems and applied machine learning. The stack includes realtime sensor fusion, Bayesian identity resolution, edge-native architecture, vision reasoning for complex rule pathways, and MCP tool support. These components are fully documented for teams who want to deploy, inspect, or extend the system.
     </p>
   </div>
   <div class="builder-actions">

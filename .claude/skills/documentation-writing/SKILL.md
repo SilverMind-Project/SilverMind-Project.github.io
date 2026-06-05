@@ -58,7 +58,7 @@ Watch for, and usually rewrite:
 - **Copula avoidance.** Write "PresenceService is the source of truth", not "serves as the source of truth". Avoid `serves as`, `stands as`, `acts as`, `represents`, `boasts`, `features`, `offers` when `is` or `has` is what you mean.
 - **Significance and legacy framing.** No "plays a vital role in", "serves as a testament to", "underscores the importance of", "in today's fast-paced landscape". State the function and attach a consequence.
 - **Reflexive rule of three.** Do not pad ideas into triads ("fast, reliable, and scalable") unless all three are real and load-bearing.
-- **Negative parallelism.** Avoid "it's not just X, it's Y" and "this isn't about X, it's about Y". State the point: "the read model answers occupancy in one query", not "this isn't just a table, it's a strategy".
+- **Negative parallelism.** Avoid "it's not just X, it's Y", "this isn't about X, it's about Y", or "this, not that" framing (e.g., "signals, not diagnoses", "a steady picture, not a flickering one"). Use it minimally, if ever. State the point directly: "the read model answers occupancy in one query", not "this isn't just a table, it's a strategy".
 - **Promotional tone**, especially on public pages: `nestled in`, `in the heart of`, `breathtaking`, `must-have`, `renowned`, `rich ecosystem`. Describe what the system does and let the reader judge.
 - **Performed endings.** No keynote cadence, applause-line closings, or "I hope this helps". Start where the answer starts, stop where it stops. A curated Next steps or Related pages section is not a performed ending; a paragraph of mission-statement uplift is.
 

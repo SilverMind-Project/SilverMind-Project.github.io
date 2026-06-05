@@ -41,7 +41,7 @@ export default defineConfig({
       { text: "Development", link: "/development/setup" },
       { text: "Roadmap", link: "/roadmap" },
       {
-        text: "v0.6.220",
+        text: "v0.6.228",
         items: [
           {
             text: "Code",
@@ -93,6 +93,7 @@ export default defineConfig({
             { text: "Notifications", link: "/features/notifications" },
             { text: "TTS Service", link: "/features/tts-service" },
             { text: "MCP Integration", link: "/features/mcp-integration" },
+            { text: "Marauder's Map Mode", link: "/features/marauders-map-mode" },
           ],
         },
       ],
