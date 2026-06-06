@@ -41,7 +41,7 @@ export default defineConfig({
       { text: "Development", link: "/development/setup" },
       { text: "Roadmap", link: "/roadmap" },
       {
-        text: "v0.6.228",
+        text: "v0.6.240",
         items: [
           {
             text: "Code",
