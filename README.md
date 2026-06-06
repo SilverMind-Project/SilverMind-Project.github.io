@@ -16,4 +16,3 @@ npm run docs:preview   # preview the built site
 Documentation lives in `docs/`. Content must be verified against the actual codebase before publishing; the code is the source of truth.
 
 See [AGENTS.md](AGENTS.md) for the full contributor guide including site structure, content guidelines, and style rules.
-
