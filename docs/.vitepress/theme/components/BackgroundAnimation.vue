@@ -10,11 +10,11 @@ const maxDist = 140
 const mouseDist = 200
 
 function getNumParticles(): number {
-  return window.innerWidth < 768 ? 35 : 80
+  return window.innerWidth < 960 ? 35 : 70
 }
 
 function getVelocityScale(): number {
-  return window.innerWidth < 768 ? 0.3 : 0.6
+  return window.innerWidth < 960 ? 0.3 : 0.5
 }
 
 function isDarkMode(): boolean {
