@@ -24,8 +24,8 @@ flowchart TB
     end
 
     subgraph Inference["GPU Inference"]
-        Triton["Triton Inference Server (gRPC 8701)\nYOLO26L, SOLIDER-REID, RTMPose"]
-        PersonID["person-identification-service\n(ArcFace recognition)"]
+        Triton["Triton Inference Server (gRPC 8701)\nYOLO26L, SOLIDER, RTMPose, Buffalo_L"]
+        PersonID["person-identification-service\nFace identification and evidence"]
     end
 
     subgraph Orchestrator["tracking-orchestrator (Python, port 8000)"]
@@ -50,6 +50,7 @@ flowchart TB
 
     Pipeline -->|"YOLO, ReID, Pose"| Triton
     Pipeline -->|"Face ID"| PersonID
+    PersonID -->|"SCRFD, ArcFace, landmarks, attributes"| Triton
     Pipeline -->|"frames.ready"| Redis
     Pipeline -->|"tracking.events\ntracking.revisions\ntracking.signals\nscene.samples"| Redis
     Pipeline -->|"Trajectory, Dwell, Signals"| TimescaleDB
@@ -60,7 +61,11 @@ flowchart TB
     Redis -->|"Consume all streams"| CC
 ```
 
-**Infrastructure**: TimescaleDB + pgvectorscale (StreamingDiskANN), Redis Streams (AOF), MinIO, Triton Inference Server. All inference runs on-premise via NVIDIA GPU (TensorRT/CUDA ONNX Runtime).
+**Infrastructure**: TimescaleDB + pgvectorscale (StreamingDiskANN), Redis
+Streams (AOF), MinIO, Triton Inference Server, and the person-identification
+API. The DGX serves canonical FP32 Buffalo_L graphs through Triton's ONNX
+Runtime backend. The Jetson profile uses target-built TensorRT plans from
+explicit-Q/DQ graphs. Both profiles use the same service code path.
 
 ## Redis Streams
 
@@ -110,6 +115,8 @@ Key hypertables:
 
 ## Related pages
 
+- [Jetson CTS Deployment](/hardware/jetson-cts): model selection, INT8 accuracy results, six-to-eight-camera sizing, and production qualification
+- [Model Quantization](/hardware/model-quantization): representative calibration, selective PTQ and QAT, TensorRT internals, sparse INT8, and Intel or AMD portability
 - [Frame Processing Pipeline](/features/continuous-tracking/frame-pipeline): detection, tracking, ReID, cross-camera association, Bayesian identity resolution, and the identity feedback loop
 - [Dementia Signal Detection](/features/continuous-tracking/dementia-signals): signal kinds, hysteresis, baseline computation, and configuration
 - [CC Integration](/features/continuous-tracking/cc-integration): enabling CTS, subscribers, rule examples, presence chain, and per-person alert profiles

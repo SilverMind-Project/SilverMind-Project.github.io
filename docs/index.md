@@ -83,7 +83,7 @@ hero:
       <p>
         Cognitive Companion is for households where care is shared. It helps you understand daily rhythms, preserve personal history, support natural conversation, and stay aware when a routine shifts unexpectedly.
       </p>
-      <a href="/guide/introduction.html">Read the family overview</a>
+      <a href="/families/overview.html">Read the family overview</a>
     </article>
     <article id="care-partners" class="audience-panel">
       <div class="audience-label">For care partners</div>

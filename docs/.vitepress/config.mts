@@ -35,13 +35,21 @@ export default defineConfig({
     logo: "/favicon.svg",
 
     nav: [
-      { text: "Guide", link: "/guide/introduction" },
-      { text: "Features", link: "/features/pipeline" },
-      { text: "API", link: "/api/reference" },
-      { text: "Development", link: "/development/setup" },
+      { text: "For Families", link: "/families/overview" },
+      { text: "Vision", link: "/vision" },
+      {
+        text: "Developers",
+        items: [
+          { text: "Guide", link: "/guide/introduction" },
+          { text: "Features", link: "/features/pipeline" },
+          { text: "Hardware", link: "/hardware/" },
+          { text: "API", link: "/api/reference" },
+          { text: "Development", link: "/development/setup" },
+        ],
+      },
       { text: "Roadmap", link: "/roadmap" },
       {
-        text: "v0.7.2",
+        text: "v0.7.3",
         items: [
           {
             text: "Code",
@@ -56,6 +64,19 @@ export default defineConfig({
     ],
 
     sidebar: {
+      "/families/": [
+        {
+          text: "For Families",
+          items: [
+            { text: "Overview", link: "/families/overview" },
+            { text: "What the senior experiences", link: "/families/what-the-senior-experiences" },
+            { text: "What caregivers see", link: "/families/what-you-see" },
+            { text: "Privacy and trust", link: "/families/privacy" },
+            { text: "Is this right for us?", link: "/families/is-this-right-for-us" },
+            { text: "FAQ", link: "/families/faq" },
+          ],
+        },
+      ],
       "/guide/": [
         {
           text: "Getting Started",
@@ -117,7 +138,14 @@ export default defineConfig({
       "/hardware/": [
         {
           text: "Hardware",
-          items: [{ text: "Supported Devices", link: "/hardware/" }],
+          items: [
+            { text: "Supported Devices", link: "/hardware/" },
+            { text: "Jetson CTS Deployment", link: "/hardware/jetson-cts" },
+            {
+              text: "Model Quantization",
+              link: "/hardware/model-quantization",
+            },
+          ],
         },
       ],
     },

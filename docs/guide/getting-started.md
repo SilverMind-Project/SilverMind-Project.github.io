@@ -6,13 +6,13 @@ This guide walks you through getting Cognitive Companion running on your local n
 
 | Component | Purpose | Notes |
 | --- | --- | --- |
-| **NVIDIA GPU** (10 GB+ VRAM) | Person-ID service + vLLM + llama.cpp + Triton | RTX 3060 or better |
+| **NVIDIA GPU** (32 GB minimum, 48 GB recommended) | Hosts the general LLM, the vision-language model, and the Triton vision models | RTX 5090 (32 GB) at minimum; A6000 or L40S (48 GB) for headroom; or split across GPUs. See [GPU memory budget](#gpu-memory-budget). |
 | **Docker** + NVIDIA Container Toolkit | Container runtime | For all services |
 | **Home Assistant** | Sensor integration, audio playback, actions | REST API + long-lived token |
 | **MinIO** (or S3-compatible) | Media object storage | Pre-signed URL support required |
-| **vLLM** | Vision model serving | Cosmos-Reason2 via OpenAI-compatible API |
-| **llama.cpp** `llama-server` | General reasoning model | Gemma 4 via OpenAI-compatible API |
-| **Triton Inference Server** | Embedding model for RAG | embeddinggemma-300m for knowledge repository |
+| **vLLM** | Serves the vision-language model | Cosmos-Reason2-8B at FP8, OpenAI-compatible API |
+| **llama.cpp** `llama-server` | Serves the general reasoning model | Gemma 4 26B-A4B (MoE) at FP4, OpenAI-compatible API |
+| **Triton Inference Server** | Vision, face, and embedding models | Detection, ReID, pose, face, CLIP, Florence-2, embeddinggemma-300m |
 | **Python 3.14** | Backend runtime | |
 | **[uv](https://docs.astral.sh/uv/)** | Python package manager | For local development |
 | **Node.js 24.16.x** | Frontend build | For admin console, WebSocket audio interface |
@@ -24,6 +24,42 @@ This guide walks you through getting Cognitive Companion running on your local n
 | Telegram Bot | Caregiver alert notifications |
 | Google Gemini API | Real-time voice conversations |
 | TTS service | Text-to-speech announcements |
+
+## GPU memory budget
+
+The system runs several models on the GPU at once. The two language models dominate the budget; the perception models are individually small but add up. The table below breaks the requirement down by component, at the precision each model is served at today.
+
+| Component | What runs | Precision | Approx. VRAM |
+| --- | --- | --- | --- |
+| General reasoning LLM | Gemma 4 26B-A4B (MoE, all experts resident) | FP4 (llama.cpp) | ~13 GB |
+| Vision-language model | Cosmos-Reason2-8B (vLLM) | FP8 | ~8 GB |
+| Knowledge embeddings | embeddinggemma-300m (Triton) | FP32 ONNX | ~1.2 GB |
+| Scene analysis | CLIP ViT-L/14 + Florence-2-large (Triton) | ONNX / INT8 | ~2 GB |
+| Multi-camera tracking | YOLO26L + Swin ReID + RTMPose (Triton) | FP32 ONNX | ~0.3 GB |
+| Face recognition | Buffalo_L: SCRFD + ArcFace R50 + landmarks (Triton) | FP32 ONNX | ~0.35 GB |
+| | | **Weights subtotal** | **~25 GB** |
+
+A few things this table does not include, which you still need to budget for:
+
+- **vLLM KV cache.** Cosmos-Reason2 is served with `--max-model-len=16384` and `--max-num-seqs=4`, and the deployment uses `--quantization=fp8` with `--kv-cache-dtype=fp8` at `--gpu-memory-utilization=0.25`. KV cache grows with context length and the number of concurrent sequences.
+- **Per-process CUDA context** of roughly 0.5 to 1 GB for each model server and for Triton.
+- **The general LLM precision is the biggest variable.** The ~13 GB figure assumes FP4 (4-bit) quantization on llama.cpp, which is the current setup. FP8 roughly doubles it and BF16 roughly quadruples it. Because it is a mixture-of-experts model, all experts stay resident in VRAM even though only about 4B parameters activate per token, so memory tracks the 26B total, not the 4B active. The `qwen-3.6-35b` alternative in `config/settings.yaml` is larger, roughly 18 GB at FP4.
+
+Two practical consequences:
+
+- **A 32 GB GPU can host the full stack**, with a 48 GB card giving comfortable headroom for KV cache and concurrency. You can also split the models across GPUs. The perception models have INT8 and Jetson-quantized variants (`continuous-tracking/triton-models-jetson/`) that bring them to under 1 GB combined, but the LLM and the vision-language model are still what set the floor.
+- **The model servers talk over OpenAI-compatible URLs and Triton gRPC**, so the LLM and VLM can run on a separate host or GPU from the perception stack. Point `VISION_MODEL_URL`, `GEMMA_MODEL_URL`, and `EMBEDDING_TRITON_URL` at wherever they run.
+
+### Reference hardware: offload perception to a Jetson
+
+A reference split runs the two language models on a main GPU and moves the latency-sensitive vision and face models to a Jetson Orin Nano Super (8 GB unified memory) acting as an inference appliance:
+
+- **Main GPU host:** general LLM, vision-language model, knowledge embeddings, and scene analysis (CLIP + Florence-2).
+- **Jetson Orin Nano Super:** detector (YOLO26L), pose (RTMPose-m), body ReID (SOLIDER), and face detection and recognition (SCRFD + ArcFace from `buffalo_l`), all served as selective INT8 TensorRT plans.
+
+These perception models are small in VRAM, about 0.65 GB on the main GPU, so the point of the split is not to reclaim much memory. It is to keep per-frame inference and face embeddings on a low-power box on the local network, off the GPU that serves the LLM. Qualify six cameras first; eight is conditional on the detector p95 staying under 140 ms with stable memory headroom.
+
+See [Run CTS inference on Jetson Orin Nano Super](/hardware/jetson-cts) for the model-by-model quantization recipe, qualification gates, and production metrics.
 
 ## Step 1: Configure Environment
 
@@ -37,8 +73,8 @@ Edit `.env` with your service URLs and API keys:
 
 ```bash
 # LLM Providers
-VISION_MODEL_URL=http://localhost:8001/v1       # vLLM (Cosmos Reason2)
-GEMMA_MODEL_URL=http://localhost:8080/v1        # llama.cpp (Gemma 4)
+VISION_MODEL_URL=http://localhost:8001       # vLLM (Cosmos-Reason2-8B, FP8)
+GEMMA_MODEL_URL=http://localhost:8100        # llama.cpp (Gemma 4 26B-A4B, FP4)
 
 # Home Assistant
 HOME_ASSISTANT_URL=http://homeassistant.local:8123
@@ -135,7 +171,7 @@ docker build -t cognitive-companion-ui .
 docker run -p 80:80 cognitive-companion-ui
 ```
 
-## Step 5: Initial Setup
+## Step 3: Initial Setup
 
 1. Open the admin console at `http://localhost:5173/admin`
 2. Set your admin API key in the settings

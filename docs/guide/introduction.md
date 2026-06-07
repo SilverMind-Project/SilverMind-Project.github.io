@@ -1,5 +1,7 @@
 # Introduction
 
+This is the technical overview of Cognitive Companion, written for developers and operators who want to deploy, inspect, or extend the system. If you are a family member or care partner deciding whether the system fits your household, start with [Cognitive Companion for families](/families/overview), which covers what the system does without the implementation detail.
+
 Cognitive Companion is a privacy-first, on-premise AI system for senior care in multigenerational households. It combines safety monitoring, cognitive support, and a personal knowledge repository. Camera feeds and sensor data flow through composable rule-based pipelines; vision and language models run entirely on local hardware.
 
 ## The problem

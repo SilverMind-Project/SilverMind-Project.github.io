@@ -1,8 +1,20 @@
-# Hardware Integration
+# Hardware integration
 
 Cognitive Companion is designed to work with affordable, readily available edge hardware. This page covers the supported devices and how they integrate with the system.
 
-## Supported Devices
+## Inference hardware
+
+Continuous Tracking can keep its stateful services on a home server while
+moving detector, pose, body ReID, and face inference to a separate accelerator.
+
+- [Run CTS inference on Jetson Orin Nano Super](/hardware/jetson-cts) covers the
+  six-camera recommendation, eight-camera qualification gates, the three CTS
+  models, the complete five-model Buffalo_L pack, and production metrics.
+- [Model quantization and accelerator portability](/hardware/model-quantization)
+  explains calibration, PTQ, QAT, sparse INT8, Triton internals, and paths for
+  Intel or AMD discrete GPUs.
+
+## Supported devices
 
 ### Seeed reCamera
 
@@ -161,7 +173,7 @@ Smart speakers, tablets, and other audio devices used for:
 - **TTS announcements**: speak notification messages aloud
 - **Home Assistant announce service**: broadcast to multiple rooms
 
-## Network Requirements
+## Network requirements
 
 All devices must be on the same local network as the Cognitive Companion backend. There is no cloud relay; communication is direct.
 
@@ -180,7 +192,7 @@ flowchart LR
 - Home Assistant accessible from the backend via its REST API
 - MinIO accessible from the backend for media storage
 
-## Adding New Hardware
+## Add new hardware
 
 The system is designed to accommodate new edge devices. Any device that can make HTTP requests can integrate:
 

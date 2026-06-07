@@ -660,6 +660,31 @@ body {
   background: transparent !important;
 }
 
+/* ----- Doc content width -----
+   The default theme caps the prose box .content-container at 688px whenever an
+   outline is present (.has-aside), and on sidebar-less pages it further caps
+   the container (992/1104px) and content (752/784px). Remove these caps so the
+   content stretches to its parent: between the sidebar and the outline on
+   sidebar pages, and to the nav bar width on sidebar-less pages.
+   DOM: .content > .content-container > main.main > .vp-doc > div > {elements}. */
+
+/* All doc pages: let the prose box fill its parent (drop the 688px cap). */
+.VPDoc .content-container,
+.VPDoc.has-aside .content-container {
+  max-width: 100% !important;
+}
+
+/* Sidebar-less pages: also widen the outer boxes to the nav bar width. */
+@media (min-width: 960px) {
+  .VPDoc:not(.has-sidebar) .container {
+    max-width: calc(var(--vp-layout-max-width) - 64px) !important;
+  }
+
+  .VPDoc:not(.has-sidebar) .content {
+    max-width: 100% !important;
+  }
+}
+
 /* ----- Product home page: foundation ----- */
 
 .VPHome .vp-doc.container {
