@@ -6,9 +6,16 @@ const canvasRef = ref<HTMLCanvasElement | null>(null)
 let animationFrameId = 0
 let particles: {x: number, y: number, vx: number, vy: number}[] = []
 let mouse = { x: -1000, y: -1000 }
-const numParticles = 80
 const maxDist = 140
 const mouseDist = 200
+
+function getNumParticles(): number {
+  return window.innerWidth < 768 ? 35 : 80
+}
+
+function getVelocityScale(): number {
+  return window.innerWidth < 768 ? 0.3 : 0.6
+}
 
 function isDarkMode(): boolean {
   return document.documentElement.classList.contains('dark')
@@ -102,19 +109,29 @@ onMounted(() => {
     canvas!.width = window.innerWidth
     canvas!.height = window.innerHeight
     gl!.viewport(0, 0, canvas!.width, canvas!.height)
+    const target = getNumParticles()
+    const speed = getVelocityScale()
+    // Rescale existing particles to the new speed limit
+    for (const p of particles) {
+      const mag = Math.sqrt(p.vx * p.vx + p.vy * p.vy)
+      if (mag > 0) {
+        p.vx = (p.vx / mag) * speed * (0.5 + Math.random() * 0.5)
+        p.vy = (p.vy / mag) * speed * (0.5 + Math.random() * 0.5)
+      }
+    }
+    while (particles.length < target) {
+      particles.push({
+        x: Math.random() * canvas!.width,
+        y: Math.random() * canvas!.height,
+        vx: (Math.random() - 0.5) * speed,
+        vy: (Math.random() - 0.5) * speed
+      })
+    }
+    if (particles.length > target) particles.splice(target)
   }
 
   window.addEventListener('resize', resize)
   resize()
-
-  for (let i = 0; i < numParticles; i++) {
-    particles.push({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      vx: (Math.random() - 0.5) * 0.6,
-      vy: (Math.random() - 0.5) * 0.6
-    })
-  }
 
   const handleMouseMove = (e: MouseEvent) => {
     mouse.x = e.clientX
@@ -150,6 +167,7 @@ onMounted(() => {
     gl.uniform3f(colorLocation, cr, cg, cb)
 
     const vertexData: number[] = []
+    const numParticles = particles.length
 
     for (let i = 0; i < numParticles; i++) {
       const p = particles[i]
