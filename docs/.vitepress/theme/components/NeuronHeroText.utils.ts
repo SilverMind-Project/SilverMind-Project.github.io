@@ -33,10 +33,10 @@ export interface FilledPixel {
 }
 
 /**
- * Font stack matching `--vp-font-family-base` used by VitePress.
+ * Font stack matching the design system display font — Newsreader editorial serif.
  */
 const VP_FONT_STACK =
-  '"Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif'
+  '"Newsreader", Georgia, "Times New Roman", serif'
 
 /**
  * Alpha threshold above which a pixel is considered "filled".
@@ -288,17 +288,15 @@ export const GRADIENT_PERIOD_MS = 60_000
 export const SPATIAL_PHASE_SCALE = 1.0
 
 /**
- * Brand colour stops as normalised RGB triples, matching the CSS gradient:
- *   linear-gradient(120deg, #0a84ff 0%, #5e5ce6 60%, #bf5af2 100%)
- *
- * Stop positions mirror the CSS percentages so gradient sampling feels identical.
+ * Brand colour stops for the dark-mode neural-net animation — sage family only.
+ * A same-hue sweep (dark → primary → light) avoids muddy hue-shift intermediates.
  *
  * Validates: Requirements 3.1, 3.2, 3.3
  */
 export const BRAND_STOPS: [number, number, number][] = [
-  [10 / 255,  132 / 255, 255 / 255], // #0a84ff  (t = 0.0)
-  [94 / 255,   92 / 255, 230 / 255], // #5e5ce6  (t = 0.6 — matches CSS 60%)
-  [191 / 255,  90 / 255, 242 / 255], // #bf5af2  (t = 1.0)
+  [ 36 / 255,  63 / 255,  49 / 255], // #243F31 sage-700  (t = 0.0 — deep forest)
+  [ 48 / 255,  83 / 255,  64 / 255], // #305340 sage-600  (t = 0.6 — primary dark)
+  [ 63 / 255, 107 / 255,  82 / 255], // #3F6B52 sage-500  (t = 1.0 — lighter end)
 ]
 
 /** CSS gradient stop positions matching the percentages above. */
@@ -343,7 +341,11 @@ export function nodeColour(
   canvasHeight: number,
   timeMs: number,
   reducedMotion: boolean,
+  isDark: boolean = true,
 ): [number, number, number] {
+  // Light mode: static sage-500 — no hue sweep, calm on cream background
+  if (!isDark) return [63 / 255, 107 / 255, 82 / 255]
+
   // Normalised coordinates (centre y = 0)
   const u = canvasWidth  > 0 ? x / canvasWidth                       : 0
   const v = canvasHeight > 0 ? (y - canvasHeight / 2) / canvasHeight : 0

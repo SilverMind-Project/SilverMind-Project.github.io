@@ -18,13 +18,13 @@ moving detector, pose, body ReID, and face inference to a separate accelerator.
 
 ### Seeed reCamera
 
-<div style="padding: 1rem; background: var(--vp-c-bg-soft); border-radius: 8px; margin-bottom: 1rem;">
-
-**Type:** Compact Linux camera module
-**Purpose:** Image capture and upload
-**Interface:** REST API (POST /api/v1/device/recamera)
-**Auth:** 8-character device key in JSON body
-
+<div class="hw-spec">
+<dl>
+<dt>Type</dt><dd>Compact Linux camera module</dd>
+<dt>Purpose</dt><dd>Image capture and upload</dd>
+<dt>Interface</dt><dd><code>POST /api/v1/device/recamera</code></dd>
+<dt>Auth</dt><dd>8-character device key in JSON body</dd>
+</dl>
 </div>
 
 The reCamera is a compact Linux-based camera module from Seeed Studio. It captures images and uploads them to the Cognitive Companion backend for processing.
@@ -103,17 +103,17 @@ When a label filter is configured and the image does not match, the endpoint ret
 
 ### Seeed reTerminal
 
-<div style="padding: 1rem; background: var(--vp-c-bg-soft); border-radius: 8px; margin-bottom: 1rem;">
-
-**Type:** Linux SBC with 5" touchscreen and eInk display
-**Purpose:** Notification display and physical button input
-**Interfaces:**
-- Image polling: GET /api/v1/image/active (device key auth)
-- Button input: POST /api/v1/device/reterminal
-
+<div class="hw-spec">
+<dl>
+<dt>Type</dt><dd>Color e-ink display module</dd>
+<dt>Chip</dt><dd>ESP32</dd>
+<dt>Purpose</dt><dd>Notification display and button input</dd>
+<dt>Image poll</dt><dd><code>GET /api/v1/image/active</code> (device key auth)</dd>
+<dt>Button input</dt><dd><code>POST /api/v1/device/reterminal</code></dd>
+</dl>
 </div>
 
-The reTerminal is a Linux single-board computer with a built-in color e-ink display. It serves as the household's notification display and physical interaction point.
+The reTerminal is an ESP32-based color e-ink display module from Seeed Studio. It serves as the household's notification display and physical interaction point.
 
 **E-ink display integration:**
 
@@ -140,12 +140,12 @@ device_keys:
 
 ### Home Assistant Sensors
 
-<div style="padding: 1rem; background: var(--vp-c-bg-soft); border-radius: 8px; margin-bottom: 1rem;">
-
-**Type:** Various smart home sensors via HA REST API
-**Purpose:** Presence detection, light levels, audio playback
-**Interface:** Polled via Home Assistant REST API
-
+<div class="hw-spec">
+<dl>
+<dt>Type</dt><dd>Various smart home sensors</dd>
+<dt>Purpose</dt><dd>Presence detection, light levels, audio playback</dd>
+<dt>Interface</dt><dd>Home Assistant REST API (polled)</dd>
+</dl>
 </div>
 
 The backend polls Home Assistant entities at a configurable interval (default: 30 seconds). Supported sensor types:

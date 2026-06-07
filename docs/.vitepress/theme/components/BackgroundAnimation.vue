@@ -10,11 +10,20 @@ const numParticles = 80
 const maxDist = 140
 const mouseDist = 200
 
+function isDarkMode(): boolean {
+  return document.documentElement.classList.contains('dark')
+}
+
+function getClearColor(): [number, number, number, number] {
+  return isDarkMode()
+    ? [29 / 255, 26 / 255, 20 / 255, 1.0]    // #1D1A14 stone-900 warm dark
+    : [251 / 255, 248 / 255, 243 / 255, 1.0]  // #FBF8F3 stone-50 cream paper
+}
+
 function getParticleColor(): [number, number, number] {
-  const isDark = document.documentElement.classList.contains('dark')
-  return isDark
-    ? [10 / 255, 132 / 255, 255 / 255]   // blue for dark mode
-    : [60 / 255, 60 / 255, 67 / 255]       // dark grey for light mode
+  return isDarkMode()
+    ? [130 / 255, 178 / 255, 146 / 255]   // sage-300 #82B292
+    : [63 / 255,  107 / 255,  82 / 255]    // sage-500 #3F6B52
 }
 
 const vShaderSrc = `
@@ -130,7 +139,8 @@ onMounted(() => {
   window.addEventListener('touchend', handleMouseOut)
 
   const draw = () => {
-    gl.clearColor(0, 0, 0, 0)
+    const [bcr, bcg, bcb, bca] = getClearColor()
+    gl.clearColor(bcr, bcg, bcb, bca)
     gl.clear(gl.COLOR_BUFFER_BIT)
 
     gl.useProgram(program)

@@ -1,92 +1,94 @@
 /*
- * Cognitive Companion documentation theme.
+ * Cognitive Companion documentation theme — Design System v2
  *
- * Inspired by Apple's product pages: generous whitespace, restrained
- * typography, a single accent colour, and frosted-glass surfaces in
- * dark mode. Mirrors the tokens used by the admin console so that the
- * marketing site and the in-product UI feel like the same product.
+ * Warm editorial calm: cream paper, sage green, terracotta accent.
+ * Fonts: Newsreader (serif display), Hanken Grotesk (UI sans), IBM Plex Mono.
  */
 
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
 :root {
-  /* Brand */
-  --vp-c-brand-1: #0a84ff;
-  --vp-c-brand-2: #0071e3;
-  --vp-c-brand-3: #0058b8;
-  --vp-c-brand-soft: rgba(10, 132, 255, 0.12);
-  --vp-c-brand-softer: rgba(10, 132, 255, 0.06);
+  /* Brand — sage green */
+  --vp-c-brand-1: #3F6B52;
+  --vp-c-brand-2: #305340;
+  --vp-c-brand-3: #243F31;
+  --vp-c-brand-soft: rgba(63, 107, 82, 0.12);
+  --vp-c-brand-softer: rgba(63, 107, 82, 0.06);
 
-  /* Surfaces */
-  --vp-c-bg: #fbfbfd;
-  --vp-c-bg-alt: #ffffff;
-  --vp-c-bg-elv: #ffffff;
-  --vp-c-bg-soft: #f5f5f7;
+  /* Surfaces — warm paper */
+  --vp-c-bg: #FBF8F3;
+  --vp-c-bg-alt: #FFFDF9;
+  --vp-c-bg-elv: #FFFDF9;
+  --vp-c-bg-soft: #F4EDE2;
 
-  /* Text */
-  --vp-c-text-1: #1d1d1f;
-  --vp-c-text-2: #515154;
-  --vp-c-text-3: #86868b;
+  /* Text — warm ink */
+  --vp-c-text-1: #1D1A14;
+  --vp-c-text-2: #5F5544;
+  --vp-c-text-3: #877960;
 
-  /* Borders */
-  --vp-c-divider: rgba(0, 0, 0, 0.08);
-  --vp-c-gutter: rgba(0, 0, 0, 0.05);
+  /* Borders — warm hairline */
+  --vp-c-divider: #E8DDCC;
+  --vp-c-gutter: rgba(45, 38, 26, 0.05);
 
-  /* Brand gradient — shared by hero title and nav logo */
-  --cc-brand-gradient: linear-gradient(120deg, #0a84ff 0%, #5e5ce6 60%, #bf5af2 100%);
-  --cc-brand-gradient-size: 180% 180%;
-  --cc-brand-gradient-duration: 18s;
+  /* Warm gradient for hero and nav title (sage → terracotta) */
+  --cc-brand-gradient: linear-gradient(135deg, #3F6B52 0%, #C8704F 100%);
+  --cc-brand-gradient-size: 200% 200%;
+  --cc-brand-gradient-duration: 20s;
 
-  /* Hero */
-  --vp-home-hero-name-color: transparent;
-  --vp-home-hero-name-background: var(--cc-brand-gradient);
-  --vp-home-hero-image-background-image: radial-gradient(closest-side, rgba(10, 132, 255, 0.18), rgba(94, 92, 230, 0.0));
+  /* Hero — plain sage in light mode; canvas handles dark mode */
+  --vp-home-hero-name-color: var(--vp-c-brand-1);
+  --vp-home-hero-name-background: none;
+  --vp-home-hero-image-background-image: radial-gradient(closest-side, rgba(63, 107, 82, 0.15), rgba(200, 112, 79, 0));
   --vp-home-hero-image-filter: blur(72px);
 
-  /* Glass surface backgrounds — light mode */
-  --cc-glass-nav:      rgba(251, 251, 253, 0.75);
-  --cc-glass-screen:   rgba(251, 251, 253, 0.95);
-  --cc-glass-sidebar:  rgba(251, 251, 253, 0.62);
-  --cc-glass-content:  rgba(251, 251, 253, 0.14);
-  --cc-glass-footer:   rgba(251, 251, 253, 0.72);
-  --cc-glass-localnav: rgba(251, 251, 253, 0.80);
-  --cc-glass-card:     rgba(255, 255, 255, 0.68);
+  /* Warm surfaces */
+  --cc-glass-nav:      rgba(251, 248, 243, 0.88);
+  --cc-glass-screen:   rgba(251, 248, 243, 0.96);
+  --cc-glass-sidebar:  rgba(251, 248, 243, 0.80);
+  --cc-glass-content:  rgba(251, 248, 243, 0.12);
+  --cc-glass-footer:   rgba(251, 248, 243, 0.88);
+  --cc-glass-localnav: rgba(251, 248, 243, 0.88);
+  --cc-glass-card:     rgba(255, 253, 249, 0.80);
 
-  /* Glass edges and depth — light mode */
-  --cc-edge:           rgba(0, 0, 0, 0.06);
-  --cc-edge-strong:    rgba(0, 0, 0, 0.07);
-  --cc-inset:          rgba(255, 255, 255, 0.80);
-  --cc-sidebar-shadow: 2px 0 24px -8px rgba(0, 0, 0, 0.06);
+  /* Borders and depth */
+  --cc-edge:           rgba(45, 38, 26, 0.08);
+  --cc-edge-strong:    rgba(45, 38, 26, 0.12);
+  --cc-inset:          rgba(255, 255, 255, 0.70);
+  --cc-sidebar-shadow: 2px 0 24px -8px rgba(45, 38, 26, 0.08);
 
   /* Typography */
   --vp-font-family-base:
-    "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
-    "Helvetica Neue", Helvetica, Arial, sans-serif;
+    "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --vp-font-family-mono:
-    ui-monospace, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
 }
 
 .dark {
-  --vp-c-brand-1: #0a84ff;
-  --vp-c-brand-2: #409cff;
-  --vp-c-brand-3: #66b2ff;
-  --vp-c-brand-soft: rgba(10, 132, 255, 0.18);
-  --vp-c-brand-softer: rgba(10, 132, 255, 0.08);
+  /* Brand — sage, lighter for dark */
+  --vp-c-brand-1: #82B292;
+  --vp-c-brand-2: #5A896E;
+  --vp-c-brand-3: #3F6B52;
+  --vp-c-brand-soft: rgba(130, 178, 146, 0.15);
+  --vp-c-brand-softer: rgba(130, 178, 146, 0.08);
 
-  --vp-c-bg: #000000;
-  --vp-c-bg-alt: #0b0b0f;
-  --vp-c-bg-elv: #1c1c1e;
-  --vp-c-bg-soft: #16161a;
+  /* Surfaces — warm dark (stone scale) */
+  --vp-c-bg: #1D1A14;
+  --vp-c-bg-alt: #2C2820;
+  --vp-c-bg-elv: #433C30;
+  --vp-c-bg-soft: #2C2820;
 
-  --vp-c-text-1: #f5f5f7;
-  --vp-c-text-2: #a1a1a6;
-  --vp-c-text-3: #6e6e73;
+  /* Text — warm light */
+  --vp-c-text-1: #F4EDE2;
+  --vp-c-text-2: #D6C7AF;
+  --vp-c-text-3: #877960;
 
-  --vp-c-divider: rgba(255, 255, 255, 0.10);
-  --vp-c-gutter: rgba(255, 255, 255, 0.05);
+  --vp-c-divider: rgba(214, 199, 175, 0.15);
+  --vp-c-gutter: rgba(255, 255, 255, 0.04);
 
-  --vp-home-hero-image-background-image: radial-gradient(closest-side, rgba(10, 132, 255, 0.32), rgba(94, 92, 230, 0));
+  --vp-home-hero-image-background-image: radial-gradient(closest-side, rgba(130, 178, 146, 0.25), rgba(200, 112, 79, 0));
 }
 
-/* ----- Global typography refinements ----- */
+/* ----- Global typography ----- */
 
 html {
   font-feature-settings: "ss01", "cv11";
@@ -95,7 +97,8 @@ html {
 }
 
 body {
-  letter-spacing: -0.011em;
+  font-size: 17px;
+  letter-spacing: -0.005em;
   background: transparent !important;
 }
 
@@ -103,27 +106,35 @@ body {
   background: transparent !important;
 }
 
+/* Headings use the editorial serif */
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3,
+.vp-doc h4 {
+  font-family: "Newsreader", Georgia, "Times New Roman", serif;
+}
+
 .vp-doc h1 {
-  letter-spacing: -0.024em;
-  font-weight: 700;
+  letter-spacing: -0.022em;
+  font-weight: 600;
 }
 
 .vp-doc h2 {
   letter-spacing: -0.018em;
-  font-weight: 650;
+  font-weight: 600;
   border-top: 1px solid var(--vp-c-divider);
   padding-top: 2rem;
   margin-top: 3rem;
 }
 
 .vp-doc h3 {
-  letter-spacing: -0.014em;
+  letter-spacing: -0.012em;
   font-weight: 600;
 }
 
 .vp-doc p,
 .vp-doc li {
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1.65;
 }
 
@@ -131,11 +142,12 @@ body {
 
 .VPHero .name,
 .VPHero .text {
+  font-family: "Newsreader", Georgia, "Times New Roman", serif;
   letter-spacing: -0.025em;
 }
 
 .VPHero .name {
-  font-weight: 700;
+  font-weight: 600;
   background-size: var(--cc-brand-gradient-size);
   background-position: 0% 50%;
   animation: cc-gradient-drift var(--cc-brand-gradient-duration) ease-in-out infinite;
@@ -144,46 +156,31 @@ body {
 .VPHero .text {
   font-size: 28px !important;
   line-height: 1.25 !important;
-  font-weight: 600;
+  font-weight: 500;
   max-width: 720px;
   color: var(--vp-c-text-1);
 }
 
 .VPHero .tagline {
   font-size: 19px !important;
-  line-height: 1.5 !important;
+  line-height: 1.55 !important;
   max-width: 640px;
   color: var(--vp-c-text-2);
   font-weight: 400;
 }
 
-/* Hide the default .VPHero .name gradient text when NeuronHeroText is active */
+/* Hide default .VPHero .name gradient when NeuronHeroText canvas is active */
 .VPHero .name:has(.neuron-hero-canvas) {
   background: none;
   -webkit-text-fill-color: unset;
   color: transparent;
 }
 
-/* NeuronHeroText canvas. Heights are sized so that the fitted neuron font
-   (constrained by canvas width) is at least as large as the vh-text below:
-   vh-text is 32 px (mobile) / 48 px (640+) / 56 px (960+).
-   The canvas must be tall enough that height is never the binding constraint
-   when the fitted font equals the vh-text size. */
+/* NeuronHeroText canvas — dark mode only (currently disabled via v-if="false") */
 .neuron-hero-canvas {
   display: block;
   height: 72px;
   width: 100%;
-  /* Soft brand-coloured glow — visible on both light and dark backgrounds.
-     Two stacked drop-shadows give a tight inner halo + a wider diffuse aura. */
-  filter:
-    drop-shadow(0 0 6px rgba(94, 92, 230, 0.55))
-    drop-shadow(0 0 14px rgba(191, 90, 242, 0.30));
-}
-
-.dark .neuron-hero-canvas {
-  filter:
-    drop-shadow(0 0 8px rgba(10, 132, 255, 0.55))
-    drop-shadow(0 0 18px rgba(94, 92, 230, 0.35));
 }
 
 @media (min-width: 640px) {
@@ -198,8 +195,7 @@ body {
   }
 }
 
-/* Styles for slot-rendered hero content — mirrors VPHero's scoped styles
-   since slot content is compiled in the parent scope and won't receive them */
+/* Slot-rendered hero content */
 .vh-heading {
   display: flex;
   flex-direction: column;
@@ -258,34 +254,19 @@ body {
   }
 }
 
-/* CSS fallback when WebGL is unavailable or in light mode.
-   Font sizes match what computeFittedFontSize() actually produces for each
-   breakpoint's container width (canvas target → fitted result):
-     mobile : 44px target → ~32px fitted  (container ≈ 330–375px)
-     640+   : 64px target → ~48px fitted  (container ≈ 500–600px)
-     960+   : 80px target → ~56px fitted  (has-image .main max-width: 592px)
-   Block heights mirror the canvas heights so the hero layout is identical
-   whether the canvas or the span is rendered. */
+/* CSS fallback when WebGL unavailable — plain sage, matches logo-mark.svg arc colour */
 .neuron-hero-fallback {
   display: block;
   width: 100%;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
-  font-weight: 700;
+  font-family: "Newsreader", Georgia, "Times New Roman", serif;
+  font-weight: 600;
   font-size: 32px;
   height: 72px;
   line-height: 72px;
-  background: var(--cc-brand-gradient);
-  background-size: var(--cc-brand-gradient-size);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-  animation: cc-gradient-drift var(--cc-brand-gradient-duration) ease-in-out infinite;
-  filter:
-    drop-shadow(0 0 6px rgba(94, 92, 230, 0.55))
-    drop-shadow(0 0 14px rgba(191, 90, 242, 0.30));
+  color: var(--vp-c-brand-1);
 }
 
 @media (min-width: 640px) {
@@ -310,7 +291,7 @@ body {
   }
 
   50% {
-    background-position: 100% 45%;
+    background-position: 100% 50%;
   }
 
   100% {
@@ -319,9 +300,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .VPHero .name,
-  .VPNavBar .title,
-  .neuron-hero-fallback {
+  .VPHero .name {
     animation: none;
     background-position: 50% 50%;
   }
@@ -332,32 +311,32 @@ body {
 }
 
 .VPButton.brand {
-  background-color: var(--vp-c-brand-2);
-  border-color: var(--vp-c-brand-2);
-  border-radius: 980px;
+  background-color: var(--vp-c-brand-1);
+  border-color: var(--vp-c-brand-1);
+  border-radius: 999px;
   font-weight: 500;
   padding: 0 22px;
-  transition: background-color 0.18s ease, transform 0.18s ease;
+  transition: background-color 0.22s ease, transform 0.22s ease;
 }
 
 .VPButton.brand:hover {
-  background-color: var(--vp-c-brand-1);
-  border-color: var(--vp-c-brand-1);
+  background-color: var(--vp-c-brand-2);
+  border-color: var(--vp-c-brand-2);
   transform: translateY(-1px);
 }
 
 .VPButton.alt {
-  border-radius: 980px;
+  border-radius: 999px;
   font-weight: 500;
   padding: 0 22px;
-  transition: background-color 0.18s ease, transform 0.18s ease;
+  transition: background-color 0.22s ease, transform 0.22s ease;
 }
 
 .VPButton.alt:hover {
   transform: translateY(-1px);
 }
 
-/* ----- Home page width — match nav bar container (layout-max-width - 64px) ----- */
+/* ----- Home page width ----- */
 
 .VPFeatures .container,
 .VPHomeContent .container {
@@ -366,13 +345,12 @@ body {
 
 /* ----- Feature grid ----- */
 
-
 .VPFeature {
   border: 1px solid var(--vp-c-divider);
-  border-radius: 18px;
+  border-radius: 20px;
   background-color: var(--vp-c-bg-alt);
   padding: 20px;
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
 }
 
 .dark .VPFeature {
@@ -380,9 +358,9 @@ body {
 }
 
 .VPFeature:hover {
-  transform: translateY(-3px);
-  border-color: var(--vp-c-brand-soft);
-  box-shadow: 0 18px 40px -20px rgba(10, 132, 255, 0.25);
+  transform: translateY(-2px);
+  border-color: rgba(63, 107, 82, 0.30);
+  box-shadow: 0 8px 20px rgba(45, 38, 26, 0.10);
 }
 
 .VPFeature .icon {
@@ -399,21 +377,20 @@ body {
 .VPFeature .details {
   color: var(--vp-c-text-2);
   font-size: 15px;
-  line-height: 1.55;
+  line-height: 1.6;
 }
 
 /* ----- Navigation bar ----- */
 
 .VPNavBar {
-  backdrop-filter: saturate(180%) blur(3px);
-  -webkit-backdrop-filter: saturate(180%) blur(3px);
-  background-color: rgba(251, 251, 253, 0.75) !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+  backdrop-filter: saturate(160%) blur(4px);
+  -webkit-backdrop-filter: saturate(160%) blur(4px);
+  background-color: rgba(251, 248, 243, 0.88) !important;
+  border-bottom: 1px solid rgba(45, 38, 26, 0.08);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.70) inset;
 }
 
-/* Prevent Safari from miscalculating the backdrop-filter paint area when
-   the navbar becomes position:fixed at ≥960 px (iPad landscape). */
+/* Prevent Safari backdrop-filter paint area miscalculation at ≥960px */
 @media (min-width: 960px) {
   .VPNavBar {
     transform: translateZ(0);
@@ -421,8 +398,7 @@ body {
   }
 }
 
-/* Reduce wrapper padding at intermediate widths so the 6 nav items + Extra
-   (3-dot menu) fit without pushing past the viewport edge on landscape phones. */
+/* Fit nav items at intermediate widths */
 @media (min-width: 768px) and (max-width: 959px) {
   .VPNavBar .wrapper {
     padding: 0 16px;
@@ -435,12 +411,11 @@ body {
 }
 
 .dark .VPNavBar {
-  background-color: rgba(11, 11, 15, 0.72) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background-color: rgba(29, 26, 20, 0.88) !important;
+  border-bottom: 1px solid rgba(214, 199, 175, 0.12);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
 }
 
-/* Non-home pages: let the navbar's frosted glass show through uniformly */
 .VPNavBar:not(.home.top) .content-body {
   background-color: transparent !important;
 }
@@ -450,26 +425,21 @@ body {
 }
 
 .VPNavScreen {
-  backdrop-filter: saturate(180%) blur(3px);
-  -webkit-backdrop-filter: saturate(180%) blur(3px);
-  background-color: rgba(251, 251, 253, 0.95) !important;
+  backdrop-filter: saturate(160%) blur(4px);
+  -webkit-backdrop-filter: saturate(160%) blur(4px);
+  background-color: rgba(251, 248, 243, 0.96) !important;
 }
 
 .dark .VPNavScreen {
-  background-color: rgba(11, 11, 15, 0.95) !important;
+  background-color: rgba(29, 26, 20, 0.96) !important;
 }
 
+/* Nav title — Newsreader editorial serif, static brand colour */
 .VPNavBar .title {
+  font-family: "Newsreader", Georgia, "Times New Roman", serif;
   font-weight: 600;
-  letter-spacing: -0.014em;
-  background: linear-gradient(120deg, #0a84ff 0%, #5e5ce6 60%, #bf5af2 100%);
-  background-size: var(--cc-brand-gradient-size);
-  background-position: 0% 50%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-  animation: cc-gradient-drift var(--cc-brand-gradient-duration) ease-in-out infinite;
+  letter-spacing: -0.018em;
+  color: var(--vp-c-brand-1);
 }
 
 /* ----- Sidebar ----- */
@@ -489,7 +459,7 @@ body {
 .vp-doc div[class*="language-"] {
   border-radius: 12px;
   border: 1px solid var(--vp-c-divider);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 2px rgba(45, 38, 26, 0.04);
 }
 
 .vp-doc :not(pre) > code {
@@ -505,7 +475,7 @@ body {
 }
 
 .dark .vp-doc :not(pre) > code {
-  color: var(--vp-c-brand-3);
+  color: var(--vp-c-brand-1);
 }
 
 /* ----- Tables ----- */
@@ -519,10 +489,8 @@ body {
 }
 
 .vp-doc .vp-table-wrapper table {
-  /* Override VitePress's display:block — with display:table, width:100% tells
-     the table layout algorithm to fill the wrapper (narrow tables stretch).
-     min-width:max-content lets wide tables exceed the wrapper so the wrapper's
-     overflow-x:auto takes over (wide tables scroll instead of compressing). */
+  /* display:table + width:100% fills narrow wrappers;
+     min-width:max-content lets wide tables overflow so wrapper scrolls. */
   display: table;
   overflow-x: unset;
   width: 100%;
@@ -560,28 +528,25 @@ body {
   letter-spacing: -0.005em;
 }
 
-/* ----- Sidebar — glass panel ----- */
+/* ----- Sidebar — warm paper panel ----- */
 
 .VPSidebar {
-  background-color: rgba(251, 251, 253, 0.62) !important;
-  border-right: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 2px 0 24px -8px rgba(0, 0, 0, 0.06);
+  background-color: rgba(251, 248, 243, 0.80) !important;
+  border-right: 1px solid rgba(45, 38, 26, 0.07);
+  box-shadow: 2px 0 24px -8px rgba(45, 38, 26, 0.06);
 }
 
 .dark .VPSidebar {
-  background-color: rgba(11, 11, 15, 0.68) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 2px 0 24px -8px rgba(0, 0, 0, 0.4);
+  background-color: rgba(29, 26, 20, 0.88) !important;
+  border-right: 1px solid rgba(214, 199, 175, 0.10);
+  box-shadow: 2px 0 24px -8px rgba(0, 0, 0, 0.30);
 }
 
-/* On desktop the sidebar is stationary — backdrop-filter is safe.
-   On mobile it starts off-screen with transform: translateX(-100%), and
-   backdrop-filter on a transformed off-screen fixed element causes browsers
-   to extend the scroll extent, widening the page and breaking the nav overlay. */
+/* Desktop only — backdrop-filter on off-screen mobile sidebar widens page */
 @media (min-width: 960px) {
   .VPSidebar {
-    backdrop-filter: saturate(160%) blur(3px);
-    -webkit-backdrop-filter: saturate(160%) blur(3px);
+    backdrop-filter: saturate(140%) blur(3px);
+    -webkit-backdrop-filter: saturate(140%) blur(3px);
   }
 }
 
@@ -589,7 +554,7 @@ body {
   margin-top: 48px;
 }
 
-/* Aside curtain — transparent to let animation show */
+/* Aside curtain — transparent to reveal content beneath */
 .VPDoc .aside-curtain {
   background: transparent !important;
 }
@@ -598,83 +563,76 @@ body {
   background: transparent !important;
 }
 
-/* Doc content — very light glass; keep blur minimal so animation stays visible */
+/* Doc content */
 .VPDoc .content {
-  backdrop-filter: saturate(140%) blur(3px);
-  -webkit-backdrop-filter: saturate(140%) blur(3px);
-  background-color: rgba(251, 251, 253, 0.14) !important;
+  backdrop-filter: saturate(120%) blur(2px);
+  -webkit-backdrop-filter: saturate(120%) blur(2px);
+  background-color: rgba(251, 248, 243, 0.10) !important;
   padding-top: 5px;
 }
 
 .dark .VPDoc .content {
-  background-color: rgba(0, 0, 0, 0.10) !important;
+  background-color: rgba(29, 26, 20, 0.08) !important;
 }
 
-/* Footer — frosted strip with top-edge specular */
+/* Footer */
 .VPFooter {
   backdrop-filter: saturate(140%) blur(3px);
   -webkit-backdrop-filter: saturate(140%) blur(3px);
-  background-color: rgba(251, 251, 253, 0.72) !important;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  background-color: rgba(251, 248, 243, 0.88) !important;
+  border-top: 1px solid rgba(45, 38, 26, 0.08);
 }
 
 .dark .VPFooter {
-  background-color: rgba(11, 11, 15, 0.72) !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background-color: rgba(29, 26, 20, 0.88) !important;
+  border-top: 1px solid rgba(214, 199, 175, 0.10);
 }
 
-/* ----- On-page local nav (sticky breadcrumb bar on doc pages) ----- */
+/* ----- On-page local nav ----- */
 
 .VPLocalNav {
-  backdrop-filter: saturate(160%) blur(3px);
-  -webkit-backdrop-filter: saturate(160%) blur(3px);
-  background-color: rgba(251, 251, 253, 0.80) !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  backdrop-filter: saturate(140%) blur(3px);
+  -webkit-backdrop-filter: saturate(140%) blur(3px);
+  background-color: rgba(251, 248, 243, 0.88) !important;
+  border-bottom: 1px solid rgba(45, 38, 26, 0.07);
 }
 
 .dark .VPLocalNav {
-  background-color: rgba(11, 11, 15, 0.80) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background-color: rgba(29, 26, 20, 0.88) !important;
+  border-bottom: 1px solid rgba(214, 199, 175, 0.10);
 }
 
-/* ----- Feature cards — glass in dark mode ----- */
+/* ----- Feature cards ----- */
 
 .dark .VPFeature {
-  background: rgba(20, 20, 24, 0.62) !important;
-  backdrop-filter: saturate(160%) blur(3px);
-  -webkit-backdrop-filter: saturate(160%) blur(3px);
-  border-color: rgba(255, 255, 255, 0.08);
-  border-top-color: rgba(255, 255, 255, 0.14);
-}
-
-/* Light mode cards — semi-transparent so backdrop-filter is visible */
-.VPFeature {
+  background: rgba(67, 60, 48, 0.62) !important;
   backdrop-filter: saturate(140%) blur(3px);
   -webkit-backdrop-filter: saturate(140%) blur(3px);
-  background-color: rgba(255, 255, 255, 0.68) !important;
+  border-color: rgba(214, 199, 175, 0.12);
+  border-top-color: rgba(214, 199, 175, 0.18);
 }
 
-/* ----- Doc right aside — transparent to reveal animation ----- */
+.VPFeature {
+  backdrop-filter: saturate(120%) blur(3px);
+  -webkit-backdrop-filter: saturate(120%) blur(3px);
+  background-color: rgba(255, 253, 249, 0.75) !important;
+}
+
+/* ----- Doc right aside ----- */
 
 .VPDoc .aside {
   background: transparent !important;
 }
 
 /* ----- Doc content width -----
-   The default theme caps the prose box .content-container at 688px whenever an
-   outline is present (.has-aside), and on sidebar-less pages it further caps
-   the container (992/1104px) and content (752/784px). Remove these caps so the
-   content stretches to its parent: between the sidebar and the outline on
-   sidebar pages, and to the nav bar width on sidebar-less pages.
-   DOM: .content > .content-container > main.main > .vp-doc > div > {elements}. */
+   Drop the 688px prose cap so content fills between sidebar and outline.
+   On sidebar-less pages widen to the nav bar container. */
 
-/* All doc pages: let the prose box fill its parent (drop the 688px cap). */
 .VPDoc .content-container,
 .VPDoc.has-aside .content-container {
   max-width: 100% !important;
 }
 
-/* Sidebar-less pages: also widen the outer boxes to the nav bar width. */
 @media (min-width: 960px) {
   .VPDoc:not(.has-sidebar) .container {
     max-width: calc(var(--vp-layout-max-width) - 64px) !important;
@@ -694,6 +652,7 @@ body {
 
 .VPHome .vp-doc h2,
 .VPHome .vp-doc h3 {
+  font-family: "Newsreader", Georgia, "Times New Roman", serif;
   letter-spacing: 0;
   border-top: none;
   padding-top: 0;
@@ -717,30 +676,32 @@ body {
   margin-top: 36px;
 }
 
+/* Section kicker — terracotta accent eyebrow */
 .section-kicker {
   margin-bottom: 14px;
-  color: var(--vp-c-brand-1);
+  color: #AC5A3C;
   font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
-/* Product home page: typography */
+/* Home typography */
 
 .home-section h2 {
   max-width: 760px;
   color: var(--vp-c-text-1);
   font-size: clamp(32px, 5vw, 64px);
   line-height: 1.05;
-  font-weight: 760;
+  font-weight: 600;
+  font-family: "Newsreader", Georgia, "Times New Roman", serif;
 }
 
 .home-section h3 {
   color: var(--vp-c-text-1);
   font-size: 20px;
   line-height: 1.25;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .home-section-copy p,
@@ -751,7 +712,7 @@ body {
   line-height: 1.6;
 }
 
-/* Product home page: demo */
+/* Home demo */
 
 .home-demo-grid {
   display: grid;
@@ -763,15 +724,15 @@ body {
 .video-shell {
   overflow: hidden;
   border: 1px solid var(--vp-c-divider);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.76);
-  box-shadow: 0 28px 72px -36px rgba(10, 132, 255, 0.45);
+  border-radius: 14px;
+  background: rgba(255, 253, 249, 0.90);
+  box-shadow: 0 18px 40px rgba(45, 38, 26, 0.10);
 }
 
 .dark .video-shell {
-  background: rgba(20, 20, 24, 0.72);
-  border-color: rgba(255, 255, 255, 0.10);
-  box-shadow: 0 28px 84px -40px rgba(10, 132, 255, 0.55);
+  background: rgba(44, 40, 32, 0.90);
+  border-color: rgba(214, 199, 175, 0.12);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
 }
 
 .video-shell iframe {
@@ -780,7 +741,7 @@ body {
   aspect-ratio: 16 / 9;
 }
 
-/* Product home page: cards and panels */
+/* Home page: cards and panels */
 
 .outcome-grid {
   display: grid;
@@ -796,10 +757,8 @@ body {
   position: relative;
   overflow: hidden;
   border: 1px solid var(--vp-c-divider);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.70);
-  backdrop-filter: saturate(150%) blur(3px);
-  -webkit-backdrop-filter: saturate(150%) blur(3px);
+  border-radius: 14px;
+  background: rgba(255, 253, 249, 0.85);
   transition: border-color 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease;
 }
 
@@ -807,9 +766,9 @@ body {
 .dark .audience-panel,
 .dark .trust-grid > div,
 .dark .builder-section {
-  background: rgba(20, 20, 24, 0.70);
-  border-color: rgba(255, 255, 255, 0.08);
-  border-top-color: rgba(255, 255, 255, 0.14);
+  background: rgba(44, 40, 32, 0.85);
+  border-color: rgba(214, 199, 175, 0.12);
+  border-top-color: rgba(214, 199, 175, 0.18);
 }
 
 .outcome-card:focus-within,
@@ -819,6 +778,7 @@ body {
   border-color: var(--vp-c-brand-1);
 }
 
+/* Warm card shine overlay */
 .outcome-card::after,
 .audience-panel::after,
 .trust-grid > div::after,
@@ -828,8 +788,8 @@ body {
   inset: -1px;
   pointer-events: none;
   background:
-    radial-gradient(circle at var(--cc-glow-x, 18%) var(--cc-glow-y, 0%), rgba(10, 132, 255, 0.14), transparent 34%),
-    linear-gradient(120deg, transparent 16%, rgba(255, 255, 255, 0.18), transparent 42%);
+    radial-gradient(circle at var(--cc-glow-x, 18%) var(--cc-glow-y, 0%), rgba(63, 107, 82, 0.08), transparent 34%),
+    linear-gradient(135deg, transparent 16%, rgba(255, 253, 249, 0.14), transparent 42%);
   opacity: 0;
   transform: translateX(-8%);
   transition: opacity 0.28s ease, transform 0.45s ease;
@@ -840,8 +800,8 @@ body {
 .dark .trust-grid > div::after,
 .dark .builder-section::after {
   background:
-    radial-gradient(circle at var(--cc-glow-x, 18%) var(--cc-glow-y, 0%), rgba(255, 255, 255, 0.055), transparent 34%),
-    linear-gradient(120deg, transparent 18%, rgba(255, 255, 255, 0.055), transparent 44%);
+    radial-gradient(circle at var(--cc-glow-x, 18%) var(--cc-glow-y, 0%), rgba(214, 199, 175, 0.06), transparent 34%),
+    linear-gradient(135deg, transparent 18%, rgba(255, 255, 255, 0.04), transparent 44%);
 }
 
 .outcome-card {
@@ -853,19 +813,19 @@ body {
 .audience-panel:hover,
 .trust-grid > div:hover,
 .builder-section:hover {
-  transform: translateY(-3px);
-  border-color: var(--vp-c-brand-soft);
-  box-shadow: 0 18px 46px -30px rgba(10, 132, 255, 0.55);
+  transform: translateY(-2px);
+  border-color: rgba(63, 107, 82, 0.30);
+  box-shadow: 0 8px 20px rgba(45, 38, 26, 0.10);
 }
 
 .dark .outcome-card:hover,
 .dark .audience-panel:hover,
 .dark .trust-grid > div:hover,
 .dark .builder-section:hover {
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: rgba(214, 199, 175, 0.22);
   box-shadow:
-    0 20px 46px -32px rgba(0, 0, 0, 0.95),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    0 8px 20px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .outcome-card:hover::after,
@@ -884,14 +844,15 @@ body {
   height: 32px;
   margin-bottom: 48px;
   border-radius: 999px;
-  background: rgba(10, 132, 255, 0.13);
-  color: var(--vp-c-brand-1);
+  background: rgba(63, 107, 82, 0.12);
+  color: var(--vp-c-brand-2);
   font-size: 12px;
   font-weight: 800;
 }
 
 .dark .card-number {
-  background: rgba(10, 132, 255, 0.22);
+  background: rgba(130, 178, 146, 0.18);
+  color: var(--vp-c-brand-1);
 }
 
 .outcome-card p {
@@ -900,7 +861,7 @@ body {
   line-height: 1.62;
 }
 
-/* Product home page: audience paths */
+/* Audience paths */
 
 .audience-grid {
   display: grid;
@@ -915,12 +876,15 @@ body {
 .audience-label {
   display: inline-block;
   margin-bottom: 72px;
-  color: var(--vp-c-brand-1);
+  color: #AC5A3C;
   font-size: 14px;
   font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
 }
 
 .audience-panel h2 {
+  font-family: "Newsreader", Georgia, "Times New Roman", serif;
   font-size: clamp(32px, 4vw, 52px);
 }
 
@@ -939,7 +903,7 @@ body {
   text-decoration: none !important;
 }
 
-/* Product home page: trust */
+/* Trust section */
 
 .trust-grid {
   display: grid;
@@ -959,7 +923,7 @@ body {
   line-height: 1.58;
 }
 
-/* Product home page: builder calls to action */
+/* Builder CTA */
 
 .builder-section {
   display: grid;
@@ -990,7 +954,7 @@ body {
   color: var(--vp-c-text-1);
   font-weight: 700;
   text-decoration: none !important;
-  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+  transition: background-color 0.22s ease, border-color 0.22s ease, color 0.22s ease, transform 0.22s ease;
 }
 
 .dark .VPHome .vp-doc .home-link-button {
@@ -1011,7 +975,7 @@ body {
   outline-offset: 3px;
 }
 
-/* Product home page: motion */
+/* ----- Motion ----- */
 
 @media (prefers-reduced-motion: no-preference) {
   .outcome-card,
@@ -1052,10 +1016,10 @@ body {
 
 @keyframes cc-card-breathe {
   0%, 100% {
-    filter: drop-shadow(0 0 0 rgba(10, 132, 255, 0));
+    filter: drop-shadow(0 0 0 rgba(45, 38, 26, 0));
   }
   50% {
-    filter: drop-shadow(0 12px 18px rgba(10, 132, 255, 0.08));
+    filter: drop-shadow(0 12px 18px rgba(45, 38, 26, 0.08));
   }
 }
 
@@ -1071,7 +1035,7 @@ body {
     filter: drop-shadow(0 0 0 rgba(0, 0, 0, 0));
   }
   50% {
-    filter: drop-shadow(0 14px 20px rgba(0, 0, 0, 0.16));
+    filter: drop-shadow(0 14px 20px rgba(0, 0, 0, 0.18));
   }
 }
 
@@ -1086,8 +1050,7 @@ body {
   }
 }
 
-
-/* Product home page: responsive layout */
+/* ----- Responsive layout ----- */
 
 @media (max-width: 959px) {
   .VPHome .vp-doc.container {
@@ -1165,4 +1128,37 @@ body {
   .VPHome .vp-doc .home-link-button {
     width: 100%;
   }
+}
+
+/* ----- Hardware spec cards ----- */
+
+.hw-spec {
+  padding: 0.875rem 1.125rem;
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.hw-spec dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 1.5rem;
+  row-gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.hw-spec dt {
+  font-weight: 600;
+  color: var(--vp-c-text-2);
+  white-space: nowrap;
+  margin: 0;
+}
+
+.hw-spec dd {
+  margin: 0;
+  color: var(--vp-c-text-1);
 }

@@ -456,14 +456,14 @@ function drawFrame(
   // --- Interior nodes ---
   for (let i = 0; i < iCount; i++) {
     const n = iNodes[i]
-    const [r, g, b] = nodeColour(n.x, n.y, canvasWidth, ch, timeMs, reducedMotion.value)
+    const [r, g, b] = nodeColour(n.x, n.y, canvasWidth, ch, timeMs, reducedMotion.value, isDarkMode)
     packVertex(data, i * FLOATS_PER_VERTEX, n.x, n.y, INTERIOR_NODE_ALPHA, r * cs, g * cs, b * cs, interiorNodeSize)
   }
 
   // --- Border nodes ---
   for (let i = 0; i < bCount; i++) {
     const n = bNodes[i]
-    const [r, g, b] = nodeColour(n.x, n.y, canvasWidth, ch, timeMs, reducedMotion.value)
+    const [r, g, b] = nodeColour(n.x, n.y, canvasWidth, ch, timeMs, reducedMotion.value, isDarkMode)
     packVertex(data, (iCount + i) * FLOATS_PER_VERTEX, n.x, n.y, BORDER_NODE_ALPHA, r * cs, g * cs, b * cs, borderNodeSize)
   }
 
@@ -473,8 +473,8 @@ function drawFrame(
     const edge = iEdges[e]
     const nA = iNodes[edge.i]
     const nB = edge.j < iCount ? iNodes[edge.j] : bNodes[edge.j - iCount]
-    const [rA, gA, bA] = nodeColour(nA.x, nA.y, canvasWidth, ch, timeMs, reducedMotion.value)
-    const [rB, gB, bB] = nodeColour(nB.x, nB.y, canvasWidth, ch, timeMs, reducedMotion.value)
+    const [rA, gA, bA] = nodeColour(nA.x, nA.y, canvasWidth, ch, timeMs, reducedMotion.value, isDarkMode)
+    const [rB, gB, bB] = nodeColour(nB.x, nB.y, canvasWidth, ch, timeMs, reducedMotion.value, isDarkMode)
     const baseA = (totalNodes + e * 2) * FLOATS_PER_VERTEX
     packVertex(data, baseA,                    nA.x, nA.y, edge.alpha, rA * cs, gA * cs, bA * cs, 0)
     packVertex(data, baseA + FLOATS_PER_VERTEX, nB.x, nB.y, edge.alpha, rB * cs, gB * cs, bB * cs, 0)
@@ -494,8 +494,8 @@ function drawFrame(
   for (let e = 0; e < bEdges.length; e++) {
     const edge = bEdges[e]
     const nA = bNodes[edge.i], nB = bNodes[edge.j]
-    const [rA, gA, bA] = nodeColour(nA.x, nA.y, canvasWidth, ch, timeMs, reducedMotion.value)
-    const [rB, gB, bB] = nodeColour(nB.x, nB.y, canvasWidth, ch, timeMs, reducedMotion.value)
+    const [rA, gA, bA] = nodeColour(nA.x, nA.y, canvasWidth, ch, timeMs, reducedMotion.value, isDarkMode)
+    const [rB, gB, bB] = nodeColour(nB.x, nB.y, canvasWidth, ch, timeMs, reducedMotion.value, isDarkMode)
     const alpha = Math.max(0.8, edge.alpha)
 
     // Perpendicular unit vector scaled to half-width
@@ -715,8 +715,8 @@ function stopWebGL(): void {
 }
 
 onMounted(() => {
-  // Set up dark-mode detection — always, even if the canvas isn't rendered
-  // yet (light mode), so switching to dark mode triggers the watcher.
+  // Set up dark-mode detection via MutationObserver. isDarkMode drives blending
+  // mode and colour scale in drawFrame — no start/stop needed on theme toggle.
   darkMode.value = document.documentElement.classList.contains('dark')
   isDarkMode = darkMode.value
   darkModeObserver = new MutationObserver(() => {
@@ -729,14 +729,14 @@ onMounted(() => {
   // Detect reduced motion preference
   reducedMotion.value = detectReducedMotion()
 
-  // Only initialise WebGL if the canvas is already visible (dark mode on first load)
+  // Only start WebGL if already in dark mode on first load.
   if (canvasRef.value && darkMode.value) {
     startWebGL(canvasRef.value)
   }
 })
 
-// When the user toggles the theme, start or stop the WebGL animation.
-// nextTick ensures the v-if canvas element is in the DOM before we touch it.
+// Start/stop WebGL as the user toggles dark mode.
+// nextTick ensures the v-if canvas is in the DOM before we touch it.
 watch(darkMode, async (isDark) => {
   if (isDark && webglSupported.value && !gl) {
     await nextTick()
@@ -769,8 +769,9 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <!-- canvas temporarily disabled — remove `false &&` to re-enable -->
   <canvas
-    v-if="webglSupported && darkMode"
+    v-if="false && webglSupported && darkMode"
     ref="canvasRef"
     class="neuron-hero-canvas"
     aria-label="Cognitive Companion"

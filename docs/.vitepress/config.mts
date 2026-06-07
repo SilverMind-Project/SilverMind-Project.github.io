@@ -32,7 +32,7 @@ export default defineConfig({
   ],
 
   themeConfig: {
-    logo: "/favicon.svg",
+    logo: { light: "/logo-mark.svg", dark: "/logo-mark-inverse.svg" },
 
     nav: [
       { text: "For Families", link: "/families/overview" },

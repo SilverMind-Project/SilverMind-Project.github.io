@@ -84,6 +84,10 @@ The dedicated Compose file loads the three CTS graphs and all five Buffalo_L
 graphs. The person-identification service remains a separate API process and
 uses Triton over gRPC.
 
+For copy commands, Jetson software checks, engine construction, memory
+fragmentation recovery, service switching, and Git LFS handling, follow the
+[repository deployment runbook](https://github.com/SilverMind-Project/continuous-tracking/blob/main/docs/jetson-int8-deployment.md).
+
 ## Understand the incoming workload
 
 Capacity starts with camera cadence, not peak TOPS.
