@@ -1,6 +1,7 @@
 import { defineConfig } from "vitepress";
 
 export default defineConfig({
+  appearance: false,
   markdown: {
     config: (md) => {
       const defaultRender = md.renderer.rules.fence?.bind(md.renderer.rules);
