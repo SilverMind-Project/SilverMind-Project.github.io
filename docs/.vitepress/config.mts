@@ -50,7 +50,7 @@ export default defineConfig({
       },
       { text: "Roadmap", link: "/roadmap" },
       {
-        text: "v0.7.3",
+        text: "v0.7.5",
         items: [
           {
             text: "Code",

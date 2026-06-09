@@ -6,8 +6,8 @@ hero:
   text: Privacy-first AI for aging in place
   tagline: Cognitive Companion helps families keep seniors safer at home by noticing meaningful routine changes, preserving personal memories, and giving caregivers calm, timely awareness.
   image:
-    src: /logo.svg
-    alt: Cognitive Companion
+    src: /cognitive-companion-care-4x3.png
+    alt: An elderly woman relaxing at home with a tablet-based AI companion, connected to a care network
   actions:
     - theme: brand
       text: Watch Demo
