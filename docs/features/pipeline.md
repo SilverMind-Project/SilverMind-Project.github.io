@@ -972,7 +972,7 @@ Rules with `trigger_types` containing `"dementia_signal"` fire when the CTS subs
 
 - `trigger_types`: `["dementia_signal"]`
 - Add a `dementia_signal` context filter to scope by signal kind, person, severity, or time window:
-  - `kinds`: list of signal kinds to match (`pacing`, `sundowning_index`, `bathroom_dwell_anomaly`, `nighttime_movement`, `stillness_anomaly`, `absence`, `room_revisit_rate`). Empty matches any kind.
+  - `kinds`: list of signal kinds to match (`pacing`, `sundowning_index`, `bathroom_dwell_anomaly`, `nighttime_movement`, `stillness_anomaly`, `absence`, `room_revisit_rate`, `fall_suspected`). Empty matches any kind.
   - `person_ids`: list of person identity IDs. Empty matches any person.
   - `min_severity`: numeric threshold where `0.33 = info`, `0.66 = warning`, `1.0 = emergency`.
   - `cooldown_minutes`: suppress repeated matches for N minutes per (rule, person, kind). Uses `DementiaSignal.acknowledged_at` from the Alerts UI.
@@ -992,6 +992,35 @@ Pipeline:
 ```
 
 :::
+
+::: details Example: Fall response (template rule "Fall response")
+
+When a possible fall is detected, query the room, fetch a camera frame, ask the VLM for visual confirmation, and notify the caregiver on all channels. The VLM runs once per incident. Requires `fall_detection.enabled: true` in `config/settings.yaml`.
+
+**Important: fall detection is supportive and is not a medical alert system. Do not use it as your sole fall-response mechanism.**
+
+```text
+Rule name: Fall response
+trigger_types: ["dementia_signal"]
+Context filters:
+  - dementia_signal: kinds=["fall_suspected"], min_severity=0.66, cooldown_minutes=5
+Pipeline:
+  1. presence_query   (person_id: {{trigger.person_id}}, output_key: presence)
+  2. image_crop       (camera_id: {{presence.camera_id}}, output_key: fall_frame)
+  3. llm_call         (vision: true,
+                       image_key: fall_frame,
+                       prompt: "Answer strictly yes/no/unclear: is a person lying on the floor?",
+                       output_key: vlm_verdict)
+  4. condition        (expression: vlm_verdict.response == "yes")
+     true  -> notification (channels: [telegram, pwa_popup_text, pwa_tts_announcement],
+                            message_template: "Possible fall in {presence.room_name}. Visual check: {vlm_verdict.response}. Please respond immediately.")
+     false -> notification (channels: [pwa_popup_text],
+                            message_template: "Fall sensor triggered in {presence.room_name} but visual check returned: {vlm_verdict.response}. Monitoring.")
+```
+
+:::
+
+
 
 ### Telegram Command Trigger {#telegram-command-triggers}
 
