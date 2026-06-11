@@ -89,7 +89,7 @@ Redis clients must set `decode_responses=False` so binary payloads round-trip un
 
 ## PostgreSQL schema
 
-All CTS tables, indexes, triggers, and functions live in the `continuous_tracking` schema on the shared PostgreSQL instance. SQL migrations (`0001` to `0006` in `tracking-orchestrator/migrations/`) are managed by `MigrationRunner` with `pg_try_advisory_lock` for multi-replica safety.
+All CTS tables, indexes, triggers, and functions live in the `continuous_tracking` schema on the shared PostgreSQL instance. The single baseline migration (`0001_init` in `tracking-orchestrator/migrations/`) is managed by `MigrationRunner` with `pg_try_advisory_lock` for multi-replica safety.
 
 Key hypertables:
 

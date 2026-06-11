@@ -6,9 +6,9 @@ How homography calibration, visibility polygons, overlap groups, and adjacency e
 
 CTS tracking within a single camera uses pixel coordinates. For cross-camera association, the system needs to know where each camera is looking on the floor plan. This requires three things:
 
-1. **Homography** — a 3×3 matrix that maps camera pixel coordinates to floor-plan meter coordinates
-2. **Visibility polygon** — the area on the floor plan that a camera can see, computed from the homography
-3. **Adjacency edges** — directed transit-time constraints that gate which cameras a person could physically move between
+1. **Homography**: a 3x3 matrix that maps camera pixel coordinates to floor-plan meter coordinates
+2. **Visibility polygon**: the area on the floor plan that a camera can see, computed from the homography
+3. **Adjacency edges**: directed transit-time constraints that gate which cameras a person could physically move between
 
 With all three configured, the cross-camera associator can compute geometric scores: "these two detections are 1.2 meters apart on the floor plan." Without them, it falls back to appearance-only matching, which produces both false merges (different people linked because they look similar) and missed merges (the same person not linked because ReID similarity is below threshold).
 
