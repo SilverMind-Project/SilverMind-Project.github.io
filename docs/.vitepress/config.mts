@@ -146,6 +146,7 @@ export default defineConfig({
               text: "Model Quantization",
               link: "/hardware/model-quantization",
             },
+            { text: "Camera Setup", link: "/hardware/camera-setup" },
           ],
         },
       ],

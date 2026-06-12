@@ -13,6 +13,9 @@ moving detector, pose, body ReID, and face inference to a separate accelerator.
 - [Model quantization and accelerator portability](/hardware/model-quantization)
   explains calibration, PTQ, QAT, sparse INT8, Triton internals, and paths for
   Intel or AMD discrete GPUs.
+- [Camera setup and tuning guide](/hardware/camera-setup) covers exposure,
+  resolution, mount angle, privacy zones, and a validation checklist for each
+  newly mounted camera.
 
 ## Supported devices
 

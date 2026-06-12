@@ -234,6 +234,7 @@ Homography, where it exists, remains an accuracy boost (full geometric scoring a
 
 ## Next steps
 
+- [Camera Setup Guide](/hardware/camera-setup): exposure, resolution, placement, and a post-mount validation checklist
 - [Frame Processing Pipeline](./frame-pipeline.md): how calibrated floor positions flow through the pipeline
 - [CC Integration](./cc-integration.md): how calibration data is served to the frontend
 - [Architecture](/guide/architecture): overall system layout
