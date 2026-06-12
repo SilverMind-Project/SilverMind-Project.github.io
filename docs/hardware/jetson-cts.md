@@ -300,8 +300,22 @@ the request, then pads any unused slots. Triton treats the whole `[8,3,640,640]`
 tensor as one non-batched request.
 
 This preserves the existing detector contract but makes low occupancy
-expensive. A future dynamic-batch detector export could reduce padding, but it
-would require new equivalence, accuracy, and throughput tests.
+expensive. The DGX/FP32 dynamic-batch export (`person-detector-dynamic`) is
+now available and equivalence-gated. Jetson INT8 re-qualification requires
+repeating the steps below before enabling the dynamic model on Jetson hardware.
+
+**Jetson INT8 re-qualification plan for the dynamic-batch detector:**
+
+1. Export the model with `--dynamic-batch` and calibrate INT8 with a
+   representative calibration set.
+2. Run `make detector-equivalence` against both the static INT8 and dynamic
+   INT8 Triton deployments and confirm all frames pass the IoU 0.5 and
+   confidence MAE gates.
+3. Run `perf_analyzer` at batch 1, 2, 4, and 8 and record results in
+   `triton-models/person-detector-dynamic/BENCH.md`.
+4. Run six cameras for 24 hours and confirm detector p95 stays below 140 ms
+   with no growing queue.
+5. Verify identity continuity and end-to-end latency match the static baseline.
 
 ### Dynamic crop batches
 
@@ -409,6 +423,9 @@ MinIO reads, crop generation, face-service calls, tracking, or Redis latency.
 9. Increase to eight cameras and repeat both 24-hour tests.
 10. Compare identity continuity, pose output, face similarity, dropped frames,
     and end-to-end latency with the DGX baseline.
+11. (Optional) Complete the dynamic-batch detector re-qualification steps in
+    the "Fixed detector batch" section above. Enable `triton.detector_dynamic_batch`
+    only after steps 1-10 pass with the dynamic model.
 
 If eight cameras fail, reduce `frame_interval_ms` to `333` or `500`, which
 corresponds to about 3 or 2 polls per second per camera. Keep the five-second
