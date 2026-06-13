@@ -1,0 +1,51 @@
+/* ============================================================
+   Cognitive Companion — Typography tokens
+   ------------------------------------------------------------
+   Newsreader (serif display) · Hanken Grotesk (sans UI/body)
+   · IBM Plex Mono (data). Scale is generous & senior-legible:
+   body base is 17px, never smaller than 14px in product UI.
+   ============================================================ */
+:root {
+  /* Families */
+  --font-display: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Weights */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-display: 500;
+
+  /* Type scale (px) — fluid-friendly steps */
+  --text-2xs: 0.75rem;   /* 12 — labels/meta only */
+  --text-xs:  0.8125rem; /* 13 */
+  --text-sm:  0.875rem;  /* 14 */
+  --text-base:1.0625rem; /* 17 — body default */
+  --text-md:  1.1875rem; /* 19 */
+  --text-lg:  1.375rem;  /* 22 */
+  --text-xl:  1.75rem;   /* 28 */
+  --text-2xl: 2.25rem;   /* 36 */
+  --text-3xl: 2.875rem;  /* 46 */
+  --text-4xl: 3.75rem;   /* 60 */
+  --text-5xl: 4.75rem;   /* 76 */
+
+  /* Line heights */
+  --leading-tight: 1.08;
+  --leading-snug: 1.22;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+
+  /* Letter spacing */
+  --tracking-tight: -0.02em;
+  --tracking-snug: -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em;
+  --tracking-caps: 0.14em;  /* eyebrow / overline */
+
+  /* Semantic roles */
+  --type-eyebrow-size: var(--text-xs);
+  --type-body-size: var(--text-base);
+  --type-display-leading: var(--leading-tight);
+}

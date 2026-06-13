@@ -1,0 +1,106 @@
+/* ============================================================
+   Cognitive Companion — Production dialect aliases (--cc-*)
+   ------------------------------------------------------------
+   The shipped frontend (frontend/src/styles/theme.css) reads
+   these names. Declaring them here too means DS artifacts and
+   product code share one vocabulary; values always reference
+   the base tokens, never restate hex.
+   ============================================================ */
+:root {
+  /* Fonts */
+  --cc-font:         var(--font-sans);
+  --cc-font-display: var(--font-display);
+  --cc-font-mono:    var(--font-mono);
+
+  /* Radii */
+  --cc-radius-xs:   var(--radius-xs);
+  --cc-radius-sm:   var(--radius-sm);
+  --cc-radius-md:   var(--radius-md);
+  --cc-radius-lg:   var(--radius-lg);
+  --cc-radius-xl:   var(--radius-xl);
+  --cc-radius-pill: var(--radius-pill);
+
+  /* Motion */
+  --cc-dur-fast: var(--dur-fast); /* @kind other */
+  --cc-dur-base: var(--dur-base); /* @kind other */
+  --cc-dur-slow: var(--dur-slow); /* @kind other */
+  --cc-ease-standard: var(--ease-standard); /* @kind other */
+  --cc-ease-out: var(--ease-out); /* @kind other */
+
+  /* Focus + inset */
+  --cc-focus-ring:   var(--focus-ring);
+  --cc-shadow-focus: var(--shadow-focus);
+  --cc-shadow-inset: var(--shadow-inset);
+
+  /* Surfaces (ccWarm theme values) */
+  --cc-bg:          var(--surface-page);
+  --cc-bg-elevated: var(--surface-card);
+  --cc-surface:     var(--surface-card);
+  --cc-surface-2:   var(--surface-sunk);
+  --cc-surface-3:   var(--surface-sunk);
+
+  /* Text */
+  --cc-text-1: var(--text-strong);
+  --cc-text-2: var(--text-muted);
+  --cc-text-3: var(--text-faint);
+
+  /* Brand */
+  --cc-brand:        var(--sage-500);
+  --cc-brand-strong: var(--sage-600);
+  --cc-brand-soft:   rgba(63, 107, 82, 0.12);
+  --cc-brand-softer: rgba(63, 107, 82, 0.06);
+
+  /* Semantic */
+  --cc-success: var(--green-care);
+  --cc-warning: var(--gold-notice);
+  --cc-error:   var(--brick-alert);
+  --cc-info:    var(--blue-info);
+
+  /* Borders */
+  --cc-divider:        var(--line-hair);
+  --cc-divider-strong: var(--line-soft);
+
+  /* Shadows */
+  --cc-shadow-sm: var(--shadow-sm);
+  --cc-shadow-md: var(--shadow-md);
+  --cc-shadow-lg: var(--shadow-lg);
+}
+
+/* ============================================================
+   Data-viz palette — warm, sequential by salience.
+   ECharts series should consume these in order. Replaces the
+   misleadingly-named --cc-teal/indigo/purple trio and the
+   rainbow PALETTE in WeeklyReportView.
+   ============================================================ */
+:root {
+  --cc-chart-1: #3F6B52;  /* sage          — primary series */
+  --cc-chart-2: #C8704F;  /* terracotta    — comparison     */
+  --cc-chart-3: #4E7A8C;  /* slate blue    — tertiary       */
+  --cc-chart-4: #C98A2E;  /* honey gold    — quaternary     */
+  --cc-chart-5: #82B292;  /* light sage    — fills, areas   */
+  --cc-chart-6: #B3A286;  /* warm stone    — de-emphasized  */
+  --cc-chart-grid: var(--stone-200);
+  --cc-chart-axis-label: var(--stone-500);
+}
+
+/* ============================================================
+   Spatial-canvas invariants — drawn over PHOTOGRAPHS (camera
+   frames, floor plans), so they intentionally break the muted
+   palette for legibility against imagery. Never use these on
+   UI surfaces.
+   ============================================================ */
+:root {
+  --cc-annotation-unknown:    #fb923c; /* @kind other */
+  --cc-annotation-pending:    #f59e0b; /* @kind other */
+  --cc-annotation-halo:       rgba(0, 0, 0, 0.70); /* @kind other */
+  --cc-annotation-halo-light: rgba(251, 248, 243, 0.92); /* @kind other */
+  --cc-annotation-ink:        #1D1A14; /* @kind other */
+  --cc-room-fill:             rgba(63, 107, 82, 0.10); /* @kind other */
+  --cc-marker-ring:           #ffffff; /* @kind other */
+
+  /* Posture overlays — must read against photographic backgrounds */
+  --cc-posture-standing: #4ade80; /* @kind other */
+  --cc-posture-sitting:  #fbbf24; /* @kind other */
+  --cc-posture-walking:  #60a5fa; /* @kind other */
+  --cc-posture-lying:    #c084fc; /* @kind other */
+}

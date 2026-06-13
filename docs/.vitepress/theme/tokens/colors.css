@@ -1,0 +1,98 @@
+/* ============================================================
+   Cognitive Companion — Color tokens
+   ------------------------------------------------------------
+   "Warm editorial calm." Warm cream paper, grounded sage green,
+   terracotta accent, deep warm ink. Semantic colors are muted,
+   never alarming — gentle awareness, not panic.
+   ============================================================ */
+:root {
+  /* ---- Stone : warm neutral scale (text, surfaces, lines) ---- */
+  --stone-50:  #FBF8F3;
+  --stone-100: #F4EDE2;
+  --stone-200: #E8DDCC;
+  --stone-300: #D6C7AF;
+  --stone-400: #B3A286;
+  --stone-500: #877960;
+  --stone-600: #5F5544;
+  --stone-700: #433C30;
+  --stone-800: #2C2820;
+  --stone-900: #1D1A14;
+
+  /* ---- Sage : primary brand green (calm, life, growth) ---- */
+  --sage-50:  #EDF4EE;
+  --sage-100: #D7E7DB;
+  --sage-200: #B0CFB9;
+  --sage-300: #82B292;
+  --sage-400: #5A896E;
+  --sage-500: #3F6B52;  /* primary */
+  --sage-600: #305340;
+  --sage-700: #243F31;
+  --sage-800: #192C22;
+
+  /* ---- Terra : terracotta accent (hearth, warmth, human) ---- */
+  --terra-50:  #FBEDE5;
+  --terra-100: #F5D8C9;
+  --terra-200: #EBB59B;
+  --terra-300: #DC8D6B;
+  --terra-400: #C8704F;  /* accent */
+  --terra-500: #AC5A3C;
+  --terra-600: #884630;
+
+  /* ---- Semantic hues (muted, calm) ---- */
+  --green-care:  #2F8F5B;  /* steady / good */
+  --gold-notice: #C98A2E;  /* gentle attention */
+  --brick-alert: #BC5740;  /* needs awareness (not panic red) */
+  --blue-info:   #4E7A8C;  /* neutral information */
+
+  /* ============================================================
+     Semantic aliases — reference these in product UI
+     ============================================================ */
+
+  /* Surfaces & backgrounds */
+  --surface-page:       var(--stone-50);
+  --surface-sunk:       var(--stone-100);
+  --surface-card:       #FFFDF9;
+  --surface-card-alt:   #FFFFFF;
+  --surface-inverse:    var(--stone-800);
+  --surface-brand:      var(--sage-500);
+  --surface-brand-soft: var(--sage-50);
+  --surface-accent-soft:var(--terra-50);
+
+  /* Text */
+  --text-strong:   var(--stone-900);
+  --text-body:     var(--stone-800);
+  --text-muted:    var(--stone-600);
+  --text-faint:    var(--stone-500);
+  --text-on-brand: #FBF8F3;
+  --text-on-dark:  var(--stone-100);
+  --text-brand:    var(--sage-600);
+  --text-accent:   var(--terra-500);
+  --text-link:     var(--sage-600);
+
+  /* Lines & borders */
+  --line-hair:   var(--stone-200);
+  --line-soft:   var(--stone-300);
+  --line-strong: var(--stone-400);
+  --line-brand:  var(--sage-300);
+
+  /* Interactive — brand (primary action) */
+  --action-bg:        var(--sage-500);
+  --action-bg-hover:  var(--sage-600);
+  --action-bg-press:  var(--sage-700);
+  --action-fg:        #FBF8F3;
+
+  /* Interactive — accent */
+  --accent-bg:        var(--terra-400);
+  --accent-bg-hover:  var(--terra-500);
+  --accent-bg-press:  var(--terra-600);
+  --accent-fg:        #FFF8F3;
+
+  /* Focus ring */
+  --focus-ring: var(--terra-300);
+
+  /* Semantic surfaces + text (for badges, banners) */
+  --good-fg:   #1F6B41; --good-bg:   #E2F0E7; --good-line: #BFE0CC;
+  --notice-fg: #8A5C12; --notice-bg: #FBEFD7; --notice-line:#F0D9A8;
+  --alert-fg:  #8E3A28; --alert-bg:  #FAE1DA; --alert-line: #F0C2B5;
+  --info-fg:   #2F5663; --info-bg:   #E0EDF1; --info-line:  #BFD9E1;
+}
