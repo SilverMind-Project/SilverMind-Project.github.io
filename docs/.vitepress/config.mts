@@ -115,6 +115,7 @@ export default defineConfig({
               ],
             },
             { text: "Voice Companion", link: "/features/voice-companion" },
+            { text: "Guided Companion", link: "/features/guided-companion" },
             { text: "E-Ink Displays", link: "/features/eink-display" },
             { text: "Notifications", link: "/features/notifications" },
             { text: "TTS Service", link: "/features/tts-service" },
