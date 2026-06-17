@@ -50,7 +50,7 @@ export default defineConfig({
       },
       { text: "Roadmap", link: "/roadmap" },
       {
-        text: "v0.7.11",
+        text: "v0.7.28",
         items: [
           {
             text: "Code",
@@ -106,6 +106,10 @@ export default defineConfig({
                 { text: "Tracking Concepts", link: "/features/continuous-tracking/tracking-concepts" },
                 { text: "Frame Pipeline", link: "/features/continuous-tracking/frame-pipeline" },
                 { text: "Camera Calibration", link: "/features/continuous-tracking/camera-calibration" },
+                { text: "Camera to Floor Basics", link: "/features/continuous-tracking/01-camera-floor-basics" },
+                { text: "Measurement Uncertainty", link: "/features/continuous-tracking/03-measurement-uncertainty" },
+                { text: "Position Fusion", link: "/features/continuous-tracking/04-position-fusion" },
+                { text: "Posture Fusion", link: "/features/continuous-tracking/05-posture-fusion" },
                 { text: "Dementia Signals", link: "/features/continuous-tracking/dementia-signals" },
                 { text: "CC Integration", link: "/features/continuous-tracking/cc-integration" },
               ],

@@ -1,0 +1,64 @@
+# Measurement Uncertainty & Anisotropy
+
+CTS projects each detection's footpoint from image pixels into the shared floor-plan frame with a camera homography. The detector's pixel error is roughly circular in the image, but the homography can stretch that error unevenly on the floor. Oblique views therefore produce an elongated floor-plane error ellipse.
+
+The per-observation model is:
+
+```text
+R_obs = J * Sigma_px * J^T + R_cal + epsilon * I
+```
+
+Where:
+
+- `R_obs` is the full single-camera measurement covariance in floor-plan m².
+- `J` is the analytic homography Jacobian at the bbox bottom-centre footpoint, in m/px.
+- `Sigma_px` is detector footpoint covariance in px².
+- `R_cal = (k_cal * floor_residual_m)² * I` is the systematic calibration term in m².
+- `epsilon * I` is a small numeric floor that keeps `R_obs` invertible.
+
+Footpoint reliability controls the scale of `Sigma_px`. A bbox clipped against the bottom or sides of the image means the bbox bottom-centre is probably the image boundary, not the person's floor contact point. If pose is available and both ankles have low visibility, the feet are likely occluded. CTS keeps those observations but marks `footpoint_reliable=False`, which steeply inflates the pixel covariance before applying `J`.
+
+The random term has the expected units:
+
+```text
+(m/px) * px² * (m/px) = m²
+```
+
+The calibration term is kept separate because it is systematic. Cross-camera fusion can shrink the random term with more independent camera observations, but it must not fuse away a fixed camera calibration bias. See [Position Fusion](./04-position-fusion.md) for how the random/systematic split is applied during fusion.
+
+Trajectory persistence keeps the uncertainty audit trail with each `person_trajectories` row: `position_sigma_m` stores the PH position covariance summary, `primary_camera_id` records the stabilized best-view camera, `contributing_camera_count` records how many camera observations fed the point for that frame, and `footpoint_reliable` records the representative observation's footpoint reliability.
+
+```text
+Image pixels                         Floor-plan metres
+
+    bbox
+  +------+
+  |      |
+  |      |
+  +--x---+  footpoint_px                camera
+      \                                  o
+       \                                  \
+        \ homography                       \ viewing ray
+         \                                  \
+          v                                  \        major axis
+     circular Sigma_px                        \      .--------.
+          (px^2)                               \    /          \
+                                                \   \          /
+                                                 \   '--------'
+                                                  x footpoint_m
+
+                                             elongated R_obs ellipse (m^2)
+```
+
+## Code references
+
+| Concern | Code |
+| --- | --- |
+| Jacobian, `Sigma_px`, R model | `tracking-orchestrator/app/tracking/world/observation_model.py` |
+| Covariance through the homography | `tracking-orchestrator/app/tracking/floor_projector.py` (`project_with_covariance`) |
+
+## Related pages
+
+- [Camera to Floor Basics](./01-camera-floor-basics.md)
+- [Position Fusion](./04-position-fusion.md)
+- [Posture Fusion](./05-posture-fusion.md)
