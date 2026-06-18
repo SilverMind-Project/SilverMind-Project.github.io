@@ -13,6 +13,14 @@ Cognitive Companion without CTS provides single-frame perception: each camera ev
 
 CTS answers these by maintaining persistent, multi-camera tracks with stable identity over time.
 
+## Beginner to advanced tracking series
+
+For a progressive explanation of the floor-plane tracking work, start with
+[Camera to Floor Basics](/features/continuous-tracking/01-camera-to-floor-basics) and continue
+through the seven-page series. It covers why the live-map dot used to jitter, measurement
+uncertainty, multi-camera fusion, posture fusion, floor-region visibility, and camera-drift
+operations.
+
 ## System architecture
 
 ```mermaid
@@ -117,6 +125,8 @@ Key hypertables:
 
 - [Jetson CTS Deployment](/hardware/jetson-cts): model selection, INT8 accuracy results, six-to-eight-camera sizing, and production qualification
 - [Model Quantization](/hardware/model-quantization): representative calibration, selective PTQ and QAT, TensorRT internals, sparse INT8, and Intel or AMD portability
+- [Camera to Floor Basics](/features/continuous-tracking/01-camera-to-floor-basics): start of the beginner-to-advanced floor tracking series
+- [Why One Dot Jitters](/features/continuous-tracking/02-why-one-dot-jitters): measured before/after results for the M09 fusion gates
 - [Frame Processing Pipeline](/features/continuous-tracking/frame-pipeline): detection, tracking, ReID, cross-camera association, Bayesian identity resolution, and the identity feedback loop
 - [Dementia Signal Detection](/features/continuous-tracking/dementia-signals): signal kinds, hysteresis, baseline computation, and configuration
 - [CC Integration](/features/continuous-tracking/cc-integration): enabling CTS, subscribers, rule examples, presence chain, and per-person alert profiles

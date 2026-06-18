@@ -102,8 +102,6 @@ The result is not "pick the best camera." Position still fuses all cameras, and 
 | Passing geometry weight into posture fusion | `tracking-orchestrator/app/pipeline/stages/trajectory.py` |
 | Metrics | `tracking-orchestrator/app/observability/metrics.py` (`cts_posture_view_weight`) |
 
-## Related pages
+Previous: [Multi-Camera Fusion](./04-multi-camera-fusion.md)
 
-- [Tracking Concepts](./tracking-concepts.md)
-- [Frame Pipeline](./frame-pipeline.md)
-- [Camera Calibration](./camera-calibration.md)
+Next: [Floor Region and Visibility](./06-floor-region-and-visibility.md)

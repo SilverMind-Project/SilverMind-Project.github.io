@@ -45,6 +45,10 @@ Two identification paths exist, depending on the calling system:
 
 CTS uses only the single-image endpoint so that person crops are sent at full resolution, preserving fine facial detail that would be lost in downscaled full-frame images.
 
+For the floor-plane side of CTS, including camera calibration, measurement uncertainty, multi-camera
+fusion, posture fusion, visibility polygons, and drift detection, read the progressive
+[Continuous Tracking floor series](/features/continuous-tracking/01-camera-to-floor-basics).
+
 ### Annotated Images
 
 When `include_annotated_image` is enabled in a pipeline step's config, the person-ID service returns a copy of each frame with bounding boxes and name labels drawn over detected faces. These annotated images are:
