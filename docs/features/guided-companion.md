@@ -63,7 +63,18 @@ guided_task:
 
 A step advances on the resident's response by default. The agent listens, and when she tells it (or later, shows it) that she has done the step, it calls `mark_guided_step_complete`. The completion evaluator confirms the proposal, and the state machine advances.
 
-Reliable fine-grained computer vision does not exist for every step, so the conversation is the dependable gate. A step may additionally require a vision confirm or an activity or zone signal (added in a later milestone), but the response gate is always present so a step can always advance on her confirmation. Vision is never the sole gate.
+Reliable fine-grained computer vision does not exist for every step, so the conversation is the dependable gate. A step may additionally require a vision confirm (see below) or an activity or zone signal, but the response gate is always present so a step can always advance on her confirmation. Vision is never the sole gate.
+
+## Vision-confirm gates (callable gate graphs)
+
+A step can carry an optional vision-confirm gate that checks, from the cameras, whether the step looks done. Rather than a single fixed model call, a vision gate is authored and run like a small pipeline: a reusable graph of read-only perception and reasoning steps that ends on exactly one verdict.
+
+- **A gate is a callable graph.** It is stored as a rule with no triggers (so it never fires on its own) and is referenced from a routine step. Because it reuses the normal pipeline canvas and steps, a gate can be as simple as "poll the cameras, ask one vision model, decide" or a cheap-first cascade ("detect the kettle cheaply, and only run the heavy vision model when one is present"). Only side-effect-free steps are allowed in a gate, so it can run often and safely.
+- **One verdict, fail-closed.** The graph ends on a single `gate_verdict` step that produces `{complete, confidence, reason}`. If the verdict is not reached, cannot be parsed, or the confidence is below the configured threshold, the result is `complete = false`. The confidence threshold is one setting, overridable per step or per routine; raising it makes the gate stricter.
+- **Two profiles: Confirm and Watch.** The same graph runs in two modes. **Confirm** is the heavy, authoritative check that runs when the resident says she is done. **Watch** is a cheap, advisory check on a background tick; it is off by default. When on, Watch suppresses unnecessary nagging while she is clearly making progress and warms the verdict cache. Watch can optionally advance a step on its own, but only after several consecutive high-confidence readings, only when a caregiver opts in, and never on a safety-critical step.
+- **Bounded disagreement.** The conversation stays authoritative. If the resident says she is done but the vision gate disagrees, the companion records the disagreement; after a small number of disagreements it defers to her word and advances (or escalates, if configured) rather than trapping her behind a camera that will not agree.
+- **One camera control, both sources.** Cameras are resolved once through the selection cascade, which spans both the continuous-tracking cameras and the reCamera sensors, and are injected into the gate. There is a single camera picker on the step; leaving it empty auto-selects.
+- **Preset first, canvas for power users.** A caregiver normally picks a vision gate from a small preset library (for example a generic vision confirm, or the kettle-on-hob cascade) without ever seeing a graph. A power user can open the gate in a scoped canvas to edit its logic and test-run it.
 
 ## Presence gating and summoning
 
@@ -116,4 +127,4 @@ The companion stores transcripts (through the conversation manager), step events
 
 The conversational core is shippable today: a rule can run a routine end to end, the agent speaks each step in Tamil, the resident confirms, the state machine advances, and a request for help notifies the caregiver.
 
-Later milestones layer on spatial grounding (sub-room zones), vision-confirm completion and a continuous safety watch (abandonment, hazard-left-active, possible fall, repeated confusion), seamless caregiver takeover, the caregiver Routine Builder UI, metrics, and the always-on kiosk. These are designed as assists behind clean interfaces, so the conversational spine works and is testable before any of them exist.
+Layered on top of that spine are spatial grounding (sub-room zones), vision-confirm completion as callable gate graphs with Confirm and Watch profiles, a continuous safety watch (abandonment, hazard-left-active, possible fall, repeated confusion), seamless caregiver takeover, the caregiver Routine Builder UI, metrics, and the always-on kiosk. These are assists behind clean interfaces, so the conversational spine works and is testable independently of any of them.
