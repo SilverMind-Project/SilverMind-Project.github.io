@@ -7,9 +7,7 @@ tracking appearance, ArcFace enrollment, and labeled ReID data in separate store
 trust rules.
 
 ::: info Implementation status
-The current `reid_gallery` has a `face_confirmed` field but no persisted lifecycle state or durable
-crop provenance. The three-state lifecycle on this page is implemented by the governed-gallery
-milestone. Existing rows enter `pending_review`; they are not treated as verified.
+The three-state ReID gallery lifecycle is fully deployed. The system requires operator verification before ReID candidates can influence identity resolution. Legacy `face_confirmed` entries have been backfilled to `pending_review` and no longer automatically vote.
 :::
 
 ## Use three states

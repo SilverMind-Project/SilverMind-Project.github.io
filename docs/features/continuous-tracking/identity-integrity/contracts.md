@@ -32,7 +32,7 @@ direction are not available until their producer and every consumer ship the cor
 | `tracking.dwell` | Tracking orchestrator, CTS | `dwell`: raw `DwellEvent` protobuf | CC dwell projection | Use the same effective identity and revision rule as presence | One coordinated deployment after revision-aware projection ships |
 | `cc.identity_assertions` | Cognitive Companion | One raw `CCIdentityAssertion` protobuf field (`assertion`) with source, `raw_similarity`, nullable `calibrated_confidence`, model versions, and calibration status | CTS assertion subscriber and face identity stage | Maintain explicit protobuf schema over Redis streams | Zero-period producer and consumer cutover |
 | MinIO `frames/...` | RTSP ingress, CTS | Raw JPEG referenced by `minio_key` | CTS fetch and keyframe stages, CC frame proxy | Keep the physical source-frame key stable | Through object retention |
-| Governed ReID crop | CTS gallery service | Not yet available | Authorized CC review surface | Immutable crop object with content hash; rejection deletes the crop and vector but keeps audit metadata | No legacy contract |
+| Governed ReID crop | CTS gallery service | Immutable crop object with content hash and state (`pending_review`, `operator_verified`, `rejected`) | Authorized CC review surface | Immutable crop object with content hash; rejection deletes the crop and vector but keeps audit metadata | No legacy contract |
 
 ::: warning
 `cc.identity_assertions` is the known baseline exception to the protobuf-only stream rule. New text
