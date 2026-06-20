@@ -36,7 +36,7 @@ flowchart TB
         PersonID["person-identification-service\nFace identification and evidence"]
     end
 
-    subgraph Orchestrator["tracking-orchestrator (Python, port 8000)"]
+    subgraph Orchestrator["tracking-orchestrator (Python, port 8500)"]
         Pipeline["FrameProcessingPipeline\nDetection, Tracking, ReID, Pose\nCross-camera, Identity, Trajectory"]
         Signals["DementiaSignalWorker\nPacing, Sundowning, Bathroom\nNighttime, Stillness, Absence"]
     end
@@ -48,7 +48,7 @@ flowchart TB
     end
 
     subgraph Consumer["Consumer"]
-        CC["cognitive-companion (Python, port 8080)\nSubscribers, BFF routers, Admin UI"]
+        CC["cognitive-companion (Python, port 8000)\nSubscribers, BFF routers, Admin UI"]
     end
 
     Cameras -->|"RTSP"| Go2RTC
@@ -77,7 +77,10 @@ explicit-Q/DQ graphs. Both profiles use the same service code path.
 
 ## Redis Streams
 
-CTS publishes and consumes raw protobuf bytes: no JSON, no base64. All streams use the `continuoustracking.v1` proto package. The Python codec lives at `app/transport/codec.py`.
+CTS streams use raw protobuf bytes: no JSON and no base64. The current `cc.identity_assertions`
+inbound stream is a known exception that still uses separate text fields. Its publisher and
+consumer require a coordinated protobuf cutover. The Python protobuf codec lives at
+`app/transport/codec.py`.
 
 | Stream | Direction | Field | Proto message |
 |--------|-----------|-------|---------------|
@@ -85,9 +88,10 @@ CTS publishes and consumes raw protobuf bytes: no JSON, no base64. All streams u
 | `tracking.events` | publish (CTS writes) | `"event"` | `TrackingEvent` |
 | `tracking.revisions` | publish | `"revision"` | `IdentityRevision` |
 | `tracking.signals` | publish | `"signal"` | `DementiaSignal` |
-| `tracking.presence` | publish | `"event"` | `PresenceEvent` (appeared / disappeared) |
-| `tracking.dwell` | publish | `"event"` | `DwellEvent` (started / ended with duration) |
+| `tracking.presence` | publish | `"presence"` | `PresenceEvent` (appeared / disappeared) |
+| `tracking.dwell` | publish | `"dwell"` | `DwellEvent` (started / ended with duration) |
 | `scene.samples` | publish | `"sample"` | `SceneSample` |
+| `cc.identity_assertions` | consume | separate text fields, current exception | Legacy assertion payload |
 
 `tracking.events` is a high-rate live feed for the UI, throttled per camera by `live_publish_max_hz` (default 3 Hz; inference still runs every frame). `tracking.presence` and `tracking.dwell` are low-rate semantic state-change streams, so downstream rule load tracks human activity rather than camera frame rate.
 
@@ -126,8 +130,9 @@ Key hypertables:
 - [Jetson CTS Deployment](/hardware/jetson-cts): model selection, INT8 accuracy results, six-to-eight-camera sizing, and production qualification
 - [Model Quantization](/hardware/model-quantization): representative calibration, selective PTQ and QAT, TensorRT internals, sparse INT8, and Intel or AMD portability
 - [Camera to Floor Basics](/features/continuous-tracking/01-camera-to-floor-basics): start of the beginner-to-advanced floor tracking series
-- [Why One Dot Jitters](/features/continuous-tracking/02-why-one-dot-jitters): measured before/after results for the M09 fusion gates
+- [Why One Dot Jitters](/features/continuous-tracking/02-why-one-dot-jitters): measured before-and-after results for the fusion gates
 - [Frame Processing Pipeline](/features/continuous-tracking/frame-pipeline): detection, tracking, ReID, cross-camera association, Bayesian identity resolution, and the identity feedback loop
+- [Identity Integrity](/features/continuous-tracking/identity-integrity): accepted authority, gallery, revision, and cross-repository contracts with current implementation status
 - [Dementia Signal Detection](/features/continuous-tracking/dementia-signals): signal kinds, hysteresis, baseline computation, and configuration
 - [CC Integration](/features/continuous-tracking/cc-integration): enabling CTS, subscribers, rule examples, presence chain, and per-person alert profiles
 - [Person Tracking](/features/person-tracking): single-camera face recognition, camera topology, room transitions

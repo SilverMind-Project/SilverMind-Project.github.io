@@ -12,7 +12,9 @@ That border contains walls, ceiling, cabinets, and door frames. Those points are
 
 ## The fix
 
-CTS auto-calibration already estimates the floor plane from depth. It uses Depth Anything v2 plus RANSAC; the RANSAC inliers are pixels likely to belong to the floor. M10 converts those inliers into a floor-region polygon.
+CTS auto-calibration estimates the floor plane from depth. It uses Depth Anything v2 plus RANSAC;
+the RANSAC inliers are pixels likely to belong to the floor. The floor-region step converts those
+inliers into a polygon.
 
 `tracking-orchestrator/app/calibration/floor_plane.py::floor_region_polygon`:
 

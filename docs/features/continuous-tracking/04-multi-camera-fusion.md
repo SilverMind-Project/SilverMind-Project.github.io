@@ -62,7 +62,8 @@ CTS applies it only after both speed and innovation stay low for enough frames. 
 | `zupt_speed_exit_m_s` | `0.20` | Release before the dementia slow-shuffle band. |
 | `zupt_consecutive_frames` | `5` | Debounce brief pauses or noisy frames. |
 
-The M09 slow-shuffle gate measured 0.2854 m/s for a 0.3 m/s truth path, so ZUPT did not clamp clinically meaningful slow walking.
+The slow-shuffle gate measured 0.2854 m/s for a 0.3 m/s truth path, so ZUPT did not clamp
+clinically meaningful slow walking.
 
 ## Stabilized primary camera
 

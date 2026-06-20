@@ -2,7 +2,8 @@
 
 A calibrated camera is assumed to stay fixed. If it is bumped, rotated, or moved, its homography no longer matches the scene. Person localization can become offset, cross-camera dedup can degrade, and room-level signals can become less reliable.
 
-M11 adds drift detection: CTS scores whether a camera still matches its calibration reference frame, and CC flags the camera for operator review. The system never silently recalibrates.
+CTS drift detection scores whether a camera still matches its calibration reference frame, and CC
+flags the camera for operator review. The system never silently recalibrates.
 
 ## Reference frame
 

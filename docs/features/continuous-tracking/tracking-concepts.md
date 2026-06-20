@@ -281,7 +281,11 @@ A frontality factor down-weights off-axis matches: full weight at or below `fron
 
 A single averaged body embedding cannot retrieve a person who turned around, because front and back are far apart in SOLIDER-REID space. The resolver estimates body orientation per observation from pose keypoints (front, back, left, right, unknown) and represents appearance as a small set of view-binned prototypes per PH and per identity. The gallery query runs once per orientation bin and takes the maximum logistic similarity across views, so a back-facing query that matches an identity's back entries scores high even when the front entries do not. A weak match leaves residual probability mass on UNKNOWN, so a non-matching body cannot be normalized onto the only enrolled identity.
 
-Non-frontal gallery coverage grows online: once a PH has a recognized-face committed identity, subsequent observation embeddings are written to that identity's gallery tagged with their estimated orientation, subject to quality and orientation-confidence gates. Seeding requires a recognized face lock, so a candidate or unknown face never poisons the shared gallery.
+Non-frontal gallery coverage currently grows online after a PH has a recognized-face committed
+identity. The existing path checks recognition state, crop quality, and orientation confidence,
+but it does not verify that the recognized face identity equals the gallery seed label. The
+accepted [gallery governance design](./identity-integrity/reid-gallery-governance) adds that equality
+check and keeps new entries pending until operator review.
 
 ## How a face signal updates a PH
 
@@ -305,7 +309,12 @@ sequenceDiagram
   Note over RS,DB: if identity changed, an IdentityRevision is emitted\nand RevisionsStage rewrites past trajectory/dwell/signal rows
 ```
 
-The key detail: `FaceIdentityStage` produces anchors keyed by `detection_id` (the PH does not exist yet at stage 6). After association, `WorldTracker._resolve_identities` remaps each anchor's `tracklet_id` to the assigned `ph_id` using `det_to_ph`. The identity-conflict hard gate in the cost matrix simultaneously prevents a strong, differing face from being matched to the wrong PH.
+The key detail: `FaceIdentityStage` produces anchors keyed by `detection_id` because the PH does not
+exist yet at stage 6. After association, `WorldTracker._resolve_identities` remaps each anchor's
+`tracklet_id` to the assigned `ph_id` using `det_to_ph`. The current `confidence` value is raw
+ArcFace cosine similarity. The accepted
+[identity authority contract](./identity-integrity/identity-authority) requires calibrated direct
+evidence before a face can become authoritative.
 
 ## How identity crosses cameras
 

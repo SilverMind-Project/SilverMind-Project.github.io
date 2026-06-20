@@ -50,7 +50,7 @@ export default defineConfig({
       },
       { text: "Roadmap", link: "/roadmap" },
       {
-        text: "v0.7.57",
+        text: "v0.7.58",
         items: [
           {
             text: "Code",
@@ -105,6 +105,18 @@ export default defineConfig({
                 { text: "Overview", link: "/features/continuous-tracking" },
                 { text: "Tracking Concepts", link: "/features/continuous-tracking/tracking-concepts" },
                 { text: "Frame Pipeline", link: "/features/continuous-tracking/frame-pipeline" },
+                {
+                  text: "Identity Integrity",
+                  link: "/features/continuous-tracking/identity-integrity",
+                  collapsed: true,
+                  items: [
+                    { text: "Architecture and Baseline", link: "/features/continuous-tracking/identity-integrity" },
+                    { text: "Identity Authority", link: "/features/continuous-tracking/identity-integrity/identity-authority" },
+                    { text: "ReID Gallery Governance", link: "/features/continuous-tracking/identity-integrity/reid-gallery-governance" },
+                    { text: "Revision Projections", link: "/features/continuous-tracking/identity-integrity/revision-projections" },
+                    { text: "Cross-Repository Contracts", link: "/features/continuous-tracking/identity-integrity/contracts" },
+                  ],
+                },
                 { text: "Camera Calibration", link: "/features/continuous-tracking/camera-calibration" },
                 { text: "Camera to Floor Basics", link: "/features/continuous-tracking/01-camera-to-floor-basics" },
                 { text: "Why One Dot Jitters", link: "/features/continuous-tracking/02-why-one-dot-jitters" },
@@ -134,6 +146,7 @@ export default defineConfig({
             { text: "Development Setup", link: "/development/setup" },
             { text: "Extending the Pipeline", link: "/development/extending-pipeline" },
             { text: "Code Standards", link: "/development/code-standards" },
+            { text: "Identity Integrity Verification", link: "/development/identity-integrity-verification" },
             { text: "Contributing", link: "/development/contributing" },
           ],
         },

@@ -15,9 +15,11 @@ That was a real bug in one place, but not in person localization:
 | Homography fit | No | `compute_homography` uses only picked floor correspondences. |
 | Person localization | No | `FloorProjector` projects the footpoint, not every image pixel. |
 | Room containment | No | Room checks happen in floor-plan coordinates. |
-| Visibility polygon | Yes, before M10 | The old CC coverage polygon projected the image border, which includes walls. |
+| Visibility polygon | Yes, before the floor-region fix | The old CC coverage polygon projected the image border, which includes walls. |
 
-Here `M09`, `M10`, and `M11` refer to the implementation milestones that shipped these changes. So page 6 fixes the wall-contaminated visibility polygon from M10. The vibrating person dot needed a different fix: measurement uncertainty and motion filtering.
+The [floor-region page](./06-floor-region-and-visibility.md) explains the wall-contaminated
+visibility polygon. The vibrating person dot needed a different fix: measurement uncertainty and
+motion filtering.
 
 ## Cause 1: every camera was trusted too equally
 
@@ -42,9 +44,10 @@ CTS now gives each observation a 2x2 measurement covariance `R` in floor-plan me
 
 Cross-camera dedup now fuses by inverse covariance, with a non-shrinking calibration bias floor. The Kalman filter consumes the fused matrix `R` directly. When a person is truly stationary, zero-velocity updates drive the velocity estimate back toward zero.
 
-## M09 acceptance numbers
+## Fusion acceptance numbers
 
-M09 turned the fix into CI gates, which are automated acceptance tests, instead of a visual judgment. The recorded baseline from 2026-06-18 shows:
+The fusion change added automated CI acceptance gates instead of relying on visual judgment. The
+recorded baseline from June 18, 2026 shows:
 
 | Gate | Legacy | Fused | Result |
 | --- | --- | --- | --- |
