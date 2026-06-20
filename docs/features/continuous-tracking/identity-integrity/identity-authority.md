@@ -7,9 +7,8 @@ Unknown state when evidence cannot resolve a conflict safely.
 
 ::: info Implementation status
 The authority order is accepted. The independent-evidence clock, 30-second prior, calibrated
-ArcFace authority, and final duplicate-active enforcement are implemented by later milestones.
-The [identity integrity baseline](/features/continuous-tracking/identity-integrity) lists current
-behavior.
+ArcFace authority, and final duplicate-active enforcement are now deployed with M04 identity provenance fields.
+The [identity integrity baseline](/features/continuous-tracking/identity-integrity) lists historical behavior.
 :::
 
 ## Decision

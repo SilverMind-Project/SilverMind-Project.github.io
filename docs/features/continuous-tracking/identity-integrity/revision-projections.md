@@ -8,8 +8,9 @@ Companion without rewriting the original model inference.
 ::: info Implementation status
 CTS already publishes protobuf `IdentityRevision` messages on `tracking.revisions`. Cognitive
 Companion already records `CtsIdentityRevisionLog` and supersedes affected
-`PersonLocationHistory` rows. Observation-bounded ranges, projection jobs, and acknowledgements
-extend this path in later milestones.
+`PersonLocationHistory` rows. Explicit `inferred_identity_id` and `effective_identity_id`
+provenance fields have been deployed across all tracking APIs. Observation-bounded ranges,
+projection jobs, and acknowledgements extend this path in later milestones.
 :::
 
 ## Keep inferred and effective labels separate

@@ -191,6 +191,8 @@ Representative paths include:
 | `/cts/presence/*` | Presence configuration and snapshots |
 | `/cts/signals/*` | Dementia and routine-change signals |
 | `/cts/window-triggers` | CTS window trigger configuration |
+| `/cts/decisions/*` | Decision detail and explicit provenance retrieval |
+| `/cts/evidence/*` | Evidence history and diagnostics retrieval by PH, observation, or keyframe |
 
 ## Knowledge and resident content
 
