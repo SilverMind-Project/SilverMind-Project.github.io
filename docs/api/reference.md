@@ -188,11 +188,31 @@ Representative paths include:
 | `/cts/cameras` | CTS camera registration and health |
 | `/cts/calibration/*` | Homography, visibility, privacy zones, and adjacency |
 | `/cts/ph/*` | Person hypothesis lists, details, corrections, merges, splits, and deletes |
+| `/cts/identity/correction-targets` | Active household members an operator may assign, with optional gallery decoration |
 | `/cts/presence/*` | Presence configuration and snapshots |
 | `/cts/signals/*` | Dementia and routine-change signals |
 | `/cts/window-triggers` | CTS window trigger configuration |
 | `/cts/decisions/*` | Decision detail and explicit provenance retrieval |
 | `/cts/evidence/*` | Evidence history and diagnostics retrieval by PH, observation, or keyframe |
+
+### Identity correction workflow
+
+A correction runs in two steps. The client first requests a segment proposal, then applies an
+explicit observation-bounded correction guarded by the proposal version token. The correction
+service writes the revision range, creates a projection job, and publishes one revision. A job
+completes only after every required projection acknowledges the same `revision_id`.
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST` | `/internal/corrections/propose` | Return an advisory segment proposal and its version token |
+| `POST` | `/internal/corrections/apply` | Apply a frame or observation-bounded correction, or an explicit Unknown |
+| `POST` | `/internal/corrections/{correction_id}/compensate` | Undo a correction with a compensating revision |
+| `POST` | `/internal/projection-acks` | Acknowledge a projection by `revision_id` |
+
+`apply` returns `409` when the version token is stale and `422` when a non-Unknown correction has no
+target identity. The whole-PH `POST /internal/corrections` endpoint is deprecated: it proposes the
+current segment and applies it, and is removed once the correction UI calls the explicit `apply`
+endpoint. The endpoint returns a `Deprecation` response header while it remains.
 
 ## Knowledge and resident content
 

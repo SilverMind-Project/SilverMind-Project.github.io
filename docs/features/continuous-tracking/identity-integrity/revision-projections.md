@@ -1,16 +1,20 @@
 # Identity revision projections
 
-Status: accepted architecture decision, June 19, 2026.
+Status: deployed, June 20, 2026.
 
 This decision defines how a caregiver correction changes the label shown by CTS and Cognitive
 Companion without rewriting the original model inference.
 
 ::: info Implementation status
-CTS already publishes protobuf `IdentityRevision` messages on `tracking.revisions`. Cognitive
-Companion already records `CtsIdentityRevisionLog` and supersedes affected
-`PersonLocationHistory` rows. Explicit `inferred_identity_id` and `effective_identity_id`
-provenance fields have been deployed across all tracking APIs. Observation-bounded ranges,
-projection jobs, and acknowledgements extend this path in later milestones.
+Deployed. A single CTS correction service owns operator corrections. It writes observation-bounded
+revision ranges, creates a projection job per revision, and publishes a protobuf `IdentityRevision`
+on `tracking.revisions` with typed range and projection fields. Cognitive Companion supersedes the
+affected `PersonLocationHistory`, `PersonLocationState`, and `cts_dementia_signals` rows while
+retaining the originals, records `CtsIdentityRevisionLog` with the revision-range lineage, and posts
+a projection acknowledgement back to CTS. A correction job completes only after
+the CTS internal projection and the Cognitive Companion projection both acknowledge the same
+`revision_id`. Explicit `inferred_identity_id` and `effective_identity_id` provenance fields remain
+deployed across all tracking APIs.
 :::
 
 ## Keep inferred and effective labels separate
@@ -71,8 +75,11 @@ The original correction, review event, revision, and acknowledgement records rem
 
 ## Preserve wire compatibility
 
-New protobuf fields use new tag numbers. Old readers ignore additions, and new readers accept
-messages that do not yet include additive fields during the stated compatibility window.
+New protobuf fields use new tag numbers. The `IdentityRevision` message gained typed fields 18 to
+25 for revision kind, range start and end, range authority, range and correction IDs, required
+projections, and the revision schema version. These are real proto fields, not JSON folded into
+`evidence_json`. Old readers ignore the additions, and new readers accept messages that do not yet
+include the additive fields during the stated compatibility window.
 
 CTS Redis streams carry raw protobuf bytes. Compatibility adapters live at one decode boundary and
 have an explicit removal condition.
