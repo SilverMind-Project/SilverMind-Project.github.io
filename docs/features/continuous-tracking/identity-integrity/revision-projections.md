@@ -68,6 +68,19 @@ projection acknowledges the revision.
 Retries do not duplicate rows, WebSocket events, or audit records. A partial failure remains
 visible as a job state.
 
+### Job status in the caregiver UI
+
+The correction workflow does not report success when the apply request returns. Apply returns
+immediately with the job in `applying`, because the projections run after the revision publishes. The
+UI polls `GET /api/v1/cts/identity/corrections/jobs/{revision_id}` until the job reaches a terminal
+state and only then confirms the correction.
+
+The status panel shows each required projection as a chip that flips from waiting to acknowledged as
+counts arrive, so a caregiver can see, for example, that the Cognitive Companion projection applied
+four rows. A `failed` job shows the last error and a Retry control that re-checks the job; because
+projections retry idempotently by `revision_id`, retrying never duplicates rows. The accepted
+correction is not rolled back when a projection fails.
+
 ## Use compensating revisions
 
 Undo creates a compensating revision that reverses or replaces an earlier effective projection.

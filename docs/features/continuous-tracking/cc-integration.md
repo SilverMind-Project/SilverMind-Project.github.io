@@ -128,6 +128,47 @@ orchestrator returns a malformed envelope, the BFF returns `502` with code
 The same `KeyframeReadService.list_frames` function powers both the `GET /api/v1/cts/keyframes`
 router and the `list_keyframe_frames` MCP tool.
 
+## Correct an identity
+
+A keyframe card and the Person Hypothesis inspector at `/admin/cts/hypotheses` open the same
+correction workflow. One Vue component (`IdentityCorrectionWorkflow`), one composable
+(`useIdentityCorrection`), and one BFF service back both surfaces, so the keyframe and PH paths never
+drift apart. On a keyframe card the caregiver opens the detail overlay and clicks a labeled box; in
+the PH inspector they open the Correct identity action on the selected track.
+
+The workflow loads the identity list from `GET /api/v1/cts/identity/correction-targets`, the active
+household roster. This list never depends on the ReID gallery, so a caregiver can still reassign a
+person when the gallery is empty or stale. Clearing the selector does not submit anything. Setting a
+person to Unknown is its own explicit action, not an empty selection.
+
+Scope follows the entry point. From a keyframe box the default is this frame only, with the proposed
+observation segment offered as an alternative. From the PH inspector the default is the proposed
+segment. The orchestrator computes the segment by searching outward from the chosen observation and
+stopping at the nearest discontinuity, split, merge, or prior operator boundary. The caregiver can
+move the start and end to other observations inside the proposal, with each boundary showing its
+capture time, thumbnail, and the reason it was chosen; a boundary that lands on a structural stop
+(split, merge, or a prior operator range) is locked so it cannot be crossed.
+
+Every apply call carries the proposal's version token. If the track changed since the proposal was
+fetched, the orchestrator returns `409` with code `correction.stale_version`. The workflow then
+re-fetches the proposal, shows the updated range, and requires the caregiver to confirm again rather
+than silently retrying.
+
+The audited actor comes from the request's authentication context. The browser payload never carries
+an actor field, and the apply schema rejects one. Proposing a segment uses `cts.identity.view`;
+applying or compensating a correction requires `cts.identity.correct`.
+
+The browser shows raw ArcFace similarity only as a labeled detail value, never as a confidence
+percentage. Operator corrections read `Verified` rather than a fabricated number. The "Verify ReID
+crop" action appears only when the server marks a crop eligible; the ReID review queue that produces
+that eligibility signal lands with a later milestone, so the action stays hidden until then. Identity
+correction and bounding-box geometry editing stay separate revision types: the keyframe annotation
+editor still handles box geometry, while identity reassignment flows through this workflow.
+
+The proposal, apply, compensate, and job endpoints share one service function
+(`IdentityCorrectionService`) that powers both the `/api/v1/cts/identity/corrections/*` routers and
+the `propose_identity_correction` and `get_identity_correction_job` MCP tools.
+
 ## Tune the presence chain
 
 `config/presence.yaml` defines the priority chain for person location resolution:

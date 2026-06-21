@@ -189,6 +189,7 @@ Representative paths include:
 | `/cts/calibration/*` | Homography, visibility, privacy zones, and adjacency |
 | `/cts/ph/*` | Person hypothesis lists, details, corrections, merges, splits, and deletes |
 | `/cts/identity/correction-targets` | Active household members an operator may assign, with optional gallery decoration |
+| `/cts/identity/corrections/*` | Shared correction workflow: propose, apply, compensate, and job status |
 | `/cts/keyframes` | Grouped physical-frame keyframe cards with effective identity per bbox |
 | `/cts/presence/*` | Presence configuration and snapshots |
 | `/cts/signals/*` | Dementia and routine-change signals |
@@ -247,6 +248,24 @@ completes only after every required projection acknowledges the same `revision_i
 target identity. The whole-PH `POST /internal/corrections` endpoint is deprecated: it proposes the
 current segment and applies it, and is removed once the correction UI calls the explicit `apply`
 endpoint. The endpoint returns a `Deprecation` response header while it remains.
+
+The Cognitive Companion BFF exposes the browser-facing side of this workflow. Both the Keyframes
+surface and the Person Hypothesis inspector call it through one service and one Vue component.
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST` | `/api/v1/cts/identity/corrections/propose` | Return a segment proposal with its version token |
+| `POST` | `/api/v1/cts/identity/corrections/apply` | Apply a frame or observation-bounded correction, or explicit Unknown |
+| `POST` | `/api/v1/cts/identity/corrections/{correction_id}/compensate` | Undo a correction with a compensating revision |
+| `GET` | `/api/v1/cts/identity/corrections/jobs/{revision_id}` | Projection-job status, polled until terminal |
+
+The BFF injects the audited actor from the authentication context; the apply request schema rejects a
+browser-supplied actor. It preserves the upstream `409 correction.stale_version` and `422` statuses
+and maps an upstream 5xx to `502 correction.upstream`. Proposing and reading job status require
+`cts.identity.view`; applying and compensating require `cts.identity.correct`. The job response
+includes `status` (`pending`, `applying`, `completed`, or `failed`), `required_projections`,
+`row_counts`, `attempts`, and `last_error`. The `propose_identity_correction` and
+`get_identity_correction_job` MCP tools read the same service functions.
 
 ## Knowledge and resident content
 
