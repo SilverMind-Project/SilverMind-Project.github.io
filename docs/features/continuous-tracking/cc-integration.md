@@ -95,6 +95,39 @@ sequenceDiagram
     Sub->>Rules: fire_event (if alert config permits)
 ```
 
+## Review keyframes
+
+The admin keyframes view at `/admin/cts/keyframes` shows one card per physical source frame. The
+keyframe stage samples a frame whenever a tracked person triggers it, so a single frame that holds
+two people can produce several trigger rows. The read model groups those rows back into one card
+keyed by `(camera_id, minio_key, captured_at)` and lists every visible person on it.
+
+Each card carries the server-owned identity state for every bounding box: the inferred identity from
+raw inference, the effective identity after operator and inferred revision ranges apply, the
+authority and decision source, a calibrated confidence or `Verified` for operator authority, a
+conflict flag, the governing revision ID, and whether the person has a ReID candidate awaiting
+review. The card summary, Unknown count, and conflict count are computed once at the BFF from this
+per-bbox provenance. The browser derives none of it.
+
+Filtering and pagination are server-side. The view filters by effective identity, camera, trigger
+reason, time range, authority, decision source, conflict, and pending review. Filters apply before
+grouped-frame pagination; a frame that matches an identity filter still returns all of its boxes so
+the caregiver keeps the full context of who else was present.
+
+The identity filter options come from the authoritative correction-target endpoint
+(`GET /api/v1/cts/identity/correction-targets`, the active household roster), not from whatever
+identities happen to appear on the current page, plus an explicit Unknown option. The list scans a
+bounded recent window; when that window is full the response sets `truncated` so a caregiver knows
+the count covers recent activity rather than all retained history.
+
+The BFF does not copy or delete raw frames. Keyframe cards reference the `frames/...` MinIO objects
+that RTSP ingress wrote, and the BFF resolves a short-lived presigned URL per request. If the
+orchestrator returns a malformed envelope, the BFF returns `502` with code
+`keyframe.upstream_contract` so contract drift is a visible incident rather than an empty page.
+
+The same `KeyframeReadService.list_frames` function powers both the `GET /api/v1/cts/keyframes`
+router and the `list_keyframe_frames` MCP tool.
+
 ## Tune the presence chain
 
 `config/presence.yaml` defines the priority chain for person location resolution:

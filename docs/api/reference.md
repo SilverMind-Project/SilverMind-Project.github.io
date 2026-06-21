@@ -189,11 +189,45 @@ Representative paths include:
 | `/cts/calibration/*` | Homography, visibility, privacy zones, and adjacency |
 | `/cts/ph/*` | Person hypothesis lists, details, corrections, merges, splits, and deletes |
 | `/cts/identity/correction-targets` | Active household members an operator may assign, with optional gallery decoration |
+| `/cts/keyframes` | Grouped physical-frame keyframe cards with effective identity per bbox |
 | `/cts/presence/*` | Presence configuration and snapshots |
 | `/cts/signals/*` | Dementia and routine-change signals |
 | `/cts/window-triggers` | CTS window trigger configuration |
 | `/cts/decisions/*` | Decision detail and explicit provenance retrieval |
 | `/cts/evidence/*` | Evidence history and diagnostics retrieval by PH, observation, or keyframe |
+
+### Grouped keyframes
+
+`GET /api/v1/cts/keyframes` returns one card per physical source frame, even when several Person
+Hypotheses triggered sampling of the same frame. Each card carries every visible bounding box with
+its server-computed effective identity, so a frame that shows two people returns two identities
+rather than only the identity of the PH that triggered the capture.
+
+The orchestrator owns identity semantics. The card summary, Unknown count, and conflict count are
+derived once at the BFF from the per-bbox provenance; the browser computes none of them. Effective
+identity maps onto Cognitive Companion's internal `person_id` at the BFF boundary.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `keyframes` | array | Physical-frame cards for the page |
+| `keyframes[].physical_frame_id` | string | Deterministic ID from `(camera_id, minio_key, captured_at)` |
+| `keyframes[].image_url` | string or null | Presigned URL for the raw frame, resolved per request |
+| `keyframes[].triggers` | array | Audit trigger rows (`keyframe_id`, `ph_id`, `tag_reason`) |
+| `keyframes[].identity_summary` | array | Effective identities on the card with `count` and `source_badges` |
+| `keyframes[].unknown_count` | integer | Bounding boxes with no effective identity |
+| `keyframes[].conflict_count` | integer | Bounding boxes in identity conflict |
+| `keyframes[].pending_review_count` | integer | Bounding boxes whose PH has a pending ReID candidate |
+| `keyframes[].bboxes` | array | Every deduplicated bbox with `inferred_identity_id`, `effective_identity_id`, `person_id`, `authority`, `decision_source`, `calibrated_confidence`, `conflict`, `revision_id`, and `pending_review` |
+| `count` | integer | Cards on this page |
+| `total` | integer | Cards matching the filters before pagination |
+| `truncated` | boolean | True when the upstream scan hit its window cap, so `total` counts only the most recent window |
+
+Server-side query parameters: `person_id` (effective household identity), `camera_id`, `tag_reason`,
+`after`, `before`, `explicit_unknown`, `authority`, `decision_source`, `conflict_only`,
+`pending_review_only`, `limit`, and `offset`. Filters apply before grouped-frame pagination; a
+matching frame still returns all of its bboxes for context. A malformed upstream envelope returns
+`502` with code `keyframe.upstream_contract` rather than an empty list. Requires
+`cts.keyframes.view`. The `list_keyframe_frames` MCP tool reads the same service function.
 
 ### Identity correction workflow
 
