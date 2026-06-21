@@ -52,6 +52,49 @@ candidate identity. A held PH label cannot override a different recognized face.
 Identity correction and gallery verification are separate actions. Correcting a bbox does not
 promote its embedding. A crop that fails a quality gate cannot be approved through an override.
 
+## Review the queue in the admin UI
+
+The review queue is deployed at `/admin/cts/reid-review`. It lists pending candidates with their
+pending age, proposed identity, camera and capture time, crop quality, orientation, model version,
+and source type. Selecting a candidate opens a detail drawer with the body crop, the source frame
+with its bounding box, nearby observations from the same PH, the full provenance table, the
+server-computed eligibility, and the immutable review history.
+
+Camera frames are blurred by default. Unblurred access uses the same `BlurToggle` and media behavior
+as the rest of the tracking admin, gated by the gallery-review permission below.
+
+The queue exposes only individual approve, individual relabel, and reject (single or batch). There is
+no bulk approve control or endpoint: every candidate that becomes verified passes through a single
+deliberate approve or relabel action.
+
+### Approval is gated on live server eligibility
+
+The server computes eligibility for each candidate from its current state, crop truncation and
+occlusion, and model and preprocessing compatibility. The detail drawer disables Approve when
+eligibility is false and lists the reasons. The server re-checks eligibility and the optimistic
+`audit_version` on every approve and relabel, so a stale or now-ineligible candidate returns `409`
+(`reid_review.stale` or `reid_review.ineligible`) and the browser refreshes rather than forcing the
+change through. The browser cannot fabricate eligibility or override a failed quality gate.
+
+### Rejected candidates show a deleted-crop state
+
+Rejection nulls the embedding and removes the dedicated crop object, then keeps the crop key, hashes,
+and review history as a fingerprint. The queue never presigns a rejected candidate's crop, so its
+detail view renders an explicit deleted-crop state instead of a broken image.
+
+## Permission separation
+
+Gallery review is a distinct biometric-admin grant, `cts.identity.gallery_review`, separate from
+`cts.identity.correct`. A caller that can view tracking data or correct identities cannot reach the
+review queue without this grant. The backend enforces it with a strict token check that ignores the
+broad `GET /api/v1/*` and `POST /api/v1/cts/identity/*` role patterns, so those wildcards do not
+unlock the review surface on their own. The grant is held by the caregiver-admin role and the admin
+role, not by the read-only caregiver role.
+
+The review queue is an operational biometric-admin surface, not caregiver-facing domain data, so it
+is intentionally not exposed as an MCP agent tool. See the
+[API reference](/api/reference) for the endpoints and this exemption.
+
 ## Weight verified evidence
 
 Verified hits receive a trust multiplier of `2.0` before identity aggregation. The multiplier does

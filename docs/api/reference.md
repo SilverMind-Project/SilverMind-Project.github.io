@@ -190,6 +190,7 @@ Representative paths include:
 | `/cts/ph/*` | Person hypothesis lists, details, corrections, merges, splits, and deletes |
 | `/cts/identity/correction-targets` | Active household members an operator may assign, with optional gallery decoration |
 | `/cts/identity/corrections/*` | Shared correction workflow: propose, apply, compensate, and job status |
+| `/cts/identity/reid-review/*` | Governed ReID gallery review queue: list, detail, approve, relabel, reject, batch reject, compensate, counts |
 | `/cts/keyframes` | Grouped physical-frame keyframe cards with effective identity per bbox |
 | `/cts/presence/*` | Presence configuration and snapshots |
 | `/cts/signals/*` | Dementia and routine-change signals |
@@ -266,6 +267,42 @@ and maps an upstream 5xx to `502 correction.upstream`. Proposing and reading job
 includes `status` (`pending`, `applying`, `completed`, or `failed`), `required_projections`,
 `row_counts`, `attempts`, and `last_error`. The `propose_identity_correction` and
 `get_identity_correction_job` MCP tools read the same service functions.
+
+### ReID review queue
+
+The review queue is the operator surface over the governed ReID gallery. It lists pending candidates,
+shows full crop and frame provenance with server-computed eligibility, and applies an approve,
+relabel, or reject decision. See [ReID gallery governance](/features/continuous-tracking/identity-integrity/reid-gallery-governance)
+for the lifecycle and trust rules.
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/v1/cts/identity/reid-review/candidates` | Paginated candidates with state, identity, camera, model, and source filters |
+| `GET` | `/api/v1/cts/identity/reid-review/candidates/{id}` | Candidate detail, review history, and eligibility |
+| `GET` | `/api/v1/cts/identity/reid-review/candidates/{id}/events` | Immutable review history |
+| `GET` | `/api/v1/cts/identity/reid-review/counts` | Queue counts by state for review indicators |
+| `POST` | `/api/v1/cts/identity/reid-review/candidates/{id}/approve` | Approve one candidate (individual only) |
+| `POST` | `/api/v1/cts/identity/reid-review/candidates/{id}/relabel` | Relabel one candidate to a household target, then verify |
+| `POST` | `/api/v1/cts/identity/reid-review/candidates/{id}/reject` | Reject one candidate with a structured reason |
+| `POST` | `/api/v1/cts/identity/reid-review/reject-batch` | Reject several candidates, with per-item results |
+| `POST` | `/api/v1/cts/identity/reid-review/candidates/{id}/compensate` | Un-verify an approved candidate |
+
+Every route requires the `cts.identity.gallery_review` permission. This is a strict token check: the
+broad `GET /api/v1/*` and `POST /api/v1/cts/identity/*` role patterns do not grant access on their
+own, so a caller holding only `cts.identity.view` or `cts.identity.correct` receives `403`. The grant
+is held by the caregiver-admin and admin roles.
+
+Approve and relabel re-check live eligibility and the optimistic `audit_version` server-side. A stale
+or now-ineligible candidate returns `409` with code `reid_review.stale` or `reid_review.ineligible`;
+a malformed upstream envelope returns `502 reid_review.upstream_contract`. There is no bulk approve
+endpoint: batch selection exposes only rejection. The BFF injects the audited actor from the
+authentication context, presigns crop and frame media only for a live object (a rejected candidate's
+crop is deleted, so its URL is null), and maps the effective identity onto `person_id`.
+
+This surface is operational biometric administration, not caregiver-facing domain data, so it is
+intentionally excluded from MCP parity. Exposing approve, relabel, or reject as an agent tool would
+let an unattended agent re-identify a household member without operator review. No MCP adapter
+duplicates the review service; the exemption is asserted in the router tests.
 
 ## Knowledge and resident content
 
