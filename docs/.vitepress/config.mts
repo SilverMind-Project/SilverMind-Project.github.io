@@ -50,7 +50,7 @@ export default defineConfig({
       },
       { text: "Roadmap", link: "/roadmap" },
       {
-        text: "v0.7.64",
+        text: "v0.7.65",
         items: [
           {
             text: "Code",
@@ -147,6 +147,7 @@ export default defineConfig({
             { text: "Extending the Pipeline", link: "/development/extending-pipeline" },
             { text: "Code Standards", link: "/development/code-standards" },
             { text: "Identity Integrity Verification", link: "/development/identity-integrity-verification" },
+            { text: "Face Confidence Calibration", link: "/development/face-confidence-calibration" },
             { text: "Contributing", link: "/development/contributing" },
           ],
         },

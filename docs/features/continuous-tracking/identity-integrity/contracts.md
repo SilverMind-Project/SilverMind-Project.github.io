@@ -7,6 +7,9 @@ identification service.
 ::: info Implementation status
 The current payload and the accepted direction are shown separately. Fields in the accepted
 direction are not available until their producer and every consumer ship the corresponding change.
+M10 calibration fields (`raw_similarity`, `calibrated_confidence`, calibration status, and version
+fields) are now deployed on the person identification service HTTP responses and consumed by the
+CTS face identity client.
 :::
 
 ## Compatibility rules
@@ -43,7 +46,7 @@ fields must not be added. Conversion requires a coordinated publisher and subscr
 
 | Contract | Producer and owner | Current fields | Consumer | Accepted direction | Compatibility |
 | --- | --- | --- | --- | --- | --- |
-| `POST /identify` and `POST /identify-batch` | Person identification | `person_id`, `name`, `confidence`, `similarity`, recognition state, bbox, and pose | CTS face identity client | `raw_similarity`, nullable `calibrated_confidence`, calibration status and version, model profile, preprocessing version, and face detection confidence | Deprecated `confidence` may mirror raw similarity for one coordinated deployment and is never authoritative |
+| `POST /identify` and `POST /identify-batch` | Person identification | `person_id`, `name`, `confidence` (raw similarity alias, deprecated), `similarity`, `raw_similarity`, nullable `calibrated_confidence`, `calibration_status`, `calibration_artifact_version`, `arcface_model_version`, `model_profile`, `preprocessing_version`, recognition state, bbox, and pose | CTS face identity client | Maintain all M10 calibration fields; `calibrated_confidence` is null in any degraded state and for non-recognized faces | Deprecated `confidence` mirrors raw similarity for one coordinated deployment and is never authoritative |
 | CTS keyframe list | CTS `GET /internal/keyframes/grouped` | One card per physical frame keyed by `(camera_id, minio_key, captured_at)`: `physical_frame_id`, trigger audit rows, every deduplicated bbox with `inferred_identity_id`, `effective_identity_id`, `authority`, `decision_source`, `calibrated_confidence`, `conflict`, `revision_id`, and `pending_review`, plus explicit unknown and conflict counts and server pagination | CC keyframe BFF and `list_keyframe_frames` MCP tool | Server-side filters by effective identity, authority, source, conflict, pending review, camera, trigger reason, and time, applied before grouped-frame pagination | Old per-trigger `GET /internal/keyframes` stays for one coordinated deployment, then ends after usage review |
 | CTS correction endpoints | CTS | `POST /internal/corrections/propose`, `/apply`, and `/{correction_id}/compensate` return segment proposals, correction and revision IDs, range ID, and job status; `GET /internal/corrections/jobs/{revision_id}` returns job status, required projections, row counts, attempts, and last error | CC correction BFF | Frame or observation-bounded segment, expected version, reason code, note, job ID, revision ID, and projection status | Whole-PH `POST /internal/corrections` adapter stays for one coordinated deployment, then ends after usage review |
 | CC correction proxy | CC `POST /api/v1/cts/identity/corrections/propose`, `/apply`, `/{correction_id}/compensate`, and `GET /api/v1/cts/identity/corrections/jobs/{revision_id}` | Browser-facing segment proposal, correction result, and projection-job status; effective identity mapped to `person_id` at the boundary | Correction UI and `propose_identity_correction` / `get_identity_correction_job` MCP tools | Audited actor injected from the auth context, never the browser; upstream `409 correction.stale_version` and `422` preserved, upstream 5xx mapped to `502` | Stable while the correction workflow exists |

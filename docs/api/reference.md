@@ -177,6 +177,33 @@ The validator rejects unknown step IDs, unknown ports, invalid graph structure, 
 | `GET` | `/rooms/{room_id}/occupants` | Current room occupants |
 | `GET` | `/persons/{person_id}/dwell` | Dwell summary |
 
+### Face detection fields
+
+`POST /identify` and `POST /identify-batch` return face detection objects with these fields:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `person_id` | string | Enrolled identity or `"unknown"` |
+| `name` | string | Display name |
+| `confidence` | float | Deprecated raw similarity alias; do not use for authority decisions |
+| `similarity` | float | Raw normalized-embedding cosine similarity |
+| `raw_similarity` | float | Same value as `similarity`; the M10 canonical field |
+| `calibrated_confidence` | float or null | Calibrated ArcFace probability in `[0, 1]`. Null when calibration is unavailable or the face is not recognized. |
+| `calibration_status` | string | `ready`, `degraded_missing`, `degraded_incompatible`, or `degraded_invalid` |
+| `calibration_artifact_version` | string or null | UUID of the active calibration artifact. Null when degraded. |
+| `arcface_model_version` | string | Active ArcFace model version from the service config |
+| `model_profile` | string | Active model profile from the service config |
+| `preprocessing_version` | string | Active preprocessing version from the service config |
+| `recognition_state` | string | `recognized`, `candidate`, or `unrecognized` |
+| `best_candidate_id` | string or null | Nearest-centroid identity below threshold |
+| `bbox` | array | Bounding box `[x1, y1, x2, y2]` in pixels |
+| `yaw_deg` | float | Head yaw in degrees |
+| `pitch_deg` | float | Head pitch in degrees |
+| `roll_deg` | float | Head roll in degrees |
+| `det_score` | float | SCRFD detection confidence |
+
+`calibrated_confidence` is null whenever `calibration_status` is not `ready`, and is always null for `candidate` and `unrecognized` faces.
+
 ## CTS endpoints
 
 CTS routes cover camera admin, calibration, PH identity review, presence, signals, trajectories, live data, overlap groups, and CTS window triggers. They require CTS enablement and the appropriate API permissions.

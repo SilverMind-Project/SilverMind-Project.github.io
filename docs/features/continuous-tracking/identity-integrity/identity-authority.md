@@ -8,6 +8,9 @@ Unknown state when evidence cannot resolve a conflict safely.
 ::: info Implementation status
 The authority order is accepted. The independent-evidence clock, 30-second prior, calibrated
 ArcFace authority, and final duplicate-active enforcement are now deployed with M04 identity provenance fields.
+The calibration toolchain (M10) is deployed: `calibrated_confidence` is populated from a versioned
+artifact when one is present and version-compatible; the service returns `calibrated_confidence: null`
+in `degraded_missing`, `degraded_incompatible`, or `degraded_invalid` states.
 The [identity integrity baseline](/features/continuous-tracking/identity-integrity) lists historical behavior.
 :::
 
@@ -102,4 +105,5 @@ review never enroll a face automatically.
 - [ReID gallery governance](/features/continuous-tracking/identity-integrity/reid-gallery-governance)
 - [Identity revision projections](/features/continuous-tracking/identity-integrity/revision-projections)
 - [Cross-repository identity contracts](/features/continuous-tracking/identity-integrity/contracts)
+- [Face confidence calibration](/development/face-confidence-calibration)
 
