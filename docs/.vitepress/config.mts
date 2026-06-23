@@ -147,6 +147,8 @@ export default defineConfig({
             { text: "Extending the Pipeline", link: "/development/extending-pipeline" },
             { text: "Code Standards", link: "/development/code-standards" },
             { text: "Identity Integrity Verification", link: "/development/identity-integrity-verification" },
+            { text: "Identity Data Reset", link: "/development/identity-data-reset" },
+            { text: "Private Identity Replay Dataset", link: "/development/private-identity-replay" },
             { text: "Face Confidence Calibration", link: "/development/face-confidence-calibration" },
             { text: "Contributing", link: "/development/contributing" },
           ],
