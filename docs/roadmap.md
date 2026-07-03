@@ -69,7 +69,7 @@ Tracking now holds identity through turns, walks, and camera handoffs instead of
 
 **Status:** Proposed
 
-**Problem:** Creating pipelines from scratch is complex for new users. Each of the 14 step types has its own configuration, and choosing the right combination requires understanding the system.
+**Problem:** Creating pipelines from scratch is complex for new users. Each of the 24 step types has its own configuration, and choosing the right combination requires understanding the system.
 
 **Design:** Ship JSON fixtures with preset pipeline definitions:
 

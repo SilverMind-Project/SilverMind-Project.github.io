@@ -24,7 +24,7 @@ This is not a concept. As of v0.7.2 the system runs an end-to-end stack across s
 
 - Multi-camera tracking with a floor-plane world tracker and Bayesian identity resolution, including cross-camera handoff that holds a person's identity through turns and camera gaps.
 - Six routine-change signals for dementia care: pacing, sundowning, long bathroom visits, nighttime movement, prolonged stillness, and unexplained absence, each measured against a person's own history.
-- A composable rules pipeline with 23 step types and 7 notification channels, driving both caregiver alerts and proactive reminders to the senior.
+- A composable rules pipeline with 24 step types and 7 notification channels, driving both caregiver alerts and proactive reminders to the senior.
 - A personal knowledge repository with caregiver-curated info cards, memory quizzes, and a voice companion the senior can talk to.
 - A unified caregiver workspace and live process views over the running pipeline.
 
