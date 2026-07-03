@@ -1,0 +1,39 @@
+name: Check
+
+# Runs on every PR and push to main so doc changes are gated before merge.
+# Deploy.yml (build + publish to Pages) only runs on push to main and does
+# not run tests; this workflow is the PR-time gate.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build documentation
+        run: npm run docs:build
