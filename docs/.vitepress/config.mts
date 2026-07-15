@@ -50,7 +50,7 @@ export default defineConfig({
       },
       { text: "Roadmap", link: "/roadmap" },
       {
-        text: "v0.7.65",
+        text: "v0.7.67",
         items: [
           {
             text: "Code",
@@ -149,6 +149,7 @@ export default defineConfig({
             { text: "Identity Integrity Verification", link: "/development/identity-integrity-verification" },
             { text: "Identity Data Reset", link: "/development/identity-data-reset" },
             { text: "Private Identity Replay Dataset", link: "/development/private-identity-replay" },
+            { text: "Identity Integrity Rollout", link: "/development/identity-integrity-rollout" },
             { text: "Face Confidence Calibration", link: "/development/face-confidence-calibration" },
             { text: "Contributing", link: "/development/contributing" },
           ],

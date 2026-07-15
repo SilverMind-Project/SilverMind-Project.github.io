@@ -36,6 +36,10 @@ The compose default `postgres` only resolves on the internal Docker network. `MI
 matches the `minio.secure` setting the orchestrator uses; the script also accepts the older
 `MINIO_USE_SSL` name.
 
+`CC_API_KEY` is optional. Set it to a key with `cts.identity.view` access to include the
+correction-targets endpoint in the post-apply smoke check. Without it, that probe is skipped and the
+auth-free identities-count check remains the authoritative proof that both household members survive.
+
 ### Migration head
 
 The script expects the CTS database at migration head `0007_keyframe_read_indexes`. If the
