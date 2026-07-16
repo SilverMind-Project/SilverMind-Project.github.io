@@ -3,7 +3,7 @@ layout: home
 
 hero:
   name: Cognitive Companion
-  text: Agentic AI for aging in place, private by design
+  text: Agentic AI for aging in place
   tagline: Cognitive Companion puts AI agents to work inside the home. They perceive daily routines, reason about what changed, and act through caregiver-approved workflows, on hardware the family owns.
   image:
     src: /cognitive-companion-care-4x3.png
@@ -76,7 +76,7 @@ hero:
 
 <section class="home-section">
   <div class="section-kicker">An agentic platform for the home</div>
-  <h2>Agents that perceive, reason, and act. People stay in charge.</h2>
+  <h2>Agents that perceive, reason, and act.</h2>
   <div class="outcome-grid">
     <article class="outcome-card">
       <span class="card-number">01</span>
@@ -133,7 +133,7 @@ hero:
 
 <section class="home-section trust-section">
   <div class="section-kicker">Trust by design</div>
-  <h2>Private enough for the home. Extensible enough for builders.</h2>
+  <h2> Extensible for builders.</h2>
   <div class="trust-grid">
     <div class="trust-card">
       <svg class="trust-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,3L2,12H5V20H19V12H22L12,3M12,9A3,3 0 0,1 15,12V13H16V17H8V13H9V12A3,3 0 0,1 12,9M12,11A1,1 0 0,0 11,12V13H13V12C13,11.5 12.6,11 12,11Z" /></svg>
