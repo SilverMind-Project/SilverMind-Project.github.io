@@ -8,6 +8,16 @@ trust rules.
 
 ::: info Implementation status
 The three-state ReID gallery lifecycle is fully deployed. The system requires operator verification before ReID candidates can influence identity resolution. Legacy `face_confirmed` entries have been backfilled to `pending_review` and no longer automatically vote.
+
+`ReIDCandidateStage` is the only pipeline path that writes to the gallery. It runs late in the
+frame pipeline, after identity resolution and provenance persistence and ahead of the per-camera
+publish throttle, so candidate creation is never silently dropped on a throttled frame. Every
+candidate it creates starts `pending_review`. A face-derived candidate is created only when the
+direct recognized ArcFace identity equals the resolved PH identity and the face evidence carries a
+calibrated confidence; without a deployed calibration artifact, the stage produces no candidates at
+all (fail closed) rather than falling back to uncalibrated similarity. The per-identity,
+per-orientation cap on gallery growth counts `pending_review` and `operator_verified` rows
+together, so a backlog of unreviewed candidates cannot exceed the cap either.
 :::
 
 ## Use three states
@@ -120,12 +130,23 @@ the entry IDs, raw similarities, trust multipliers, recency factors, and weighte
 
 ## Review checklist
 
-- [ ] Pending and rejected entries are excluded at repository and cache boundaries.
-- [ ] Every candidate points to an immutable frame and crop.
-- [ ] Direct face identity equals the candidate label.
-- [ ] Model and preprocessing partitions are enforced.
-- [ ] Rejection deletes the vector and crop while retaining audit metadata.
-- [ ] Undo creates a compensating event.
+- [x] Pending and rejected entries are excluded at repository and cache boundaries
+      (`tests/storage/test_gallery_state_parity.py`, InMemory and Postgres).
+- [x] Every candidate points to an immutable frame and crop, and carries `origin_tracklet_id`,
+      `ph_id`, and `source_episode_id`
+      (`tests/pipeline/stages/test_reid_candidate_stage.py`,
+      `tests/integration/test_gallery_state_parity_postgres.py::test_create_review_candidate_round_trips_and_is_idempotent`).
+- [x] Direct face identity equals the candidate label; a held PH label cannot override a different
+      recognized face (`tests/characterization/test_gallery_seed_identity_mismatch.py`, a strict
+      positive test since M04, no longer `xfail`).
+- [x] Model and preprocessing partitions are enforced (`candidate_eligibility.py::evaluate_candidate`).
+- [x] Rejection deletes the vector and crop while retaining audit metadata.
+- [x] Undo creates a compensating event.
+- [x] The gallery has exactly one pipeline write path, `ReIDCandidateStage` →
+      `create_review_candidate` (`tests/contracts/test_gallery_write_path.py`).
+- [x] The per-(identity, orientation) cap counts pending and verified rows and engages against
+      Postgres (`tests/pipeline/stages/test_reid_candidate_stage.py::test_cap_counts_pending_and_verified_rows`,
+      `test_count_gallery_entries_defaults_to_pending_and_verified`).
 
 ## Related pages
 

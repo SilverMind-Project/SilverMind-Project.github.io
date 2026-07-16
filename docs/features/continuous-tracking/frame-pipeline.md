@@ -1,6 +1,6 @@
 # Frame Processing Pipeline
 
-The orchestrator's `FrameProcessingPipeline` (`app/pipeline/frame_pipeline.py`) processes each frame through 15 stages: from JPEG decode through person detection, privacy enforcement, spatial floor projection, ReID and pose inference, face identification, world tracking (which includes pre-association cross-camera dedup and Bayesian identity resolution), detection backfill, PH lifecycle management, posture classification, trajectory writing, keyframe sampling, identity revision, trail management, and event publishing.
+The orchestrator's `FrameProcessingPipeline` (`app/pipeline/frame_pipeline.py`) processes each frame through 17 stages: from JPEG decode through person detection, privacy enforcement, spatial floor projection, ReID and pose inference, face identification, world tracking (which includes pre-association cross-camera dedup and Bayesian identity resolution), detection backfill, PH lifecycle management, posture classification, trajectory writing, keyframe sampling, identity revision, trail management, durable provenance persistence, governed ReID candidate creation, and event publishing. (A conditional fall-detection stage also runs between posture classification and trajectory writing when `fall_detection.enabled`; it is omitted from the count and diagram here because it is off by default.)
 
 ```mermaid
 flowchart TB
@@ -19,7 +19,9 @@ flowchart TB
     Keyframe["12. Keyframe sampling\nPeriodic + identity change"]
     Revisions["13. Identity revisions\nCross-table rewrite"]
     Trails["14. Trail management\nPer-PH foot-point trail buffer"]
-    Publish["15. Event publishing\ntracking.events Redis Stream"]
+    Provenance["15. Provenance persistence\nDurable identity-decision audit rows"]
+    ReIDCandidate["16. ReID candidate creation\nGoverned pending_review gallery writes"]
+    Publish["17. Event publishing\ntracking.events Redis Stream"]
 
     FrameReady --> Fetch
     Fetch --> Detect
@@ -35,7 +37,9 @@ flowchart TB
     Trajectory --> Keyframe
     Keyframe --> Revisions
     Revisions --> Trails
-    Trails --> Publish
+    Trails --> Provenance
+    Provenance --> ReIDCandidate
+    ReIDCandidate --> Publish
 ```
 
 ## 1. Frame fetch
@@ -210,7 +214,29 @@ When the identity committer is enabled, the `PostgresIdentityRewriter` performs 
 
 `TrailsStage` maintains an in-memory ring buffer of foot-point trail positions per PH (default: last 30 positions). These trails are published in the `TrackingEvent` proto and consumed by the CC live view to render person movement paths on the floor plan.
 
-## 15. Event publishing
+## 15. Provenance persistence
+
+`ProvenancePersistStage` durably persists every identity decision that revises a PH's previous
+identity (`revises_previous=True`), unconditionally. It runs immediately before the per-camera
+publish throttle, and deliberately outside it: a decision that revises identity is audit data a
+caregiver-facing read model joins against, so it must never be dropped just because the frame
+that carried it was rate-limited for live-view publishing. The stage is a no-op when no
+`identity_provenance_repo` is configured.
+
+## 16. ReID candidate creation
+
+`ReIDCandidateStage` is the only pipeline path that writes to the ReID gallery. For each
+committed, face-matched detection it evaluates a governed eligibility gate
+(`evaluate_candidate`, `app/tracking/identity/candidate_eligibility.py`) and, when it passes,
+creates a `pending_review` candidate with crop and frame provenance, `origin_tracklet_id`, `ph_id`,
+and model/preprocessing versions. A face-derived candidate requires the direct recognized ArcFace
+identity to equal the committed identity with calibrated confidence at or above the authority
+threshold; without a deployed calibration artifact the stage produces no candidates rather than
+falling back to raw similarity. Like provenance persistence, this runs ahead of the publish
+throttle because candidate creation is audit-visible governance data. The per-(identity,
+orientation) cap on gallery growth counts `pending_review` and `operator_verified` rows together.
+
+## 17. Event publishing
 
 `PublishStage` assembles and publishes the final `TrackingEvent` proto to `tracking.events`. It carries per-frame detections enriched with `ph_id`, the posterior's top identity per PH (published even before formal commit, so the live view sees the current best guess immediately), pose keypoints, per-PH foot-point trails, and posterior evidence (top probability, top-2 probability, face anchor flag).
 

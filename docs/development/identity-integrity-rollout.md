@@ -46,6 +46,9 @@ than flipping them for the first time.
 | Appearance outlier rejection | `world.enable_appearance_outlier_rejection` | On |
 | Covariance validation | `world.enable_covariance_validation` | On |
 | Governed gallery voting | enforced in SQL (`state = 'operator_verified'`) | On |
+| Multiview-gallery shadow compare | `resolver.multiview_shadow_sample_rate` (`config/settings.yaml`, default `0.0`) | Off; a nonzero fraction runs the shadow comparison for measurement only, no output change |
+| Coherence-boost shadow compare | `coherence_shadow_sample_rate` on `ResolverConfig` (default `0.0`; not yet exposed as a `settings.yaml` key) | Off; same measurement-only shadow pattern |
+| Governed candidate creation | `reid_candidates.enabled` (`config/settings.yaml`, default `true`) | On, fail-closed: `require_calibrated_face: true` rejects every candidate until a calibration artifact is deployed |
 
 ## Verified-ReID association cost
 
@@ -99,6 +102,8 @@ decision, and identity IDs stay in structured logs, never in labels.
 | `cts_worldtracker_association_rejections_total` | Gated association pairs by reason |
 | `cts_correction_projection_lag_seconds` | Seconds from a revision to its CC projection |
 | `cts_correction_projection_failures_total` | Projection applies or acks that failed |
+| `cts_reid_candidate_rejected_total{reason}` | Governed candidates `ReIDCandidateStage` rejected, by bounded reason (for example `calibration_not_authoritative`) |
+| `cts_identity_shadow_mismatch_total{feature}` | Shadow-versus-live decision disagreement, by shadowed feature (`multiview_gallery`, coherence boost). Stays low; a sustained rise means the shadowed config would change production decisions if enabled |
 
 Build a dashboard, without paging thresholds at first, for the Unknown rate and durations, the
 conflict distribution, association rejection and batch skew, the review-queue age and action rates,

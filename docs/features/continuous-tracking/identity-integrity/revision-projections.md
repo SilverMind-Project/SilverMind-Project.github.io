@@ -15,6 +15,12 @@ a projection acknowledgement back to CTS. A correction job completes only after
 the CTS internal projection and the Cognitive Companion projection both acknowledge the same
 `revision_id`. Explicit `inferred_identity_id` and `effective_identity_id` provenance fields remain
 deployed across all tracking APIs.
+
+Supersession is always bounded: an operator revision rewrites only the rows inside its explicit
+`range_start`/`range_end`; an automatic (range-less) revision rewrites only rows within
+`cts.revision_horizon_s` of the revision time. A replacement row for a superseded
+`cts_dementia_signals` row re-derives its `signal_id` from the new identity rather than reusing the
+superseded row's ID, so `signal_id` lookups never point at the wrong identity mid-supersession.
 :::
 
 ## Keep inferred and effective labels separate
@@ -38,6 +44,19 @@ An operator correction:
 
 CTS is the source of truth. Each revision has a stable `revision_id`, actor, reason, observation
 range, expected version, evidence summary, and revision lineage.
+
+## Bound automatic revisions by a horizon
+
+Not every revision comes from an operator. A resolver-driven revision (for example, the resolver
+overturning its own earlier commit) carries no operator-supplied range. Cognitive Companion bounds
+that case with `cts.revision_horizon_s` (default 600 seconds), which mirrors the CTS resolver's own
+`resolver.revision_horizon_s`. The rewriter only supersedes `PersonLocationHistory` and
+`cts_dementia_signals` rows whose window falls inside that horizon of the revision time, never a
+PH's entire history.
+
+The two constants must change together. A drift between them lets Cognitive Companion rewrite more
+or less history than the CTS resolver's own revision contract promises. There is no schema
+migration for this: both sides read the same conceptual bound from their own config.
 
 ## Track projection jobs
 
@@ -112,6 +131,9 @@ have an explicit removal condition.
 - [ ] Every projection is idempotent by `revision_id`.
 - [ ] Completion requires all configured acknowledgements.
 - [ ] Undo creates a compensating revision.
+- [ ] An automatic (range-less) revision rewrites only rows within `cts.revision_horizon_s`, never
+      a PH's entire history.
+- [ ] A replacement signal row re-derives its `signal_id`; it never copies the superseded row's ID.
 
 ## Related pages
 

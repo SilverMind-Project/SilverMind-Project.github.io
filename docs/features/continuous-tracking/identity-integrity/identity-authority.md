@@ -11,6 +11,10 @@ ArcFace authority, and final duplicate-active enforcement are now deployed with 
 The calibration toolchain (M10) is deployed: `calibrated_confidence` is populated from a versioned
 artifact when one is present and version-compatible; the service returns `calibrated_confidence: null`
 in `degraded_missing`, `degraded_incompatible`, or `degraded_invalid` states.
+The evidence clock gate is identity-matched: it advances only when the frame's evidence names the
+PH's own committed identity, not merely when any evidence is present in the frame. The `authority`
+field on every identity decision is a bounded vocabulary naming the authority-ladder rung that
+decided the frame, never a raw identity id.
 The [identity integrity baseline](/features/continuous-tracking/identity-integrity) lists historical behavior.
 :::
 
@@ -42,12 +46,22 @@ swap to a caregiver.
 The identity prior is measured from the last independent qualifying evidence. Resolver evaluation
 time, persistence time, and ordinary identity update time are separate timestamps.
 
+The clock gate is identity-matched, not presence-only: it advances only when a frame carries a
+direct recognized ArcFace anchor whose person matches the PH's committed identity, or a ReID vote
+whose top candidate matches that identity. Evidence for a different, unrelated identity appearing
+in the same frame never refreshes the clock, even though a likelihood distribution's smoothing
+mass may technically assign that identity a nonzero probability. Checking for evidence presence
+alone, without confirming the evidence names the held identity, was a defect (an incumbent
+identity could renew its own clock from a bystander's face); the gate now requires an explicit
+identity match.
+
 The following inputs do not refresh the independent-evidence clock:
 
 - prior-only maintenance;
 - height;
 - propagated face evidence;
-- an ordinary PH persistence write.
+- an ordinary PH persistence write;
+- evidence that identifies a different person than the one currently held.
 
 Verified ReID may refresh the clock only after it clears PH confidence, margin, quality, version,
 and conflict gates.
@@ -85,6 +99,26 @@ They do not replace the authority decision.
 ArcFace enrollment remains a separate golden dataset. PH inference, identity correction, and ReID
 review never enroll a face automatically.
 
+## Authority vocabulary
+
+Every identity decision carries an `authority` field naming which rung of the authority order
+decided it. `authority` is a bounded vocabulary, never a raw identity id or name:
+
+| `authority` | Meaning |
+| --- | --- |
+| `operator` | An operator correction decided the frame, inside its explicit range. |
+| `direct_face` | Calibrated, unambiguous ArcFace evidence cleared the authority threshold. |
+| `posterior` | The PH's Bayesian posterior over verified ReID evidence decided the frame. |
+| `temporal_prior` | The bounded temporal prior held the identity with no new independent evidence this frame. |
+| `none` | No authority decided an identity this frame (conflict, demotion, or no PH identity). |
+| `reid_gallery` | Reserved for a future governed-gallery authority rung; not yet emitted. |
+| `unknown`, `height_proxy` | Legacy members kept for backward compatibility; the current resolver never emits either. |
+
+A card or API response never renders an `authority` value as a person's name. `decision_source`
+(which evidence type led the frame) is a related but distinct field; the two are not
+interchangeable, and consumers must branch on `authority` for authority questions rather than
+inferring authority from `decision_source`.
+
 ## Operational consequences
 
 - An increase in Unknown is acceptable during a safe rollout and must be measured.
@@ -95,10 +129,13 @@ review never enroll a face automatically.
 ## Review checklist
 
 - [ ] Non-authoritative evidence cannot create an effective identity.
-- [ ] Only independent qualifying evidence advances the evidence clock.
+- [ ] Only independent, identity-matched qualifying evidence advances the evidence clock; evidence
+      for a different identity never does, even if present in the same frame.
 - [ ] Unresolved conflict becomes `Unknown`.
 - [ ] Active occupancy includes incumbents outside the current frame.
 - [ ] Raw similarity is never displayed as calibrated confidence.
+- [ ] `authority` is always a member of the bounded vocabulary above, never an identity id; the
+      repository boundary rejects out-of-vocabulary values.
 
 ## Related pages
 
