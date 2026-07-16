@@ -4,6 +4,8 @@ The Guided Companion walks a resident through a routine one small step at a time
 
 Unlike a one-shot reminder, a guided session is long-lived and stateful. It holds its place across interruptions, speaks to the resident in her own language through the realtime voice agent, advances only when she confirms a step, and notifies the caregiver when she is stuck.
 
+The Guided Companion is also a working answer to the hardest question in deploying autonomous agents: how much authority to give the model. Here the split is explicit. The voice agent handles the conversation; deterministic code owns advancement, escalation, and safety; and every session writes an auditable event timeline a caregiver can review. The same pattern generalizes to any setting where an agent acts around people who depend on it.
+
 ## Mental model: deterministic spine, agent per turn
 
 A guided session is a deterministic state machine over a linear list of steps.
@@ -127,4 +129,4 @@ The companion stores transcripts (through the conversation manager), step events
 
 The conversational core is shippable today: a rule can run a routine end to end, the agent speaks each step in Tamil, the resident confirms, the state machine advances, and a request for help notifies the caregiver.
 
-Layered on top of that spine are spatial grounding (sub-room zones), vision-confirm completion as callable gate graphs with Confirm and Watch profiles, a continuous safety watch (abandonment, hazard-left-active, possible fall, repeated confusion), seamless caregiver takeover, the caregiver Routine Builder UI, metrics, and the always-on kiosk. These are assists behind clean interfaces, so the conversational spine works and is testable independently of any of them.
+Layered on top of that spine are spatial grounding (sub-room zones), vision-confirm completion as callable gate graphs with Confirm and Watch profiles, a continuous safety watch (abandonment, hazard-left-active, possible fall, repeated confusion), live caregiver takeover, the caregiver Routine Builder UI, metrics, and the always-on kiosk. These are assists behind clean interfaces, so the conversational spine works and is testable independently of any of them.

@@ -1,6 +1,8 @@
 # MCP Integration
 
-Cognitive Companion includes a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, that exposes 39 tools for AI agent integration. Agents can discover system state, query sensor data, inspect enrollment and e-ink status, check person locations, review activity timelines and daily reports, explore semantic memory, trigger rule executions, author new rules, and inspect plugin metadata. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
+Cognitive Companion treats the home as something an AI agent can safely operate. A built-in [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, exposes 59 tools for AI agent integration: agents can discover system state, query sensor data, inspect enrollment and e-ink status, check person locations, review activity timelines and daily reports, explore semantic memory, read the unified signals feed, acknowledge behavioral signals with feedback, drive and analyze guided routine sessions, propose identity corrections, trigger rule executions, author new rules, and inspect plugin metadata. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
+
+This makes Cognitive Companion agent-native: household state has one governed, authenticated tool surface, and every agent, whether Claude Desktop, a custom orchestrator, or the internal voice companion, goes through it. There is no separate integration to audit per client, and tools stay in lockstep with the UI because both read the same service layer.
 
 ## What is MCP?
 
@@ -48,7 +50,7 @@ A `GeminiToolAdapter` reads the same tool definitions and converts them to Gemin
 | `get_room_occupancy`       | Current occupancy from presence sensors                      | `room_name` (optional)                        |
 | `get_recent_images`        | Recent camera images for a sensor                            | `sensor_id`, `limit`                          |
 | `get_light_level`          | Illuminance from a HA sensor                                 | `entity_id`                                   |
-| `get_alerts`               | Recent emergency alerts                                      | `resolved`, `room_name`, `limit` (optional)   |
+| `get_signals_feed`         | Unified caregiver signals feed (CTS signals plus rule alerts) | `source`, `severity_min`, `room_name`, `limit` (optional) |
 | `get_event_logs`           | Rule execution event logs                                    | `rule_name`, `status`, `limit` (optional)     |
 | `get_rules`                | Configured automation rules                                  | `enabled_only` (default true)                 |
 | `get_conversation_history` | Recent conversation turns                                    | `session_id`, `limit` (optional)              |
@@ -74,6 +76,26 @@ A `GeminiToolAdapter` reads the same tool definitions and converts them to Gemin
 | `get_tracking_status`       | Overall CTS tracking status and active PH count        | (none) |
 | `get_person_location`       | Current location envelope for one person (with quality/staleness) | `person_id` |
 | `get_recent_dementia_signals` | Recent dementia signals for a person with signal envelopes | `person_id`, `limit` (optional) |
+| `acknowledge_dementia_signal` | Acknowledge a dementia signal, optionally with caregiver feedback | `signal_id`, `feedback` (optional) |
+| `get_gait_trend`            | Gait speed trend envelope for a resident                | `person_id`, `days` (default 56) |
+| `get_heatmap`               | Aggregated floor-plan heatmap bins for a person over a time range | `person_id`, `start_time`, `end_time`, `start_minute`, `end_minute` (optional) |
+| `list_keyframe_frames`      | Keyframes grouped per physical source frame for identity review | `person_id`, `camera_id`, `tag_reason`, `conflict_only`, `pending_review_only`, `limit`, `offset` (all optional) |
+| `propose_identity_correction` | Propose an observation-bounded identity correction segment for a PH | `ph_id`, `observation_id`, `at` (optional) |
+| `get_identity_correction_job` | Status of an identity correction job                  | `revision_id` |
+| `get_active_guided_step`    | Current step of an active guided session                | `session_id` |
+| `mark_guided_step_complete` | Propose that the resident completed the current guided step | `session_id`, `step_ord`, `note` (optional) |
+| `repeat_guided_step`        | Rephrase and repeat the current guided step             | `session_id` |
+| `report_step_blocked`       | Record that the resident is stuck on the current step   | `session_id`, `reason` |
+| `request_caregiver_help`    | Escalate a guided session to the caregiver              | `session_id`, `reason` (optional) |
+| `get_guided_completion_summary` | Guided-task completion outcomes                     | `person_id`, `routine_id`, `since`, `until` (optional) |
+| `get_guided_attempts_per_step` | Retry pressure by guided routine step                | `person_id`, `routine_id`, `since`, `until` (optional) |
+| `get_guided_time_to_complete` | Guided routine completion durations                   | `person_id`, `routine_id`, `since`, `until` (optional) |
+| `get_guided_abandonment`    | Guided-task abandonment rate and reasons                | `person_id`, `routine_id`, `since`, `until` (optional) |
+| `get_guided_escalation_breakdown` | Guided-task escalation reasons                    | `person_id`, `routine_id`, `since`, `until` (optional) |
+| `get_guided_vision_agreement` | Guided-task vision agreement quality                  | `person_id`, `routine_id`, `since`, `until` (optional) |
+| `get_guided_time_of_day`    | Guided outcomes bucketed by local hour                  | `person_id`, `routine_id`, `since`, `until` (optional) |
+| `get_guided_watch_summary`  | Guided-task watch runs and agreement                    | `person_id`, `routine_id`, `since`, `until` (optional) |
+| `get_guided_gate_cost_summary` | Guided-task vision gate execution costs              | `person_id`, `routine_id`, `since`, `until` (optional) |
 | `query_knowledge_base`      | Semantic search over the knowledge repository           | `query` |
 | `get_current_quiz_question` | Current question in an active quiz session              | `session_id` |
 | `submit_quiz_answer`        | Record an answer to a quiz question                     | `session_id`, `answer` |
@@ -156,7 +178,7 @@ An AI agent monitoring the household might:
 2. Call `get_enrolled_persons` to see which household members are tracked
 3. Call `get_person_activities` to check if lunch has been eaten
 4. If lunch has not been detected, call `trigger_rule` on the lunch reminder rule
-5. Call `get_alerts` to check for any unresolved emergencies
+5. Call `get_signals_feed` to check for any unacknowledged signals
 
 ## Voice Companion Integration
 
@@ -170,14 +192,27 @@ mcp:
     - "get_rooms"
     - "get_room_occupancy"
     - "get_person_locations"
-    - "get_alerts"
+    - "get_signals_feed"
     - "get_weather"
+    - "get_recent_scene_objects"
+    - "get_room_trend"
+    - "get_person_movements"
     - "get_local_datetime"
     - "get_person_activities"
     - "get_enrolled_persons"
+    - "submit_user_response"
+    - "query_knowledge_base"
+    - "submit_quiz_answer"
+    - "get_current_quiz_question"
+    - "complete_quiz_session"
+    - "get_active_guided_step"
+    - "mark_guided_step_complete"
+    - "repeat_guided_step"
+    - "report_step_blocked"
+    - "request_caregiver_help"
 ```
 
-Destructive tools like `trigger_rule` are excluded from the voice subset by default.
+Destructive tools like `trigger_rule` are excluded from the voice subset by default. The guided-session tools are voice-enabled by design: they are how the realtime agent proposes step completion, repeats a step, or escalates to a caregiver during a [guided routine](/features/guided-companion).
 
 ## Network Considerations
 

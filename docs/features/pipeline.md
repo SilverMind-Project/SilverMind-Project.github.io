@@ -1,6 +1,8 @@
 # Composable Pipelines
 
-The pipeline system is the core of Cognitive Companion. Each rule defines its own graph of pipeline steps executed by the `PipelineExecutor`. Caregivers and operators connect steps on a visual canvas, branch through output ports, and review live or historical runs in the execution inspector.
+The pipeline system is the core of Cognitive Companion: an engine for autonomous workflows that perceive, reason, and act inside the home. Each rule defines its own graph of pipeline steps executed by the `PipelineExecutor`, combining perception steps (person identification, scene analysis), reasoning steps (LLM calls, conditions, verification), and action steps (notifications, Home Assistant actions, guided routines). Caregivers and operators connect steps on a visual canvas, branch through output ports, and review live or historical runs in the execution inspector.
+
+Autonomy comes with observability built in. Every execution captures an immutable graph snapshot, a step-by-step timeline, activated output ports, outputs, and errors, so a run can be audited after the fact exactly as it happened. Cool-off windows, context filters, and rate limits bound how often a workflow may act.
 
 Step handlers are self-contained plugins, each in its own file under `backend/steps/builtin/`, auto-discovered at startup via `StepRegistry`. The frontend loads available step types dynamically from the `GET /api/v1/pipeline/step-types` endpoint, so new plugins appear automatically in the step palette and config editor. See [Extending the Pipeline](/development/extending-pipeline) for how to add custom step types.
 
@@ -353,13 +355,29 @@ Queries the [semantic-memory-service](/guide/architecture#semantic-memory-servic
 
 Graceful degradation: when the semantic-memory-service is unreachable or disabled, the output contains empty lists and a "No memory context available." summary.
 
-#### `recamera_media_poll`
+#### `media_window_poll`
 
-Fetches recent reCamera images from the `MediaCache` via the `EventAggregator` and returns presigned MinIO URLs plus metadata. Snapshot semantics: reads what is currently in cache and returns immediately. To wait for new events to accumulate, place a `wait` step before this one.
+The unified camera polling step for both Continuous Tracking System (CTS) and reCamera sources. It fetches a recent image window, returns presigned MinIO URLs plus metadata, and replaces the former `recamera_media_poll` and `cts_window_poll` step types. The step is gate-safe, so it can also run inside vision-gate graphs.
 
-The step pairs well with the [Continuous Tracking](/features/continuous-tracking) data path. It lets a rule explicitly collect frames from one or more reCamera sensors or rooms, branch on the image count, then forward the snapshot to a downstream vision or scene-analysis step.
+The `source` config field selects the path:
 
-**Config fields:**
+- `auto` (default): prefers CTS when its live bucketizer is available, otherwise uses reCamera.
+- `cts`: a window of CTS frames enriched with detections, identities, and optionally scene captions. The payload shape is symmetric with the `cts_window` trigger, so downstream template expressions are interchangeable between the two paths.
+- `recamera`: recent reCamera images from the `MediaCache` via the `EventAggregator`, with snapshot semantics: it reads what is currently in cache and returns immediately. To wait for new events to accumulate, place a `wait` step before this one.
+
+**Config fields (CTS path):**
+
+- `duration_s` (number, default `10`): total window duration in seconds.
+- `sample_period_s` (number, default `1.0`): downsample to one frame per this many seconds.
+- `cameras` (list): CTS camera IDs to include. Empty means all CTS cameras. CTS camera IDs are distinct from reCamera sensor IDs.
+- `rooms` (list): room names to include.
+- `lookback_s` (number, default `5`): seconds before the trigger time to include in the window.
+- `lookahead_s` (number, default `5`): seconds after the trigger time to wait and collect.
+- `include_scene` (bool, default `false`): run scene analysis on sampled frames.
+- `include_pose` (bool, default `false`): include pose keypoints when the CTS pose path is wired.
+- `max_frames` (int, default `30`): hard cap on total frames returned.
+
+**Config fields (reCamera path):**
 
 - `sensor_ids` (list): reCamera sensor IDs to include. Empty means all cameras (subject to `room_names` filter if set).
 - `room_names` (list): room names to include. Combined with `sensor_ids`, only sensors in these rooms are returned.
@@ -369,32 +387,10 @@ The step pairs well with the [Continuous Tracking](/features/continuous-tracking
 - `max_images` (int, default `10`): hard cap on total images returned across all sensors.
 - `chronological` (bool, default `true`): when `true`, images within each sensor are sorted oldest-first (better for temporal reasoning). When `false`, newest-first.
 
-**Output keys:** `images` (list of presigned MinIO URLs), `count`, `sensor_ids`, `room_names`, `since_minutes`, `polled_at` (ISO-8601 UTC timestamp).
-
-Graceful degradation: when the `EventAggregator` is not available, the step returns `success=False` with an empty payload so downstream steps can branch on it.
-
-#### `cts_window_poll`
-
-Pulls a window of recent Continuous Tracking System (CTS) frames enriched with detections, identities, room dwells, and optionally scene captions. Designed to be used inside a pipeline triggered by a reCamera sensor event, so the downstream LLM step can reason over high-quality CTS data even when the trigger fired on a lower-resolution reCamera frame.
-
-The output payload shape is symmetric with the `cts_window` trigger so downstream template expressions are interchangeable between the two paths.
-
-**Config fields:**
-
-- `duration_s` (number, required, default `10`): total window duration in seconds.
-- `sample_period_s` (number, required, default `1.0`): downsample to one frame per this many seconds.
-- `cameras` (list): CTS camera IDs to include. Empty means all CTS cameras. CTS camera IDs are distinct from reCamera sensor IDs.
-- `rooms` (list): room names to include.
-- `lookback_s` (number, default `5`): seconds before the trigger time to include in the window.
-- `lookahead_s` (number, default `5`): seconds after the trigger time to wait and collect.
-- `include_scene` (bool, default `false`): run scene analysis on sampled frames.
-- `include_pose` (bool, default `false`): include pose keypoints. Requires the CTS pose pipeline (TD-005); the option is shown in the UI as disabled until that path is wired.
-- `max_frames` (int, default `30`): hard cap on total frames returned.
-
-**Output keys:** `trigger_id`, `window_start`, `window_end`, `cameras`, `rooms`, `frames` (list of enriched frame dicts: per-frame `detections`, `identities`, optional `scene_caption`), `summary` (`distinct_identities`, `detection_count`, `rooms`), `partial` (true when the bucketizer is not yet wired or when the downsampler trimmed frames).
+**Output keys:** `window_start`, `window_end`, `cameras`, `rooms`, `frames` (list of enriched frame dicts on the CTS path), `images` (list of presigned MinIO URLs), `count`, `summary` (`distinct_identities`, `detection_count`, `rooms`), `source` (`"cts"` or `"recamera"`, the path actually used), and `partial`. The payload also carries path-specific fields when present: `trigger_id` for CTS windows, and `sensor_ids`, `room_names`, `since_minutes`, `polled_at` for reCamera snapshots.
 
 ::: warning
-The CTS event bucketizer is the upstream feed for this step. When the bucketizer is not wired into the service container, `cts_window_poll` logs a warning and returns an empty window with `partial: true`. Downstream steps can branch on `partial` to handle the degraded path.
+The CTS event bucketizer is the upstream feed for the CTS path. When the bucketizer is not wired into the service container, the CTS path returns an empty window with `partial: true`. Downstream steps can branch on `partial` or `source` to handle the degraded path.
 :::
 
 ### Reasoning

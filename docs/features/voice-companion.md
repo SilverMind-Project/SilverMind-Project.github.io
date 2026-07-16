@@ -135,21 +135,22 @@ mcp:
     - "get_rooms"
     - "get_room_occupancy"
     - "get_person_locations"
-    - "get_alerts"
+    - "get_signals_feed"
     - "get_weather"
     - "get_local_datetime"
     - "get_person_activities"
     - "get_enrolled_persons"
+    # ... plus knowledge, quiz, and guided-session tools
 ```
 
-Only read-only tools are included by default. Destructive tools like `trigger_rule` are excluded to prevent unintended actions during voice conversations.
+See [MCP Integration](/features/mcp-integration#voice-companion-integration) for the full voice-enabled subset. Destructive tools like `trigger_rule` are excluded to prevent unintended actions during voice conversations.
 
 ### Example Queries
 
 - "What time is it?" calls `get_local_datetime`
 - "What's the weather like?" calls `get_weather`
 - "Where is grandma?" calls `get_person_locations`
-- "Are there any alerts?" calls `get_alerts`
+- "Are there any alerts?" calls `get_signals_feed`
 
 ### Conversation Logging
 

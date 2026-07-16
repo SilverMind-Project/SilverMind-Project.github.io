@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: Cognitive Companion
-  text: Privacy-first AI for aging in place
-  tagline: Cognitive Companion helps families keep seniors safer at home by noticing meaningful routine changes, preserving personal memories, and giving caregivers calm, timely awareness.
+  text: Agentic AI for aging in place, private by design
+  tagline: Cognitive Companion puts AI agents to work inside the home. They perceive daily routines, reason about what changed, and act through caregiver-approved workflows, on hardware the family owns.
   image:
     src: /cognitive-companion-care-4x3.png
     alt: An elderly woman relaxing at home with a tablet-based AI companion, connected to a care network
@@ -74,6 +74,41 @@ hero:
 
 <HomeDayTimeline />
 
+<section class="home-section">
+  <div class="section-kicker">An agentic platform for the home</div>
+  <h2>Agents that perceive, reason, and act. People stay in charge.</h2>
+  <div class="outcome-grid">
+    <article class="outcome-card">
+      <span class="card-number">01</span>
+      <h3>Autonomous care workflows</h3>
+      <p>
+        Rules run as pipelines of 24 step types that watch cameras and sensors, reason with local vision and language models, branch on conditions, and act through 7 notification channels. Every run is recorded with a full graph snapshot, so caregivers can review exactly what an agent did and why.
+      </p>
+    </article>
+    <article class="outcome-card">
+      <span class="card-number">02</span>
+      <h3>Guided routines with bounded autonomy</h3>
+      <p>
+        A realtime voice agent walks a resident through routines such as making tea, one step at a time, in her own language. The agent proposes each advance; deterministic code decides, escalates to a caregiver when she is stuck, and writes an auditable event timeline.
+      </p>
+    </article>
+    <article class="outcome-card">
+      <span class="card-number">03</span>
+      <h3>Open to the agent ecosystem</h3>
+      <p>
+        A built-in Model Context Protocol server exposes 59 tools, so Claude, custom agents, and the voice companion all operate the household through one governed, authenticated interface. The home becomes something an agent can safely act on.
+      </p>
+    </article>
+    <article class="outcome-card">
+      <span class="card-number">04</span>
+      <h3>Grounded in physical-world perception</h3>
+      <p>
+        Multi-camera tracking, Bayesian identity resolution, and behavioral signals measured against each person's own history give agents a persistent model of the physical home. Caregivers can confirm or dismiss each behavioral signal, and that feedback stays with the record.
+      </p>
+    </article>
+  </div>
+</section>
+
 <section class="home-section audience-section">
   <div class="section-kicker">For everyone in the circle of care</div>
   <div class="audience-grid">
@@ -89,7 +124,7 @@ hero:
       <div class="audience-label">For care partners</div>
       <h2>Care infrastructure for the home.</h2>
       <p>
-        For health plans, senior-care providers, and care organizations, Cognitive Companion is privacy-preserving aging-in-place infrastructure. Local-by-default inference improves unit economics, while consistent reliability drives long-term retention and earlier risk signals.
+        For health plans, senior-care providers, and care organizations, Cognitive Companion is a vertical AI agent for aging in place: always-on monitoring, earlier risk signals, and lower caregiver burden in one deployable system. Local inference means no per-frame cloud cost scaling with each home, which changes the unit economics of continuous care.
       </p>
       <a href="/guide/architecture.html">Explore the architecture</a>
     </article>
@@ -134,9 +169,9 @@ hero:
 <section class="home-section builder-section">
   <div class="builder-copy">
     <div class="section-kicker">For builders</div>
-    <h2>Beneath the calm surface is a serious local AI stack.</h2>
+    <h2>Beneath the calm surface is a serious agent stack.</h2>
     <p>
-      Cognitive Companion combines distributed systems and applied machine learning. The stack includes realtime sensor fusion, Bayesian identity resolution, edge-native architecture, vision reasoning for complex rule pathways, and MCP tool support. These components are fully documented for teams who want to deploy, inspect, or extend the system.
+      Cognitive Companion combines distributed systems, applied machine learning, and agent orchestration. The stack includes realtime sensor fusion, Bayesian identity resolution, edge-native local inference, vision reasoning inside composable agent workflows, a 59-tool MCP server, and a realtime voice agent with function calling. Every layer is documented for teams who want to deploy, inspect, or extend the system.
     </p>
   </div>
   <div class="builder-actions">

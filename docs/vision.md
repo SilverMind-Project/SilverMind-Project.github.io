@@ -18,14 +18,28 @@ The first is trust. Families are far more willing to put cameras in a parent's h
 
 The second is economics. Local inference means there is no per-frame cloud bill scaling with every home and every camera. For a care organization deploying at scale, that changes the unit economics of always-on monitoring and makes earlier, finer-grained risk signals affordable.
 
+## A vertical AI agent for the home
+
+The systems creating real value with AI agents today go deep on one domain: they own the workflow end to end, act autonomously within clear limits, and prove their worth in outcomes the buyer already measures. Cognitive Companion applies that pattern to senior care. It is a domain agent that perceives the home through cameras and sensors, reasons with local vision and language models, and acts through caregiver-approved workflows, rather than a general assistant with a care skin.
+
+The harder half of deploying agents is governance. Cognitive Companion builds it into the architecture:
+
+- Every autonomous run records an immutable graph snapshot and timeline, so a caregiver or operator can inspect exactly what the agent saw, decided, and did.
+- The guided companion follows a strict division of authority: the voice agent proposes, deterministic code decides. Advancement, escalation, and safety are never delegated to the model.
+- Caregivers can confirm or dismiss each behavioral signal, and the feedback stays with the record, giving the system ground truth about which alerts earn their interruption.
+- The MCP tool surface is authenticated, permissioned, and shared with the internal voice agent, so there is one governed path into household state instead of a side door per integration.
+
+The same properties that make an agent safe around a vulnerable adult, auditability, bounded autonomy, and human review, are what let a care organization put it in a member's home and stand behind it.
+
 ## What already works
 
 This is not a concept. As of v0.7.2 the system runs an end-to-end stack across several services, with each major capability shipped and tested:
 
 - Multi-camera tracking with a floor-plane world tracker and Bayesian identity resolution, including cross-camera handoff that holds a person's identity through turns and camera gaps.
-- Six routine-change signals for dementia care: pacing, sundowning, long bathroom visits, nighttime movement, prolonged stillness, and unexplained absence, each measured against a person's own history.
-- A composable rules pipeline with 23 step types and 7 notification channels, driving both caregiver alerts and proactive reminders to the senior.
+- Nine behavioral signals for dementia care: pacing, sundowning, long bathroom visits, nighttime movement, prolonged stillness, unexplained absence, suspected falls, gait slowing, and elevated restlessness, each measured against a person's own history. Fall detection and restlessness are opt-in per deployment.
+- A composable rules pipeline with 24 step types and 7 notification channels, driving both caregiver alerts and proactive reminders to the senior.
 - A personal knowledge repository with caregiver-curated info cards, memory quizzes, and a voice companion the senior can talk to.
+- An MCP server exposing 59 tools, so external AI agents and the built-in voice agent operate the household through one authenticated interface.
 - A unified caregiver workspace and live process views over the running pipeline.
 
 Each of these landed behind tests and, for the tracking work, frame-replay proofs. The roadmap records the milestones as they shipped.
