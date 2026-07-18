@@ -61,6 +61,17 @@ guided_task:
   rephrase_via: "agent"
 ```
 
+### Additional settings
+
+A few more `guided_task.*` and `app.*` keys resolve through the same precedence:
+
+| Name | Type | Default | Description |
+| --- | --- | --- | --- |
+| `guided_task.max_pipeline_park_s` | integer (seconds) | `7200` | Hard ceiling on how long the owning pipeline stays parked for a routine, regardless of the computed summon-plus-steps budget. A safety net for a wedged session, not the normal resume path. |
+| `guided_task.vision.max_cameras` | integer | `3` | Camera count cap for the vision-confirm cascade, independent of `max_frames` (the per-camera frame budget). Overridable per profile via `vision.confirm.max_cameras` and `vision.watch.max_cameras`. |
+| `guided_task.summon_messages` | map (language code to string) | `en` and `ta` seeded | The literal-TTS summon announcement text, keyed by language code. Resolved in order: the routine's `language_override`, then the household default, then `en`. |
+| `app.public_base_url` | string | `""` (empty) | External origin prefixed onto links in outbound notifications, such as a Telegram takeover link. Empty keeps relative links for in-app surfaces. |
+
 ## Completion: the response gate
 
 A step advances on the resident's response by default. The agent listens, and when she tells it (or later, shows it) that she has done the step, it calls `mark_guided_step_complete`. The completion evaluator confirms the proposal, and the state machine advances.
@@ -113,13 +124,17 @@ These tools are added to the `mcp.gemini_tools` allowlist in `settings.yaml`. Th
 
 ## Language and voice
 
-Language is configurable per resident and per routine, overriding the global default (Chennai Tamil, Tanglish, or simple English). The coach persona is configured in `config/knowledge_voice.yaml` under `guided_task_default`, not hardcoded. The agent speaks the resident's language; any vision reasoning happens in English. Translation is left to the agent, never done in code.
+Language is configurable per resident and per routine, overriding the global default (Chennai Tamil, Tanglish, or simple English). The coach persona is configured in `config/knowledge_voice.yaml` under `guided_task_default`, not hardcoded.
+
+Within a live conversation, the agent speaks the resident's language and any vision reasoning happens in English. The routine's language override is composed into the agent's instructions rather than translated in code, so the agent produces the resident-facing words directly in her language.
+
+The summon announcement is the one exception: it plays before a conversation exists, so it cannot rely on the agent. It resolves from a small per-language message map (`guided_task.summon_messages` in `settings.yaml`), in order: the routine's language override, then the household default, then English. A language missing from the map falls back to English rather than mistranslating.
 
 ## Escalation and the caregiver safety net
 
 The companion never leaves the resident without help. Within a step the agent rephrases and retries up to the attempt cap. When the cap is reached, or when she asks for help, the caregiver is notified over the configured escalation channels with context: the routine name, the current instruction, and the reason. Emergencies add a Home Assistant speaker announcement.
 
-The escalation message is sent through the existing notification dispatcher, so it reaches the same channels as other alerts (Telegram, on-screen popup, and so on).
+The escalation message is sent through the existing notification dispatcher, so it reaches the same channels as other alerts (Telegram, on-screen popup, and so on). It also carries a takeover link so the caregiver can open the session directly. When `app.public_base_url` is configured, the link is an absolute URL a caregiver can open from a phone; otherwise it stays a relative path, which only works from an in-app surface.
 
 ## Privacy and retention
 
