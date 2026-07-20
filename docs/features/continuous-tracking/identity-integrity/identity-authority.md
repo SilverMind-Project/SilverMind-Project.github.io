@@ -43,6 +43,10 @@ three-state text of this decision. See
 for the full state machine.
 :::
 
+A verified-ReID vote is same-wardrobe-window evidence by construction: a hard 12-hour vote-age
+cutoff (identity-continuity M03) excludes any gallery entry older than that from every resolver
+query and the tracker's disagreement probe, so rung 3 above never rests on yesterday's clothing.
+
 ## Resolve conflicts as Unknown
 
 When material evidence conflicts and the authority order does not resolve the conflict, the

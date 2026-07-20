@@ -129,11 +129,29 @@ is intentionally not exposed as an MCP agent tool. See the
 by the same shared scorer described below, so a query regression that leaks a pending or rejected
 row into scoring is loud (a backstop counter increments) rather than silently miscounted.
 
-Recency uses exponential decay with a seven-day half-life and no floor:
+Recency uses exponential decay with a two-day half-life and no floor (identity-continuity M03;
+shortened from the original seven-day default):
 
 ```text
-recency_factor = 2 ** (-(age_days / 7))
+recency_factor = 2 ** (-(age_days / 2))
 ```
+
+A hard vote-age cutoff additionally excludes any gallery entry older than
+`resolver.gallery_vote_max_age_s` (default 12 hours, identity-continuity M03) on every query path:
+the per-orientation multiview query, the single-query fallback, and the cross-camera-assist
+diagnostic query. SOLIDER-REID embeddings are dominated by clothing, and clothing validity is a
+step function at wardrobe change, not a smooth decay -- the cutoff encodes the step; the two-day
+half-life handles staleness inside the window. The cutoff intentionally does not apply to the
+corpus-building read that seeds a PH's own query embedding from its recent gallery entries
+(`list_gallery_entries_for_tracklets`): that read describes the PH's own track, not a candidate
+vote. The tracker's verified-ReID disagreement probe applies the mirrored
+`world_tracker.reid_disagreement_max_age_s` cutoff so it disagree-costs against the same temporal
+corpus the resolver votes with.
+
+The cutoff depends on `auto_verified` rows accumulating from same-day, calibrated face matches
+(identity-continuity M02): with a 12-hour cutoff and no same-day population, the resolver would
+lose its ReID vote every morning. M02 must be landed and enabled in production, with `auto_verified`
+rows actually accumulating on ordinary days, before the M03 defaults are relied upon.
 
 Queries use only entries with compatible model and preprocessing versions. Near-duplicate votes
 are capped or clustered by source episode, camera, and orientation.
@@ -149,7 +167,10 @@ recency decay, and vote caps on every gallery query path: the per-orientation mu
 single-query fallback, and the shadow comparison. No path scores hits inline. The trust multiplier
 and recency half-life are configurable via `resolver.gallery_verified_trust_multiplier`,
 `resolver.gallery_auto_verified_trust_multiplier`, and `resolver.gallery_recency_half_life_days` in
-`config/settings.yaml`.
+`config/settings.yaml`. The hard vote-age cutoff (`resolver.gallery_vote_max_age_s`,
+identity-continuity M03) is enforced one level below the scorer, at the repository query itself
+(`GalleryRepository.search_similar`), via the resolver's `_gallery_search_kwargs()` helper so every
+current and future call site applies it identically.
 
 ## Keep learning boundaries explicit
 
