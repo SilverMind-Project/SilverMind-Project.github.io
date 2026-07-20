@@ -123,6 +123,53 @@ have an explicit removal condition.
 - Keyframe cards show effective identity; detail views retain inference and revision history.
 - Operators can retry a failed projection by `revision_id`.
 
+## Unknown-segment backfill
+
+A resident tracked as Unknown all morning who is face-identified at noon previously kept an
+unlabeled morning forever: the resolver only builds a revision when a prior identity existed, the
+cross-table rewriter refuses identity-NULL rows, and Cognitive Companion had no rows to supersede.
+Identity-continuity M04 closes this gap.
+
+**Trigger.** On a qualifying first commit of a previously Unknown PersonHypothesis, `UnknownBackfillService`
+fires when all three conditions hold: the decision has no previous identity, the decision names a
+real identity, and the commit's authority is the calibrated ArcFace-authority rung (`direct_face`).
+Posterior commits never trigger a backfill; the backfilled label inherits the full trust of the
+segment, so only the strongest evidence class may write history.
+
+**The NULL-only invariant.** Backfill only ever fills NULL identity. It never changes a non-NULL
+identity value in any table, and it never crosses an operator range, an earlier decision naming a
+different identity, or the configured cap.
+
+**Range computation.** The range starts at the PH's birth time and clips forward, in order, past:
+the end of the latest earlier decision on the PH naming a different identity; the end of any
+overlapping operator range (an operator range covering the live edge skips the backfill entirely,
+since operator authority always outranks an automatic process); and the configured maximum span
+(`resolver.backfill_max_range_s`, default 4 hours). A range that collapses to empty is skipped.
+
+**Staged rollout.** Three keys under `resolver:` in settings.yaml: `enable_unknown_backfill`
+(default false), `backfill_shadow` (default true), `backfill_max_range_s` (default 14400 seconds).
+Flag off restores prior behavior instantly. Shadow mode computes the range and emits metrics and
+logs only, with no database or stream writes. Enabled mode records an `inferred` revision range,
+relabels the identity-NULL `person_trajectories` and `room_dwells` rows, and publishes one
+`IdentityRevision` with `revision_kind=inferred_backfill`, `range_authority=inferred`, and
+`required_projections=[cc]` for Cognitive Companion to project.
+
+**Wire shape.** The published revision carries an empty `previous_identity_id` (promoting from
+Unknown) and the same `revision_id` on its `IdentityRevisionRange` row, so the CTS-internal
+projection and the Cognitive Companion projection acknowledge in step. The job stays `applying`
+until Cognitive Companion also acknowledges; the CTS-internal projection acknowledges synchronously
+as soon as the range is recorded and the rows are relabeled.
+
+**Reading the backfilled range.** The effective-identity overlay that already serves operator
+corrections needs no new code: an inferred range is just another live range, and the overlay
+already prefers operator authority over inferred and, among inferred or operator ranges, the newest.
+Keyframes and read models over a backfilled segment resolve to the identity automatically.
+
+**Reversal.** Every write is keyed by `revision_id`. `scripts/rollback_backfill.py` takes a
+revision_id and restores `identity_id` to NULL on the exact rows a backfill relabelled, defaulting
+to a dry run. It does not retire the underlying revision range; an operator who also wants the
+overlay to stop reporting the backfilled label uses the existing compensating-revision flow.
+
 ## Review checklist
 
 - [ ] Original inferred identity remains immutable.

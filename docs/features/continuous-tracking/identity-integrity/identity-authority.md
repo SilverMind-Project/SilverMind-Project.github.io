@@ -56,6 +56,14 @@ default.
 This rule keeps an uncertain frame visible for review without presenting a confident identity
 swap to a caregiver.
 
+A qualifying first `direct_face` commit out of Unknown can also backfill the PH's preceding
+Unknown history (identity-continuity M04). A backfilled label carries `range_authority=inferred`,
+is subordinate to any operator range over the same window, and is reversible: undoing it is a
+matter of restoring the relabelled rows, not overwriting a trusted human decision, because nothing
+non-NULL was ever changed. See
+[Unknown-segment backfill](/features/continuous-tracking/identity-integrity/revision-projections#unknown-segment-backfill)
+for the trigger, range, and rollout detail.
+
 ## Keep an independent evidence clock
 
 The identity prior is measured from the last independent qualifying evidence. Resolver evaluation
