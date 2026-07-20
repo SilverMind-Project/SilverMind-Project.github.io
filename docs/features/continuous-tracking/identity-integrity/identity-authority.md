@@ -25,12 +25,23 @@ Identity authority follows this order:
 1. An operator correction inside its explicit observation-bounded range.
 2. Direct ArcFace evidence with unambiguous face-to-observation association, compatible model and
    preprocessing versions, and calibrated confidence above the authority threshold.
-3. A PH posterior supported by operator-verified, version-compatible ReID entries.
+3. A PH posterior supported by version-compatible ReID gallery entries, either operator-verified
+   (full trust) or auto-verified (a calibrated high-confidence match, machine-minted at a reduced
+   trust, identity-continuity M02).
 4. A temporal prior no older than 30 seconds from the last independent qualifying evidence.
 
 Raw ArcFace cosine similarity, propagated face hints, height, pending or rejected ReID entries, and
 PH-local appearance prototypes may support tracking or corroborate evidence. They cannot create an
 effective identity.
+
+::: info Amended decision (identity-continuity M02, 2026-07-18)
+ReID gallery entries are pending, auto-verified, operator-verified, or rejected. Only auto-verified
+and operator-verified entries vote; operator review outranks auto-verification (an operator can
+approve, relabel, reject, or demote an auto-verified row at any time). This amends the original
+three-state text of this decision. See
+[ReID gallery governance](/features/continuous-tracking/identity-integrity/reid-gallery-governance)
+for the full state machine.
+:::
 
 ## Resolve conflicts as Unknown
 

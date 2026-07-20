@@ -7,30 +7,43 @@ tracking appearance, ArcFace enrollment, and labeled ReID data in separate store
 trust rules.
 
 ::: info Implementation status
-The three-state ReID gallery lifecycle is fully deployed. The system requires operator verification before ReID candidates can influence identity resolution. Legacy `face_confirmed` entries have been backfilled to `pending_review` and no longer automatically vote.
+The four-state ReID gallery lifecycle is fully deployed (identity-continuity M02). Operator-verified
+and machine-minted auto-verified entries both vote in identity resolution, at different trust
+levels; pending and rejected entries never vote. Legacy `face_confirmed` entries have been
+backfilled to `pending_review` and no longer automatically vote.
 
 `ReIDCandidateStage` is the only pipeline path that writes to the gallery. It runs late in the
 frame pipeline, after identity resolution and provenance persistence and ahead of the per-camera
-publish throttle, so candidate creation is never silently dropped on a throttled frame. Every
-candidate it creates starts `pending_review`. A face-derived candidate is created only when the
-direct recognized ArcFace identity equals the resolved PH identity and the face evidence carries a
-calibrated confidence; without a deployed calibration artifact, the stage produces no candidates at
-all (fail closed) rather than falling back to uncalibrated similarity. The per-identity,
-per-orientation cap on gallery growth counts `pending_review` and `operator_verified` rows
-together, so a backlog of unreviewed candidates cannot exceed the cap either.
+publish throttle, so candidate creation is never silently dropped on a throttled frame. A
+face-derived candidate is created only when the direct recognized ArcFace identity equals the
+resolved PH identity and the face evidence carries a calibrated confidence; without a deployed
+calibration artifact, the stage produces no candidates at all (fail closed) rather than falling
+back to uncalibrated similarity. A candidate whose calibrated confidence is at or above
+`reid_candidates.auto_verify_min_confidence` (default `0.90`) mints directly into `auto_verified`
+instead of `pending_review`; every other eligible candidate still lands `pending_review`. The
+per-identity, per-orientation cap on gallery growth counts `pending_review`, `auto_verified`, and
+`operator_verified` rows together, so a backlog of unreviewed or machine-verified candidates cannot
+exceed the cap either.
 :::
 
-## Use three states
+## Use four states
 
 Every `reid_gallery` entry has one state.
 
 | State | Resolver vote | Retention |
 | --- | --- | --- |
 | `pending_review` | Never | Keep vector, crop, and provenance for review |
-| `operator_verified` | Eligible when versions match | Keep vector, crop, provenance, and review event |
+| `auto_verified` | Eligible, at a reduced trust multiplier | Keep vector, crop, provenance, and review event |
+| `operator_verified` | Eligible, at full trust | Keep vector, crop, provenance, and review event |
 | `rejected` | Never | Delete vector and dedicated crop; keep audit metadata and fingerprint |
 
-Only `operator_verified` entries may reach resolver queries or caches.
+`auto_verified` is minted at candidate-creation time, never by a review action: it exists precisely
+because the calibrated evidence at creation already cleared a strict bar (the ArcFace authority
+threshold plus a margin), so the row deserves machine trust with operator veto rather than operator
+trust with machine suggestion. Operators can approve, relabel, reject, or **demote** an
+`auto_verified` row from the same review queue used for `pending_review`. Only `operator_verified`
+and `auto_verified` entries may reach resolver queries or caches; pending and rejected entries never
+vote, including through caches, fallback queries, or compatibility code.
 
 ## Require crop provenance
 
@@ -54,28 +67,32 @@ candidate identity. A held PH label cannot override a different recognized face.
 
 | Action | Result |
 | --- | --- |
-| Approve | Promote the proposal to `operator_verified` |
-| Relabel | Record the old proposal and corrected identity, then promote |
+| Approve | Promote `pending_review` or `auto_verified` to `operator_verified` |
+| Relabel | Record the old proposal and corrected identity, then promote to `operator_verified` |
+| Demote | Un-trust `auto_verified` back to `pending_review`; keeps the vector, unlike reject |
 | Reject | Record the reason and fingerprint, then delete the vector and crop |
-| Undo | Add a compensating event; keep the original review event |
+| Undo | Add a compensating event; restore the state the row was promoted from (`auto_verified` or `pending_review`), not always `pending_review`; keep the original review event |
 
 Identity correction and gallery verification are separate actions. Correcting a bbox does not
 promote its embedding. A crop that fails a quality gate cannot be approved through an override.
+Approve, relabel, and reject all act on a row in `pending_review` or `auto_verified`; demote acts
+only on `auto_verified`.
 
 ## Review the queue in the admin UI
 
-The review queue is deployed at `/admin/cts/reid-review`. It lists pending candidates with their
-pending age, proposed identity, camera and capture time, crop quality, orientation, model version,
-and source type. Selecting a candidate opens a detail drawer with the body crop, the source frame
-with its bounding box, nearby observations from the same PH, the full provenance table, the
-server-computed eligibility, and the immutable review history.
+The review queue is deployed at `/admin/cts/reid-review`. It lists candidates filtered by state (a
+visually distinct chip marks `auto_verified` apart from `operator_verified` and `pending_review`)
+with their pending age, proposed identity, camera and capture time, crop quality, orientation,
+model version, and source type. Selecting a candidate opens a detail drawer with the body crop, the
+source frame with its bounding box, nearby observations from the same PH, the full provenance
+table, the server-computed eligibility, and the immutable review history.
 
 Camera frames are blurred by default. Unblurred access uses the same `BlurToggle` and media behavior
 as the rest of the tracking admin, gated by the gallery-review permission below.
 
-The queue exposes only individual approve, individual relabel, and reject (single or batch). There is
-no bulk approve control or endpoint: every candidate that becomes verified passes through a single
-deliberate approve or relabel action.
+The queue exposes only individual approve, individual relabel, individual demote, and reject
+(single or batch). There is no bulk approve control or endpoint: every candidate that becomes
+`operator_verified` passes through a single deliberate approve or relabel action.
 
 ### Approval is gated on live server eligibility
 
@@ -107,8 +124,10 @@ is intentionally not exposed as an MCP agent tool. See the
 
 ## Weight verified evidence
 
-Verified hits receive a trust multiplier of `2.0` before identity aggregation. The multiplier does
-not change cosine similarity.
+`operator_verified` hits receive a trust multiplier of `2.0` before identity aggregation;
+`auto_verified` hits receive `1.5`. Neither multiplier changes cosine similarity; both are applied
+by the same shared scorer described below, so a query regression that leaks a pending or rejected
+row into scoring is loud (a backstop counter increments) rather than silently miscounted.
 
 Recency uses exponential decay with a seven-day half-life and no floor:
 
@@ -156,9 +175,20 @@ and recency half-life are configurable via `resolver.gallery_verified_trust_mult
 - [x] Undo creates a compensating event.
 - [x] The gallery has exactly one pipeline write path, `ReIDCandidateStage` →
       `create_review_candidate` (`tests/contracts/test_gallery_write_path.py`).
-- [x] The per-(identity, orientation) cap counts pending and verified rows and engages against
-      Postgres (`tests/pipeline/stages/test_reid_candidate_stage.py::test_cap_counts_pending_and_verified_rows`,
+- [x] The per-(identity, orientation) cap counts pending, auto-verified, and verified rows and
+      engages against Postgres
+      (`tests/pipeline/stages/test_reid_candidate_stage.py::test_cap_counts_pending_and_verified_rows`,
       `test_count_gallery_entries_defaults_to_pending_and_verified`).
+- [x] A calibrated confidence at or above `auto_verify_min_confidence` mints `auto_verified`; raw
+      (uncalibrated) confidence never does (fail-closed)
+      (`tests/unit/tracking/test_candidate_minting.py`).
+- [x] `auto_verified` votes at its configured trust multiplier and never trips the non-voting-state
+      backstop counter (`tests/unit/tracking/test_gallery_scoring.py::test_trust_multiplier_by_state`,
+      `tests/unit/tracking/test_identity_resolver_multiview.py::test_auto_verified_votes_at_1_5_no_backstop`).
+- [x] Demote, and undo-of-approve-from-`auto_verified`, both restore the correct prior state, proven
+      against both repository peers
+      (`tests/storage/test_gallery_state_parity.py::TestAutoVerifiedLifecycle`,
+      `tests/integration/test_gallery_state_parity_postgres.py`).
 
 ## Related pages
 
