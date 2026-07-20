@@ -117,8 +117,20 @@ recency_factor = 2 ** (-(age_days / 7))
 ```
 
 Queries use only entries with compatible model and preprocessing versions. Near-duplicate votes
-are capped or clustered by source episode, camera, and orientation. Decision provenance records
-the entry IDs, raw similarities, trust multipliers, recency factors, and weighted contributions.
+are capped or clustered by source episode, camera, and orientation.
+
+The schema for per-hit decision provenance (`IdentityDecisionGalleryHit`: entry ID, raw
+similarity, trust multiplier, recency factor, and weighted contribution) exists end to end
+(domain type, Postgres table, repository read/write), but no gallery query path populates it
+today; `IdentityProvenanceDecision.gallery_hits` is always empty. Wiring population is separate,
+deferred work, not part of the shared scorer.
+
+A single shared scorer (`app/tracking/identity/gallery_scoring.py`) applies the trust multiplier,
+recency decay, and vote caps on every gallery query path: the per-orientation multiview query, the
+single-query fallback, and the shadow comparison. No path scores hits inline. The trust multiplier
+and recency half-life are configurable via `resolver.gallery_verified_trust_multiplier`,
+`resolver.gallery_auto_verified_trust_multiplier`, and `resolver.gallery_recency_half_life_days` in
+`config/settings.yaml`.
 
 ## Keep learning boundaries explicit
 
