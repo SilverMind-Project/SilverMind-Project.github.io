@@ -127,7 +127,7 @@ class RoomTransition:
     confidence: float
 ```
 
-Each computed transition is written to `PersonLocationHistory` with the `direction_semantic` field populated. The `person_identification` step also writes transitions to `pipeline_data["room_transitions"]` for use in downstream steps and notification templates.
+Each computed transition is stored in `PersonLocationService` presence segments with the `direction_semantic` field populated. The `person_identification` step also writes transitions to `pipeline_data["room_transitions"]` for use in downstream steps and notification templates.
 
 ### Room Transition filter
 
@@ -152,11 +152,11 @@ config:
   within_minutes: 2
 ```
 
-This filter is evaluated against `PersonLocationHistory` records, so it works correctly across both direct camera detections and HA-sensor-inferred transitions.
+This filter is evaluated against `PersonLocationService` presence segments, so it works correctly across both direct camera detections and HA-sensor-inferred transitions.
 
 ## Whole-House Location Tracking
 
-The presence system maintains a real-time location state for each household member by fusing multiple data sources into a single ranked chain. Each source has a configurable priority; the highest-priority source with a valid reading wins.
+The presence system maintains real-time location state for each household member via `PersonLocationService` by fusing multiple data sources (`world_tracker`, `face_sighting`, `sensor`, `manual`). Source arbitration priority and per-source evidence aging govern active presence segments.
 
 ### Presence provider chain
 
@@ -180,33 +180,30 @@ flowchart LR
 |----------|-------------|--------------|
 | `night_anchor` | Night Mode (Light Sensor) | Infers bedroom occupancy from bed-occupancy state combined with light sensor readings at night |
 | `ha_bed_sensor` | Bed Sensor | HA `binary_sensor` (pressure or capacitance mat) directly under the mattress |
-| `cts_location` | Continuous Tracking System | Multi-camera tracking pipeline: person detected and identified by the tracking orchestrator, room resolved from the camera's configured location |
+| `cts_location` | Continuous Tracking System | Multi-camera tracking pipeline: person detected and identified by the tracking orchestrator, ingested via `PersonLocationService` |
 | `ha_device_tracker` | Phone Location | HA `device_tracker` entity (phone GPS or Wi-Fi fingerprint) |
-| `stale_fallback` | Last Known Location | The most recent confirmed location, used when all live sources are absent |
+| `stale_fallback` | Last Known Location | The most recent confirmed location from `PersonLocationService`, used when live sources go quiet |
 | `unknown_sentinel` | No Data | No location information available |
 
 The provider chain is configured in `config/presence.yaml` and reloaded without a restart via `POST /api/v1/cts/presence-config/reload`.
 
 ### Continuous Tracking System detections
 
-When CTS is enabled, the tracking orchestrator identifies persons across multiple cameras and publishes `TrackingEvent` protos to Redis. The CC-side `TrackingEventSubscriber` writes these to `PersonLocationState`. Room name is taken from the proto when present; when absent, the `LocationWriter` falls back to the camera-to-room mapping configured in the admin UI.
+When CTS is enabled, the tracking orchestrator identifies persons across multiple cameras and publishes `TrackingEvent` protos to Redis. The CC-side `TrackingEventSubscriber` ingests these into `PersonLocationService` with source tag `world_tracker`. Room name is resolved directly from the tracking observation or camera mapping.
 
 ### Home Assistant presence sensors
 
 For rooms without cameras (such as bathrooms), HA presence sensors (PIR/mmWave) provide occupancy data. The `ha_bed_sensor` provider reads from a dedicated bed-occupancy binary sensor. The `ha_device_tracker` provider reads phone or watch location from HA's `device_tracker` entity.
 
-### Location State
+### Location State and History
 
-Each person's current location is stored as a `PersonLocationState` record:
+All person location state lives in `PersonLocationService` (`location_observations` and `presence_segments` tables):
 
-- **Room name**: current room
-- **Source**: the provider that supplied the current reading (shown as a human-readable label in the admin UI)
-- **Last updated**: timestamp of the most recent detection
-- **Stale timeout**: locations older than the configured timeout (default from `person_tracking.stale_timeout_minutes`) are considered stale
-
-### Location History
-
-Every location change creates a `PersonLocationHistory` entry, providing a full timeline of where a person has been throughout the day. Query via `GET /api/v1/persons/{id}/history?hours=24`.
+- **Room name**: current room segment
+- **Source**: canonical source tag (`world_tracker`, `face_sighting`, `sensor`, `manual`)
+- **Last observed**: timestamp of the most recent evidence
+- **Quiet gap / TTL**: per-source evidence aging automatically closes segments when a source goes quiet
+- **History timeline**: `presence_history()` queries presence segments and bucketed observations over arbitrary time ranges. Query via `GET /api/v1/persons/{id}/history?hours=24`.
 
 ### Home Assistant Propagation
 
@@ -307,7 +304,7 @@ The `person_presence` filter checks whether a person is home, away, or in a spec
 - **Person is in a specific room:** `person_id: "grandma"`, `status: "home"`, `room_name: "Kitchen"`
 - **Person is away:** `person_id: "grandma"`, `status: "away"`
 
-The filter checks the `PersonLocationState` table, which is continuously updated by camera detections and HA sensor correlation. Locations older than 30 minutes are considered stale and treated as away.
+The filter checks `PersonLocationService` presence state, which is continuously updated by camera tracking observations, reCamera face sightings, and HA sensor correlation. Locations older than their per-source quiet gap are considered stale and treated as away.
 
 ### Person Activity Filter
 

@@ -60,8 +60,8 @@ When `cts.enabled` is true, the CC backend starts four Redis Streams subscribers
 
 | Subscriber | Stream | Effect |
 |------------|--------|--------|
-| `TrackingEventSubscriber` | `tracking.events` | Updates `PersonLocationState` and writes `PersonLocationHistory` via `LocationWriter` and `SourceAuthority` (CTS-precedence lock controlled by `cts.lock_seconds`). Room name is taken from the `TrackingEvent` proto when present; when absent, `LocationWriter` falls back to the camera-to-room mapping loaded from `cts_cameras` at startup. The proto uses `ph_id` as the physical-track identifier. `mean_quality` from the `IdentitySnapshot` is stored on the presence segment and surfaces as `quality` in `PersonLocationEnvelope`: quality is always server-computed, never client-inferred. Broadcasts `cts_live_frame` WebSocket messages for the live tracking view. |
-| `IdentityRevisionSubscriber` | `tracking.revisions` | Soft-deletes superseded `PersonLocationHistory` rows via `IdentityRewriter` and inserts corrected entries. Revisions reference `ph_id`. |
+| `TrackingEventSubscriber` | `tracking.events` | Ingests observations into `PersonLocationService` (`world_tracker` source tag) for room segment arbitration. Room name is taken from the `TrackingEvent` proto when present, or resolved from camera mapping. The proto uses `ph_id` as the physical-track identifier. `mean_quality` from the `IdentitySnapshot` is stored on the presence segment and surfaces as `quality` in `PersonLocationEnvelope`: quality is always server-computed, never client-inferred. Broadcasts `cts_live_frame` WebSocket messages for the live tracking view. |
+| `IdentityRevisionSubscriber` | `tracking.revisions` | Applies segment supersession in `PersonLocationService` for identity revisions referencing `ph_id`. |
 | `DementiaSignalSubscriber` | `tracking.signals` | Persists `DementiaSignal` via `SignalStore`. Before calling `fire_event`, checks the person's `cts_alert_config` in `household_members`. If the signal kind or severity is disabled for that person, the signal is stored for history but no rule is triggered. |
 | `SceneSampleSubscriber` | `scene.samples` | Decodes tagged keyframe `SceneSample` protos, pulls the JPEG from MinIO, runs scene analysis (YOLO + Florence-2 + CLIP + hazards), and persists observations to semantic memory. |
 
@@ -74,20 +74,21 @@ sequenceDiagram
     participant Orch as tracking-orchestrator
     participant Redis as Redis Streams
     participant Sub as CC Subscribers
+    participant Svc as PersonLocationService
     participant DB as CC Database
     participant WS as WebSocket
     participant Rules as Rules Engine
 
     Orch->>Redis: TrackingEvent proto (tracking.events)
     Redis->>Sub: TrackingEventSubscriber consumes
-    Sub->>DB: PersonLocationState upsert
-    Sub->>DB: PersonLocationHistory insert
+    Sub->>Svc: ingest_observation (world_tracker)
+    Svc->>DB: location_observations & presence_segments
     Sub->>WS: cts_live_frame broadcast
 
     Orch->>Redis: IdentityRevision proto (tracking.revisions)
     Redis->>Sub: IdentityRevisionSubscriber consumes
-    Sub->>DB: Soft-delete old history rows
-    Sub->>DB: Insert corrected history rows
+    Sub->>Svc: Segment supersession & revision
+    Svc->>DB: Update presence_segments
 
     Orch->>Redis: DementiaSignal proto (tracking.signals)
     Redis->>Sub: DementiaSignalSubscriber consumes

@@ -9,7 +9,7 @@ Companion without rewriting the original model inference.
 Deployed. A single CTS correction service owns operator corrections. It writes observation-bounded
 revision ranges, creates a projection job per revision, and publishes a protobuf `IdentityRevision`
 on `tracking.revisions` with typed range and projection fields. Cognitive Companion supersedes the
-affected `PersonLocationHistory`, `PersonLocationState`, and `cts_dementia_signals` rows while
+affected `PersonLocationService` presence segments and `cts_dementia_signals` rows while
 retaining the originals, records `CtsIdentityRevisionLog` with the revision-range lineage, and posts
 a projection acknowledgement back to CTS. A correction job completes only after
 the CTS internal projection and the Cognitive Companion projection both acknowledge the same
@@ -50,7 +50,7 @@ range, expected version, evidence summary, and revision lineage.
 Not every revision comes from an operator. A resolver-driven revision (for example, the resolver
 overturning its own earlier commit) carries no operator-supplied range. Cognitive Companion bounds
 that case with `cts.revision_horizon_s` (default 600 seconds), which mirrors the CTS resolver's own
-`resolver.revision_horizon_s`. The rewriter only supersedes `PersonLocationHistory` and
+`resolver.revision_horizon_s`. The rewriter only supersedes `PersonLocationService` presence segments and
 `cts_dementia_signals` rows whose window falls inside that horizon of the revision time, never a
 PH's entire history.
 
