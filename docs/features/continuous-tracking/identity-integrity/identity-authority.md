@@ -7,8 +7,8 @@ Unknown state when evidence cannot resolve a conflict safely.
 
 ::: info Implementation status
 The authority order is accepted. The independent-evidence clock, 30-second prior, calibrated
-ArcFace authority, and final duplicate-active enforcement are now deployed with M04 identity provenance fields.
-The calibration toolchain (M10) is deployed: `calibrated_confidence` is populated from a versioned
+ArcFace authority, and final duplicate-active enforcement are now deployed with identity provenance fields.
+The calibration toolchain is deployed: `calibrated_confidence` is populated from a versioned
 artifact when one is present and version-compatible; the service returns `calibrated_confidence: null`
 in `degraded_missing`, `degraded_incompatible`, or `degraded_invalid` states.
 The evidence clock gate is identity-matched: it advances only when the frame's evidence names the
@@ -27,14 +27,14 @@ Identity authority follows this order:
    preprocessing versions, and calibrated confidence above the authority threshold.
 3. A PH posterior supported by version-compatible ReID gallery entries, either operator-verified
    (full trust) or auto-verified (a calibrated high-confidence match, machine-minted at a reduced
-   trust, identity-continuity M02).
+   trust).
 4. A temporal prior no older than 30 seconds from the last independent qualifying evidence.
 
 Raw ArcFace cosine similarity, propagated face hints, height, pending or rejected ReID entries, and
 PH-local appearance prototypes may support tracking or corroborate evidence. They cannot create an
 effective identity.
 
-::: info Amended decision (identity-continuity M02, 2026-07-18)
+::: info Amended decision (2026-07-18)
 ReID gallery entries are pending, auto-verified, operator-verified, or rejected. Only auto-verified
 and operator-verified entries vote; operator review outranks auto-verification (an operator can
 approve, relabel, reject, or demote an auto-verified row at any time). This amends the original
@@ -44,7 +44,7 @@ for the full state machine.
 :::
 
 A verified-ReID vote is same-wardrobe-window evidence by construction: a hard 12-hour vote-age
-cutoff (identity-continuity M03) excludes any gallery entry older than that from every resolver
+cutoff excludes any gallery entry older than that from every resolver
 query and the tracker's disagreement probe, so rung 3 above never rests on yesterday's clothing.
 
 ## Resolve conflicts as Unknown
@@ -57,7 +57,7 @@ This rule keeps an uncertain frame visible for review without presenting a confi
 swap to a caregiver.
 
 A qualifying first `direct_face` commit out of Unknown can also backfill the PH's preceding
-Unknown history (identity-continuity M04). A backfilled label carries `range_authority=inferred`,
+Unknown history. A backfilled label carries `range_authority=inferred`,
 is subordinate to any operator range over the same window, and is reversible: undoing it is a
 matter of restoring the relabelled rows, not overwriting a trusted human decision, because nothing
 non-NULL was ever changed. See

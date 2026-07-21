@@ -105,7 +105,7 @@ referenced only by a non-sensitive hash.
 
 | Measurement | Result |
 | --- | --- |
-| Replay scenarios | `uv run pytest tests/integration/test_unknown_backfill_postgres.py` (M04 backfill) <br/> `uv run pytest tests/test_visitor_store.py -k test_milestone_completion_criterion` (M06 visitor) |
+| Replay scenarios | `uv run pytest tests/integration/test_unknown_backfill_postgres.py` (backfill) <br/> `uv run pytest tests/test_visitor_store.py -k test_milestone_completion_criterion` (visitor) |
 | Identity swaps |  |
 | Duplicate-active violations |  |
 | Unknown rate and baseline delta |  |

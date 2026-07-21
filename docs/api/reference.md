@@ -187,7 +187,7 @@ The validator rejects unknown step IDs, unknown ports, invalid graph structure, 
 | `name` | string | Display name |
 | `confidence` | float | Deprecated raw similarity alias; do not use for authority decisions |
 | `similarity` | float | Raw normalized-embedding cosine similarity |
-| `raw_similarity` | float | Same value as `similarity`; the M10 canonical field |
+| `raw_similarity` | float | Same value as `similarity`; the canonical field |
 | `calibrated_confidence` | float or null | Calibrated ArcFace probability in `[0, 1]`. Null when calibration is unavailable or the face is not recognized. |
 | `calibration_status` | string | `ready`, `degraded_missing`, `degraded_incompatible`, or `degraded_invalid` |
 | `calibration_artifact_version` | string or null | UUID of the active calibration artifact. Null when degraded. |

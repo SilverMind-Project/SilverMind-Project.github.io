@@ -128,7 +128,7 @@ have an explicit removal condition.
 A resident tracked as Unknown all morning who is face-identified at noon previously kept an
 unlabeled morning forever: the resolver only builds a revision when a prior identity existed, the
 cross-table rewriter refuses identity-NULL rows, and Cognitive Companion had no rows to supersede.
-Identity-continuity M04 closes this gap.
+This backfill behavior closes this gap.
 
 **Trigger.** On a qualifying first commit of a previously Unknown PersonHypothesis, `UnknownBackfillService`
 fires when all three conditions hold: the decision has no previous identity, the decision names a
@@ -172,7 +172,7 @@ overlay to stop reporting the backfilled label uses the existing compensating-re
 
 ## Cognitive Companion backfill projection
 
-Identity-continuity M05 gives the recovered history somewhere to land on the Cognitive Companion
+The identity continuity updates give the recovered history somewhere to land on the Cognitive Companion
 side. An `inferred_backfill` revision has no rows to supersede (the Unknown segment was never
 attributed in the first place), so `IdentityRevisionSubscriber` routes it entirely to a dedicated
 `BackfillProjector` instead of the ordinary rewriter and `PersonLocationService.apply_identity_revision`
@@ -206,7 +206,7 @@ rather than inserted as a duplicate.
 numeric confidence field; each segment's `confidence` is the CTS dwell's own `entry_confidence` from
 the `/internal/trajectory/dwells` response.
 
-**Visible with no new read code.** Because the M32 hardening program already made
+**Visible with no new read code.** Because earlier hardening programs already made
 `PersonLocationService.room_segments` and `presence_history` the single read API behind the People
 tab, presence surfaces, and the activity timeline, an inserted backfill segment shows up in the
 caregiver timeline the same way a live segment does. A later operator correction over the same
