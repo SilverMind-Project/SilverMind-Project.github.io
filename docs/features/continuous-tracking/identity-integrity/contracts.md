@@ -58,6 +58,8 @@ fields must not be added. Conversion requires a coordinated publisher and subscr
 | `person_location_history` projection | CC identity rewriter | `person_id`, PH, and superseding revision | CC location reads | Supersede the affected observation range, retain originals, and acknowledge the revision ID | Historical audit is permanent |
 | `cts_dementia_signals` projection | CC identity rewriter | `person_id`, window, and `superseded_by_revision_id` | CC signal reads | Supersede signals under the prior identity within the corrected range, retain originals, and insert replacements under the corrected identity with a re-derived `signal_id` | Historical audit is permanent |
 | Revision horizon config | CTS resolver, `resolver.revision_horizon_s` (default 600 s) | Bounds how far back an automatic (range-less) revision may supersede prior rows | CC `IdentityRewriter`, mirrored as `cts.revision_horizon_s` | Both constants must express the same bound | Change both together; a drift lets CC rewrite more or less history than the resolver's own revision contract promises |
+| `inferred_backfill` revision projection | CTS `RevisionsStage` / `UnknownBackfillService` | `revision_kind=inferred_backfill` with empty `previous_identity_id` and explicit range | CC `BackfillProjector` | Idempotent insert of presence segments over the range | Acknowledgment loop required to mark CTS job complete |
+| Visitor clustering API | Person identification service | `GET /clusters`, `GET /clusters/{id}`, `POST /clusters/{id}/name`, `POST /clusters/{id}/dismiss` | CC BFF (Visitor review surface) | Naming moves biometric data from the visitor dataset into the enrollment dataset and creates a `HouseholdMember` | Stable API shape for one coordinated deployment |
 
 ## Change checklist
 
