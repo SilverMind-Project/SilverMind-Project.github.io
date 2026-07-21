@@ -170,6 +170,49 @@ revision_id and restores `identity_id` to NULL on the exact rows a backfill rela
 to a dry run. It does not retire the underlying revision range; an operator who also wants the
 overlay to stop reporting the backfilled label uses the existing compensating-revision flow.
 
+## Cognitive Companion backfill projection
+
+Identity-continuity M05 gives the recovered history somewhere to land on the Cognitive Companion
+side. An `inferred_backfill` revision has no rows to supersede (the Unknown segment was never
+attributed in the first place), so `IdentityRevisionSubscriber` routes it entirely to a dedicated
+`BackfillProjector` instead of the ordinary rewriter and `PersonLocationService.apply_identity_revision`
+supersession path.
+
+**Insert, never supersede.** `BackfillProjector` fetches the PH's room dwells for the revision's
+range from CTS's `GET /internal/trajectory/dwells` and inserts one **closed** presence segment per
+dwell (`entered_at` and `exited_at` both set) through a dedicated
+`PersonLocationService.ingest_backfill_segments` method. Every segment carries
+`entry_source="observed"` and `exit_source="observed"`, since the underlying evidence is a real
+historical world-tracker observation being retroactively attributed, not a new evidence kind. No
+observation rows are inserted: observations are the live audit feed, and fabricating historical rows
+would pollute the heatmap and bucketed-observation queries with synthetic data.
+
+**Idempotency is a database constraint.** `presence_segments` gained a `backfill_revision_id` column
+with a partial unique index on `(backfill_revision_id, entered_at)`. The projector inserts the whole
+batch through one `INSERT ... ON CONFLICT DO NOTHING`, so a redelivered stream message under
+concurrent processing cannot double-insert a segment; a read-then-write existence check alone would
+not be race-safe.
+
+**Room resolution never fabricates a room.** Each dwell's `room_name` is resolved against the
+`rooms` table. A dwell whose room cannot be resolved is dropped and counted, never inserted with a
+guessed room, since `presence_segments.room_id` is not nullable.
+
+**The overlap guard.** If a concurrent live commit already wrote a non-backfill segment for the
+identity inside the backfill range between CTS's emission and Cognitive Companion's projection, a
+backfill dwell that overlaps a live segment by more than 50 percent of its own duration is skipped
+rather than inserted as a duplicate.
+
+**Confidence comes from the dwell, not the revision.** The wire-level `IdentityRevision` carries no
+numeric confidence field; each segment's `confidence` is the CTS dwell's own `entry_confidence` from
+the `/internal/trajectory/dwells` response.
+
+**Visible with no new read code.** Because the M32 hardening program already made
+`PersonLocationService.room_segments` and `presence_history` the single read API behind the People
+tab, presence surfaces, and the activity timeline, an inserted backfill segment shows up in the
+caregiver timeline the same way a live segment does. A later operator correction over the same
+window reaches a backfilled segment through the SSOT's own `apply_identity_revision`, which matches
+by person and range overlap and stamps `superseded_by` exactly like a live segment.
+
 ## Review checklist
 
 - [ ] Original inferred identity remains immutable.
@@ -181,6 +224,8 @@ overlay to stop reporting the backfilled label uses the existing compensating-re
 - [ ] An automatic (range-less) revision rewrites only rows within `cts.revision_horizon_s`, never
       a PH's entire history.
 - [ ] A replacement signal row re-derives its `signal_id`; it never copies the superseded row's ID.
+- [ ] A backfilled segment is inserted, never superseded, and its idempotency key is a database
+      constraint, not just a read-then-write check.
 
 ## Related pages
 
