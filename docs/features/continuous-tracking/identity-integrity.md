@@ -151,6 +151,9 @@ unexpected pass fails the test run, which forces the xfail to be removed when th
 ## Related pages
 
 - [Cross-repository identity contracts](/features/continuous-tracking/identity-integrity/contracts)
+- [Visitor identities](/features/continuous-tracking/identity-integrity/visitor-identities) (written
+  for a caregiver, not an engineer: what is stored about a recurring unnamed visitor and how to name
+  or dismiss one)
 - [Identity-integrity verification](/development/identity-integrity-verification)
 - [Tracking concepts](/features/continuous-tracking/tracking-concepts)
 - [CC integration](/features/continuous-tracking/cc-integration)

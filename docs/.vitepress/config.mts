@@ -114,6 +114,7 @@ export default defineConfig({
                     { text: "Identity Authority", link: "/features/continuous-tracking/identity-integrity/identity-authority" },
                     { text: "ReID Gallery Governance", link: "/features/continuous-tracking/identity-integrity/reid-gallery-governance" },
                     { text: "Revision Projections", link: "/features/continuous-tracking/identity-integrity/revision-projections" },
+                    { text: "Visitor Identities", link: "/features/continuous-tracking/identity-integrity/visitor-identities" },
                     { text: "Cross-Repository Contracts", link: "/features/continuous-tracking/identity-integrity/contracts" },
                   ],
                 },
