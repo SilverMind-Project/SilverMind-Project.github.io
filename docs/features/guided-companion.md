@@ -140,6 +140,18 @@ The escalation message is sent through the existing notification dispatcher, so 
 
 The companion stores transcripts (through the conversation manager), step events, and outcomes. It does not store raw audio. Events and transcripts are pruned after `guided_task.transcript_retention_days` (default 30). Caregiver interventions are spoken in the same agent voice and are never surfaced to the resident as "a human", while every turn is attributed internally for a full caregiver audit trail, including the resident's recent turns in escalation context.
 
+## What a session remembers
+
+Every session, whichever way it ends, writes to memory once it reaches a terminal outcome (completed, abandoned, or failed):
+
+- **The activity ledger.** Only a *completed* session whose routine is mapped to an activity type (for example, the tea routine mapped to `medication`) writes a row to the same countable activity ledger the caregiver's "has she had her medication today" question reads from. An abandoned or failed session never writes a ledger row, even for a mapped routine: a false "she took her medication" is a care-safety hazard, not a bookkeeping nicety.
+- **One episodic memory, every time.** Exactly one narrative summary is written to semantic memory per session, regardless of outcome: what happened, how long it took, which step needed the most retries, whether it escalated. This is a single record per session, not a log entry per step, so search stays readable.
+- **Durable preferences, when she states one.** A stable preference ("two sugars in her tea") is recorded to the household knowledge repository and surfaced back into future sessions of that routine. A one-off, transient statement ("I'm not hungry right now") is not treated as a preference.
+
+Each of these three writes is independent and best-effort: a failure in one is logged to the session's own event timeline and never blocks the session from finishing normally.
+
+The next time a routine runs, the agent's prompt is given one short, condensed line about the last time she did it (for example, "last time this routine: completed in 14 minutes; step 1 needed 3 tries"), read back from the episodic memory above.
+
 ## What ships and what comes later
 
 The conversational core is shippable today: a rule can run a routine end to end, the agent speaks each step in Tamil, the resident confirms, the state machine advances, and a request for help notifies the caregiver.

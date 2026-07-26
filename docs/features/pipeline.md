@@ -278,6 +278,81 @@ Queries the [semantic-memory-service](/guide/architecture#semantic-memory-servic
 
 Graceful degradation: when the semantic-memory-service is unreachable or returns no data, the step writes empty results and continues.
 
+#### `region_presence`
+
+Tests person detections from an earlier perception step (typically `scene_analysis`) against configured normalized image-space regions (rectangles or polygons), without spending a model call on a geometry question. This is the image-space counterpart to floor-space `RoomZone` checks: use it for sub-room precision (kettle counter, medicine cabinet) or on cameras that are not calibrated to floor meters. The two coordinate spaces are never compared to each other. Gate-safe.
+
+**Config fields:**
+
+- `detections_key`: dotted `pipeline_data` path to the detection list (default `scene_detections`).
+- `regions`: list of rectangle or polygon regions in normalized `[0, 1]` image space.
+- `mode`: `anchor` (a detection's anchor point must fall inside a region) or `overlap` (a detection's box must overlap a region by at least `min_overlap`). Default `anchor`.
+- `anchor`: `bottom_center` or `center`, used only when `mode` is `anchor`. Default `bottom_center`.
+- `min_overlap`: minimum overlap fraction (0-1) for `overlap` mode. Default `0.5`.
+- `labels`: detection labels to test (default `["person"]`).
+- `min_confidence`: minimum detection confidence to consider (default `0.5`).
+
+**Output keys:**
+
+| Key | Type | Description |
+| --- | ---- | ----------- |
+| `in_region` | bool | Whether any detection matched any configured region |
+| `count` | integer | Number of region hits (a detection matching two regions counts twice) |
+| `hits` | list | Matched detections with their region |
+| `per_region` | dict | Hit count per region |
+| `skipped` | list | Detections skipped (e.g. `unknown_bbox_space`) with a reason |
+| `evaluated_at` | str | ISO-8601 evaluation timestamp |
+
+A detection whose bounding-box coordinate space cannot be determined is skipped rather than guessed; check `skipped` when a rule that should be matching stays quiet.
+
+#### `novelty_gate`
+
+Skips downstream analysis when the scene has not changed since the last check for a scope, by comparing a CLIP embedding (e.g. `scene_analysis`'s `scene_embedding`) against the last one cached for that scope. Authoring pattern:
+
+```yaml
+# scene_analysis -> novelty_gate -> condition(novel == true) -> llm_call
+```
+
+`scene_analysis` (a cheap Florence-2 caption) still runs every tick; `novelty_gate` only gates the more expensive tier-3/4 reasoning and vision calls further downstream. Gate-safe.
+
+**Config fields:**
+
+- `embedding_key`: dotted `pipeline_data` path to a CLIP embedding, a list of floats (default `scene_embedding`).
+- `scope`: template resolving to one cache slot key. Defaults to one slot per rule and camera.
+- `min_distance`: cosine distance at or above this counts as novel. Leave blank to use the `novelty_gate.min_distance` setting (default `0.06`).
+- `ttl_minutes`: a cached embedding older than this counts as novel regardless of distance, so a slowly drifting scene eventually re-triggers.
+
+**Output keys:**
+
+| Key | Type | Description |
+| --- | ---- | ----------- |
+| `novel` | bool | Whether the scene counts as changed |
+| `distance` | float or null | Cosine distance from the cached embedding |
+| `reason` | str | `no_previous`, `stale`, `compared`, or `no_embedding` |
+
+Fails open (`novel: true`) whenever the embedding is missing, since the gate must never suppress analysis because an upstream step broke.
+
+#### `media_presign`
+
+Resolves MinIO object names referenced in trigger or pipeline context into presigned URLs consumable by a downstream `llm_call` or `notification` step, registering each as a `MediaCache` row for cleanup. The motivating case is a `dementia_signal` trigger's evidence context, which carries bare MinIO object names (e.g. `today_best_keyframe_objects`) rather than URLs a vision step can fetch directly, but the step is generic: any rule that receives object-name references in trigger or prior-step context can use it. Gate-safe.
+
+**Config fields:**
+
+- `object_names_key`: list of dotted `pipeline_data` paths, each resolving to a MinIO object name or a list of them (e.g. `trigger_event.evidence.today_best_keyframe_objects`). All resolved names are concatenated and de-duplicated.
+- `retention_minutes`: how long the presigned URLs stay valid (default `240`, range 5-1440).
+- `output_key`: `pipeline_data` key for the list of presigned URLs (default `presigned_images`).
+
+**Output keys:**
+
+| Key | Type | Description |
+| --- | ---- | ----------- |
+| `presigned_images` | list | Presigned URLs, in resolution order |
+| `objects` | list | Resolved object metadata |
+| `count` | integer | Number of presigned URLs |
+| `skipped` | list | Object names that could not be resolved, with a reason |
+
+`notification`'s `telegram_image_source: "pipeline"` and `llm_call`'s `image_source: "pipeline"` both consume this step's output via a `pipeline_image_path` config.
+
 #### `presence_query`
 
 Queries the fused [PresenceService](/guide/architecture#presence-fusion) for the current location and status of a person. Aggregates data from multiple providers (night anchor, HA bed sensor, CTS location, HA device tracker, stale fallback) via the priority chain in `config/presence.yaml`. Also fetches recent dementia signals when `services.signals` is wired.
@@ -307,6 +382,8 @@ Queries the fused [PresenceService](/guide/architecture#presence-fusion) for the
 | `presence_away` | bool | Convenience flat key: person is away |
 
 Graceful degradation: when the PresenceService returns `UNKNOWN` or `STALE`, all keys default to empty/null and `presence_at_home` / `presence_asleep` / `presence_away` are all `false`.
+
+**`room_dwell_history` mode.** Set `query_mode: room_dwell_history` to check qualifying dwell episodes in one room over a historical lookback window instead of current presence (the hygiene shower-proxy join is the reference use: "did she have a plausible wash-up in the last 26 hours"). Additional config fields: `room_name` (room to check), `window_hours` (lookback, default `26`), `min_episode_minutes` (minimum merged-episode duration to count as a qualifying dwell, default `8`), `merge_gap_minutes` (gap-merge adjacent segments within this many minutes of each other, default `2`). Built on `PersonLocationService.dwell_episodes`, the arbitrated segment history, not raw per-frame observations. Output keys: `{output_key}_had_dwell` (bool), `{output_key}_qualifying_episodes` (int), `{output_key}_total_minutes` (float), `{output_key}_longest_minutes` (float); all zero-valued when no qualifying episode is found.
 
 #### `home_state`
 
@@ -558,6 +635,24 @@ Calls a Home Assistant service. Can turn on lights, lock doors, activate scenes,
 
 **Output keys:** `ha_action.domain`, `ha_action.service`, `ha_action.entity_id`, `ha_action.success`, optional `_cooloff_triggered`
 
+#### `signal_emit`
+
+Writes a CC-local signal (a kind the CTS orchestrator never produces, e.g. `tea_intent_suspected`) onto the same unified signals feed as CTS-produced dementia signals, so a caregiver's accurate/inaccurate feedback becomes a labeled precision dataset for a shadow-mode detector, with no new table and no new labeling UI. Only kinds in the CC-local allowlist are accepted; a CTS-produced kind is rejected. This step is a write (not gate-safe) and cannot run inside a vision-gate graph.
+
+**Config fields:**
+
+- `kind` (required): CC-local signal kind to write.
+- `person_id`: household member this signal is about. Falls back to `pipeline_data`'s persons/person_id, then (for an event-fired rule) the triggering event's person, when omitted.
+- `severity`: `info`, `warning`, or `emergency`. Default `info`.
+- `value`: a number, or a `{{template}}` resolving to one (e.g. an upstream `llm_call` confidence). Default `1.0`.
+- `context`: freeform JSON object, merged with `{rule_id, execution_id}` provenance. String values support `{{template}}` syntax.
+- `dedupe_minutes`: skip the write if an unacknowledged signal of the same kind and person exists within this window. `0` disables dedup. Default `60`.
+- `trigger_cooloff`: if `true` and a signal was actually emitted (not deduped or rejected), arms the rule's cool-off window. Default `true`. This is the intended way to rate-limit a shadow detector: the rule's own trigger stays frequent, and only a real positive detection pauses it.
+
+**Output keys:** `emitted` (bool), `reason` (str or null, populated when not emitted), `signal_row_id` (int or null)
+
+Every CC-local emission is written with `evidence_grade: "experimental"` unconditionally, which is what makes the signals feed's caregiver feedback buttons persist for it.
+
 #### `activity_session_start`
 
 Open a duration-aware activity session for a person. Idempotent: reuses an existing open session of the same type if one already exists. Stores timeout configuration for automatic stale-session cleanup.
@@ -569,14 +664,15 @@ Open a duration-aware activity session for a person. Idempotent: reuses an exist
 - `activity_type` (required): activity type (e.g. `sleep`, `bathroom`, `meal_prep`). Supports `{{template}}` syntax.
 - `person_id`: person to attribute this session to. Supports templates (e.g. `{{person_detections.0.person_id}}`).
 - `room_name`: room where the activity occurs. Supports templates. Defaults to trigger room.
-- `confidence`: detection confidence (0-1). Accepts a fixed number or `{{template}}` syntax (default `0.85`).
+- `confidence`: detection confidence (0-1). Accepts a fixed number or `{{template}}` syntax (default `0.85`). Clamped to the valid range and recorded on the session row.
+- `source`: how this session was determined, one of `guided_companion`, `ha_state_join`, `sensor`, `vision_inferred` (default `vision_inferred`). Recorded on the session row and used to phrase caregiver answers to the right evidence grade: only a routine the resident completed step-by-step with the companion supports claiming she performed an action. An unrecognized value degrades to `vision_inferred` rather than failing, so a typo can never inflate confidence.
 - `timeout_minutes`: maximum session duration in minutes before auto-close. Uses built-in default for the activity type when empty. Supports templates.
 - `metadata_extra`: optional JSON string of extra fields to merge into session metadata. Supports `{{template}}` syntax.
 - `output_key`: `pipeline_data` key to write the session result under (default `session`).
 
 :::
 
-**Output keys:** `pipeline_data[output_key]` with `session_id`, `person_id`, `activity_type`, `room_name`, `started_at`, `timeout_minutes`, `was_existing`
+**Output keys:** `pipeline_data[output_key]` with `session_id`, `person_id`, `activity_type`, `room_name`, `started_at`, `timeout_minutes`, `source`, `confidence`, `was_existing`
 
 #### `activity_session_end`
 

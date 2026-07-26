@@ -50,7 +50,7 @@ export default defineConfig({
       },
       { text: "Roadmap", link: "/roadmap" },
       {
-        text: "v0.7.119",
+        text: "v0.7.130",
         items: [
           {
             text: "Code",
@@ -132,6 +132,7 @@ export default defineConfig({
             },
             { text: "Voice Companion", link: "/features/voice-companion" },
             { text: "Guided Companion", link: "/features/guided-companion" },
+            { text: "Daily Living", link: "/features/daily-living" },
             { text: "E-Ink Displays", link: "/features/eink-display" },
             { text: "Notifications", link: "/features/notifications" },
             { text: "TTS Service", link: "/features/tts-service" },

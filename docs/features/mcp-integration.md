@@ -87,6 +87,7 @@ A `GeminiToolAdapter` reads the same tool definitions and converts them to Gemin
 | `repeat_guided_step`        | Rephrase and repeat the current guided step             | `session_id` |
 | `report_step_blocked`       | Record that the resident is stuck on the current step   | `session_id`, `reason` |
 | `request_caregiver_help`    | Escalate a guided session to the caregiver              | `session_id`, `reason` (optional) |
+| `record_resident_preference` | Record a stable resident preference (not a transient fact) to the knowledge repository | `person_id`, `preference`, `context` (optional) |
 | `get_guided_completion_summary` | Guided-task completion outcomes                     | `person_id`, `routine_id`, `since`, `until` (optional) |
 | `get_guided_attempts_per_step` | Retry pressure by guided routine step                | `person_id`, `routine_id`, `since`, `until` (optional) |
 | `get_guided_time_to_complete` | Guided routine completion durations                   | `person_id`, `routine_id`, `since`, `until` (optional) |
@@ -200,6 +201,9 @@ mcp:
     - "get_local_datetime"
     - "get_person_activities"
     - "get_enrolled_persons"
+    - "get_person_timeline"
+    - "get_daily_report"
+    - "get_open_sessions"
     - "submit_user_response"
     - "query_knowledge_base"
     - "submit_quiz_answer"
@@ -210,9 +214,10 @@ mcp:
     - "repeat_guided_step"
     - "report_step_blocked"
     - "request_caregiver_help"
+    - "record_resident_preference"
 ```
 
-Destructive tools like `trigger_rule` are excluded from the voice subset by default. The guided-session tools are voice-enabled by design: they are how the realtime agent proposes step completion, repeats a step, or escalates to a caregiver during a [guided routine](/features/guided-companion).
+Destructive tools like `trigger_rule` are excluded from the voice subset by default. The guided-session tools are voice-enabled by design: they are how the realtime agent proposes step completion, repeats a step, or escalates to a caregiver during a [guided routine](/features/guided-companion). `get_person_timeline`, `get_daily_report`, and `get_open_sessions` are the typed daily-living ledger tools: the agent answers countable questions ("has she had her medication today") by calling these, never by aggregating semantic-memory captions.
 
 ## Network Considerations
 
