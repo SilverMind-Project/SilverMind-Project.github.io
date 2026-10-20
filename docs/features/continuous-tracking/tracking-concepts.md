@@ -112,7 +112,7 @@ cost(PH i, observation j) = alpha_geo * geo_cost + alpha_app * app_cost + alpha_
 Two hard gates return `GATE_INF` (never match):
 
 - Geometric gate: squared Mahalanobis distance `> gate_chi2 (9.21)`. For uncalibrated observations the gate is widened to `uncalibrated_gate_chi2 (21.0)` and appearance is weighted more heavily, because synthetic floor points are not metric.
-- Identity-conflict gate: the observation carries a recognized face `person_id` that differs from the PH's identity at confidence `>= face_conflict_threshold (0.70)`.
+- Identity-conflict gate: the observation carries a recognized face `person_id` that differs from the PH's identity at raw similarity `>= face_conflict_min_similarity (0.70)`.
 
 ### PH lifecycle
 
@@ -262,7 +262,7 @@ Commit thresholds: `commit_prob = 0.65`, `commit_margin = 0.15`; in dense scenes
 
 **Maintenance window.** A committed identity is held by the temporal prior for `prior_maintenance_max_age_s = 30 s`, measured from the last independent evidence that named that identity (a direct recognized face or a ReID vote for it). The prior alone never refreshes that clock, so after the window expires with no sensory evidence the identity decays to Unknown.
 
-**Sticky maintenance (favor continuity).** When a person turns away, the face anchor vanishes and body ReID drifts, so the per-frame posterior argmax can flip to UNKNOWN even though the PH persists. Sticky maintenance holds the committed identity within the maintenance window unless it is strongly contradicted: a recognized face for a different identity at or above `contradiction_face_confidence = 0.70`, or a different identity that clears the dense-scene posterior thresholds. A candidate or unrecognized face never contradicts a held identity, so a resident at a bad angle keeps their label instead of dropping to UNKNOWN. Two enrolled people in one room still separate, because a recognized different-identity face does contradict.
+**Sticky maintenance (favor continuity).** When a person turns away, the face anchor vanishes and body ReID drifts, so the per-frame posterior argmax can flip to UNKNOWN even though the PH persists. Sticky maintenance holds the committed identity within the maintenance window unless it is strongly contradicted: a recognized face for a different identity with raw similarity at or above `contradiction_face_similarity = 0.70`, or a different identity that clears the dense-scene posterior thresholds. A candidate or unrecognized face never contradicts a held identity, so a resident at a bad angle keeps their label instead of dropping to UNKNOWN. Two enrolled people in one room still separate, because a recognized different-identity face does contradict.
 
 ### Three-valued face evidence and head pose
 
@@ -311,8 +311,8 @@ sequenceDiagram
 
 The key detail: `FaceIdentityStage` produces anchors keyed by `detection_id` because the PH does not
 exist yet at stage 6. After association, `WorldTracker._resolve_identities` remaps each anchor's
-`tracklet_id` to the assigned `ph_id` using `det_to_ph`. The current `confidence` value is raw
-ArcFace cosine similarity. The accepted
+`tracklet_id` to the assigned `ph_id` using `det_to_ph`. An anchor's `match_score` is raw
+ArcFace cosine similarity, not a probability. The accepted
 [identity authority contract](./identity-integrity/identity-authority) requires calibrated direct
 evidence before a face can become authoritative.
 
@@ -330,7 +330,7 @@ flowchart TD
   end
 ```
 
-Path 1 requires calibration. For uncalibrated home cameras, identity crosses through the ReID gallery (path 2), recognized-face propagation (path 3, gated twice: gallery similarity `>= cross_gt_face_propagation_threshold (0.72)` and `synthetic_confidence = source_confidence * gallery_sim >= face_commit_min_confidence (0.70)`), continuation candidates published to CC (path 4), appearance dedup within a declared overlap group (path 5), and cross-camera revival acted on inside CTS (path 6).
+Path 1 requires calibration. For uncalibrated home cameras, identity crosses through the ReID gallery (path 2), recognized-face propagation (path 3, gated twice: gallery similarity `>= cross_gt_face_propagation_threshold (0.72)` and `synthetic_match_score = source_match_score * gallery_sim >= face_commit_min_similarity (0.70)`), continuation candidates published to CC (path 4), appearance dedup within a declared overlap group (path 5), and cross-camera revival acted on inside CTS (path 6).
 
 **Cross-camera revival (path 6)** extends PH revival across cameras. A closed PH may be revived on a different camera when the learned camera topology says the transit is plausible (`plausible_transit >= cross_camera_min_plausibility = 0.05`, with a floor so a first handoff is never blocked) and the multi-view appearance similarity clears `cross_camera_revive_appearance_min_sim = 0.60`. A recognized different-identity face blocks revival. When the predecessor PH is still open (a genuine co-presence on two overlapping cameras), CTS does not merge the PHs; it adopts the identity onto the new PH and records a co-presence link, so the dashboard shows one person on two views rather than two people.
 

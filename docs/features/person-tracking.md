@@ -72,7 +72,7 @@ The person-ID service compares each face with the closest enrolled person and re
 | `candidate` | from `recognition.unknown_threshold` (default `0.25`) up to the threshold | Reported as unknown, with the closest person as `best_candidate_id` |
 | `unrecognized` | below `recognition.unknown_threshold` | A face was found but matches no one |
 
-Both thresholds live in the person-ID service's `config/settings.yaml`; override the first with the `RECOGNITION_THRESHOLD` environment variable. The Continuous Tracking orchestrator applies its own floor on top: it discards `recognized` faces below `face_id.min_confidence` (default `0.6`, compared with raw similarity) and passes `candidate` faces to the identity resolver as weak evidence. A calibrated probability is reported separately as `calibrated_confidence` once a calibration artifact is deployed; see [Face confidence calibration](/development/face-confidence-calibration).
+Both thresholds live in the person-ID service's `config/settings.yaml`; override the first with the `RECOGNITION_THRESHOLD` environment variable. The Continuous Tracking orchestrator applies its own floor on top: it discards `recognized` faces below `face_id.min_raw_similarity` (default `0.6`) and passes `candidate` faces to the identity resolver as weak evidence. A calibrated probability is reported separately as `calibrated_confidence` once a calibration artifact is deployed; see [Face confidence calibration](/development/face-confidence-calibration).
 
 ### Guest Image Saving
 

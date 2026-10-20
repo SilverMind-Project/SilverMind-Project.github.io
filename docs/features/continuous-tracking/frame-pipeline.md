@@ -88,7 +88,7 @@ Face identification sends one crop per person to `POST /api/v1/identify` on the 
 |-----------|---------|-------------|
 | `cooldown_s` | 5.0 | Minimum seconds between queries for the same tracked person on a camera |
 | `timeout_s` | 2.0 | HTTP request timeout |
-| `min_confidence` | 0.6 | Recognized faces below this raw similarity are dropped |
+| `min_raw_similarity` | 0.6 | Recognized faces below this raw similarity are dropped |
 | `head_region_height_frac` | 0.35 | Share of the person box, from the top, that can hold the face |
 | `head_region_side_margin_frac` | 0.10 | Horizontal tolerance per side, as a share of box width |
 | `crop_pad_top_frac` / `crop_pad_side_frac` | 0.15 / 0.10 | Face crop padding |
@@ -96,7 +96,7 @@ Face identification sends one crop per person to `POST /api/v1/identify` on the 
 | `enabled` | true | Master switch |
 | Per-camera overrides | camera_id to `FaceIdCameraConfig` | Enable/disable per camera, override the minimum similarity |
 
-Face identification can be disabled per camera (for example, top-down views where faces are never visible). Each `FaceAnchor` carries `person_id`, `confidence` (raw similarity for recognized and candidate faces), `detection_id`, and `camera_id`. The identity resolver weights face evidence 3x over ReID. Every face result is also recorded for measurement; see [Measuring your cameras](/development/face-confidence-calibration#measuring-your-cameras).
+Face identification can be disabled per camera (for example, top-down views where faces are never visible). Each `FaceAnchor` carries `person_id`, `match_score` (raw cosine similarity for recognized and candidate faces, the face detection score for an unrecognized marker), `det_score`, `quality`, `calibrated_confidence` (null unless calibration is ready), `detection_id`, and `camera_id`. The identity resolver weights face evidence 3x over ReID. Every face result is also recorded for measurement; see [Measuring your cameras](/development/face-confidence-calibration#measuring-your-cameras).
 
 ## 7. World tracking
 

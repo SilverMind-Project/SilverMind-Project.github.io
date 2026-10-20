@@ -185,9 +185,8 @@ The validator rejects unknown step IDs, unknown ports, invalid graph structure, 
 | --- | --- | --- |
 | `person_id` | string | Enrolled identity or `"unknown"` |
 | `name` | string | Display name |
-| `confidence` | float | Deprecated raw similarity alias; do not use for authority decisions |
-| `similarity` | float | Raw normalized-embedding cosine similarity |
-| `raw_similarity` | float | Same value as `similarity`; the canonical field |
+| `similarity` | float | Raw normalized-embedding cosine similarity: the face's match score, not a probability |
+| `raw_similarity` | float | Alias of `similarity`, kept for one release for older consumers |
 | `calibrated_confidence` | float or null | Calibrated ArcFace probability in `[0, 1]`. Null when calibration is unavailable or the face is not recognized. |
 | `calibration_status` | string | `ready`, `degraded_missing`, `degraded_incompatible`, or `degraded_invalid` |
 | `calibration_artifact_version` | string or null | UUID of the active calibration artifact. Null when degraded. |
