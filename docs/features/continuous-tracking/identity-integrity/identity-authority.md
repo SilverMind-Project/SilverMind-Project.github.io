@@ -122,6 +122,30 @@ They do not replace the authority decision.
 ArcFace enrollment remains a separate golden dataset. PH inference, identity correction, and ReID
 review never enroll a face automatically.
 
+## Face quality weighting
+
+A recognized face's weight in the posterior depends on how trustworthy that image is, not only on
+how similar it is to an enrolled face. The person-ID service scores each face's image quality
+(resolution, sharpness, detection score, pitch), and the tracker carries the score on the face
+anchor as `face_quality`, separately from `quality`, the evidence-path weight (1.0 for a face seen
+in this frame, attenuated for propagated evidence, the assertion's own quality for external
+evidence).
+
+`resolver.face_quality_mode` decides whether the score is used:
+
+| Mode | Live decision | Measurement |
+| --- | --- | --- |
+| `off` | `quality` only | none |
+| `shadow` (default in `settings.yaml`) | `quality` only | a quality-weighted evaluation counts each disagreement in `cts_identity_shadow_mismatch_total{feature="face_quality"}` and logs `face_quality_shadow_mismatch` |
+| `enabled` | `quality` times `face_quality` | none |
+
+Quality comes only from the service. A face the service did not score is treated as quality 0.5
+(`resolver.face_quality_missing_default`), never 1.0, once the mode is not `off`, so an unmeasured
+face never outranks a measured good one. External evidence is not discounted twice. Face quality
+does not grant or remove ArcFace authority, which still requires a calibrated confidence. Flip to
+`enabled` only after reviewed shadow mismatches show the quality-weighted decision moves a correct
+commit to Unknown no more often than it removes a wrong one.
+
 ## Authority vocabulary
 
 Every identity decision carries an `authority` field naming which rung of the authority order

@@ -178,11 +178,30 @@ The JSON schema lives at `schemas/calibration_artifact.schema.json` in the `pers
 
 The raw-similarity `confidence` field was removed on 2026-10-20. `similarity` is the match score; `raw_similarity` remains as its alias for one release, so consumers read `raw_similarity` and fall back to `similarity`.
 
+## Face quality
+
+Every face the person-ID service returns also carries `quality`: a score in `[0, 1]`, the four components it was combined from, and the scorer `version` (`heuristic-v1`). It is computed only in the service (`app/services/face_quality.py`), because it needs the aligned face crop and the eye keypoints, which never leave the service.
+
+| Component | Measures | Scores 0 at | Scores 1 at |
+| --- | --- | --- | --- |
+| `resolution` | Distance between the eyes, pixels | 10 px | 36 px |
+| `sharpness` | Variance of the Laplacian of the aligned 112x112 crop (log10) | 20 | 300 |
+| `detection` | SCRFD face detection score | 0.5 | 0.9 |
+| `pitch` | Absolute head pitch, degrees | 45 | 15 |
+
+The score is a weighted geometric mean, `resolution^0.45 * sharpness^0.25 * detection^0.15 * pitch^0.15`, with each component floored at 0.01. A geometric mean is used because a face that fails badly on one axis is unusable however good the others are: a sharp, frontal, 8 px face scores about 0.13. Head yaw is left out because the tracking orchestrator already applies a yaw frontality factor. The anchors and weights are set in `face_quality.heuristic` in the service's `config/settings.yaml`, and they are provisional until checked against labeled faces:
+
+```bash
+uv run --extra calibration-tools python scripts/calibrate_face_quality.py manifest.json
+```
+
+The manifest lists image files and the enrolled identity each shows. The script runs face detection directly (it never calls `/identify`, so it records no visitor sightings), reads enrolled centroids read-only, and prints each input's distribution, its Spearman correlation with raw similarity to the labeled identity, and suggested ramp anchors at the 5th and 95th percentiles. It never writes configuration. Changing an anchor or weight changes what the score means, so it ships as a new scorer version, and any calibration artifact or policy tuned on the old version must be re-checked.
+
 ## Measuring your cameras
 
 Before fitting or trusting any calibration, check how large faces actually are on your cameras. Recognition accuracy depends mostly on the distance between the eyes in pixels: below about 16 px it is unreliable, 16 to 24 px is marginal, and above about 40 px the ArcFace template (roughly 35 px between the eyes) is already filled, so accuracy stops improving. On a wide-angle home camera that usually means faces are usable within 2 to 3 m.
 
-Every face the person-ID service returns carries its size in pixels of the submitted image: `face_width_px`, `face_height_px`, and `interocular_px` (the distance between the two eye keypoints that face alignment uses, or `null` when it cannot be measured). The Continuous Tracking orchestrator records one row per face in `continuous_tracking.face_observation_stats` with these sizes, the detection score, head pose, raw similarity, recognition state, the closest enrolled identity id, and what the tracker did with the face (`emitted`, `dropped_min_similarity`, `dropped_no_candidate`, `dropped_no_detection`, `dropped_not_in_head_region`, or `dropped_ambiguous`). Rows hold no embeddings, crops, or names, and expire after 14 days.
+Every face the person-ID service returns carries its size in pixels of the submitted image: `face_width_px`, `face_height_px`, and `interocular_px` (the distance between the two eye keypoints that face alignment uses, or `null` when it cannot be measured). The Continuous Tracking orchestrator records one row per face in `continuous_tracking.face_observation_stats` with these sizes, the detection score, head pose, the face quality score and version, raw similarity, recognition state, the closest enrolled identity id, and what the tracker did with the face (`emitted`, `dropped_min_similarity`, `dropped_no_candidate`, `dropped_no_detection`, `dropped_not_in_head_region`, or `dropped_ambiguous`). Rows hold no embeddings, crops, or names, and expire after 14 days.
 
 Run the report from `continuous-tracking/tracking-orchestrator` after a week of normal activity:
 
@@ -191,13 +210,14 @@ DATABASE_URL=postgresql://... .venv/bin/python scripts/face_resolution_report.py
 DATABASE_URL=postgresql://... .venv/bin/python scripts/face_resolution_report.py --since 2026-10-20 --camera cam-01 --format json
 ```
 
-Per camera it shows interocular percentiles, the share of faces in each pixel band, raw similarity by recognition state, how many recognized faces the tracker's `face_id.min_raw_similarity` floor discarded and at what similarity, and recognized faces per enrolled identity. Use it to decide where a camera needs a narrower lens or a lower mounting point.
+Per camera it shows interocular percentiles, the share of faces in each pixel band, raw similarity by recognition state, how many recognized faces the tracker's `face_id.min_raw_similarity` floor discarded and at what similarity, the face count with median interocular distance and raw similarity in each face-quality band (below 0.2, 0.2 to 0.4, 0.4 to 0.6, 0.6 and above), and recognized faces per enrolled identity. Use it to decide where a camera needs a narrower lens or a lower mounting point.
 
 Two live metrics complement the table:
 
 | Metric | Service | Shows |
 | --- | --- | --- |
 | `pid_face_interocular_px` | person-ID | Histogram of interocular distance by recognition state |
+| `pid_face_quality_score` | person-ID | Histogram of the face quality score by recognition state |
 | `cts_face_queries_total{camera_id, result}` | tracking orchestrator | Person crops sent for face identification, by `face_found`, `no_face`, `too_small`, or `error`; the face hit rate per camera comes from here |
 | `cts_face_gate_outcomes_total{camera_id, outcome}` | tracking orchestrator | What the tracker did with each returned face |
 

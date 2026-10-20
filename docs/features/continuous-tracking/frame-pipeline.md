@@ -96,7 +96,7 @@ Face identification sends one crop per person to `POST /api/v1/identify` on the 
 | `enabled` | true | Master switch |
 | Per-camera overrides | camera_id to `FaceIdCameraConfig` | Enable/disable per camera, override the minimum similarity |
 
-Face identification can be disabled per camera (for example, top-down views where faces are never visible). Each `FaceAnchor` carries `person_id`, `match_score` (raw cosine similarity for recognized and candidate faces, the face detection score for an unrecognized marker), `det_score`, `quality`, `calibrated_confidence` (null unless calibration is ready), `detection_id`, and `camera_id`. The identity resolver weights face evidence 3x over ReID. Every face result is also recorded for measurement; see [Measuring your cameras](/development/face-confidence-calibration#measuring-your-cameras).
+Face identification can be disabled per camera (for example, top-down views where faces are never visible). Each `FaceAnchor` carries `person_id`, `match_score` (raw cosine similarity for recognized and candidate faces, the face detection score for an unrecognized marker), `det_score`, `quality` (the evidence-path weight: 1.0 for a face seen in this frame, lower for propagated or external evidence), `face_quality` (the person-ID service's image-quality score, null from an older service), `calibrated_confidence` (null unless calibration is ready), `detection_id`, and `camera_id`. The identity resolver weights face evidence 3x over ReID. Every face result is also recorded for measurement; see [Measuring your cameras](/development/face-confidence-calibration#measuring-your-cameras).
 
 ## 7. World tracking
 
@@ -164,7 +164,7 @@ posterior(identity) proportional to prior(identity) x face_likelihood(identity) 
 
 **Temporal prior.** Encodes continuity from the previous identity assignment. The previous MAP identity receives `prior_weight = 0.6` of the probability mass. Identity persists for `prior_maintenance_max_age_s` (30 s) without new evidence; beyond that window, the prior alone cannot sustain a commit.
 
-**Face likelihood.** Face anchors carry a `p_face` probability derived from a sigmoid of confidence and quality. Face evidence receives a `face_weight_multiplier` of 3.0 over ReID evidence: ArcFace is more reliable than body appearance for disambiguating identities in multi-person households.
+**Face likelihood.** The strongest recognized anchor contributes `p_face = 0.5 + 0.5 * tanh(4 * (0.7 * match_score + 0.3 * q - 0.5))`, capped at 0.99. This is an uncalibrated heuristic, not a probability fit to data. `q` is the anchor's `quality`; with `resolver.face_quality_mode: enabled` it is multiplied by the service's face quality, so a small, blurred, or steeply pitched face counts less. The default in `settings.yaml` is `shadow`: decisions use `quality` alone while a quality-weighted evaluation counts disagreements in `cts_identity_shadow_mismatch_total{feature="face_quality"}`. Face evidence receives a `face_weight_multiplier` of 3.0 over ReID evidence: ArcFace is more reliable than body appearance for disambiguating identities in multi-person households.
 
 **ReID likelihood.** Gallery k-NN search (pgvector HNSW with StreamingDiskANN) retrieves similar embeddings and maps them to identities via a logistic curve.
 
