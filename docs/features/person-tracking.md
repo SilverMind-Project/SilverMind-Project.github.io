@@ -25,6 +25,10 @@ Upload 5-10 reference photos per person through the admin UI (**Members & Enroll
 - Avoid group photos; use one person per reference image
 - Photos from deployment cameras give the best domain match
 
+**Enroll everyone who comes regularly.** Every face is matched to the closest enrolled person, so a relative, aide, or nurse who visits often but was never enrolled can be mistaken for an enrolled family member who looks similar. Enroll every resident and every person who visits on three or more days a month, and name or dismiss recurring visitors on the **Visitors** page.
+
+**Roster health.** The **Members & Enrollment** page shows a warning when the roster is incomplete: it lists active, non-guest members with fewer than `roster.min_face_embeddings` enrolled photos (default 5, set in the Cognitive Companion `config/settings.yaml`) and counts recurring visitors waiting for review. If the person-ID service is unreachable, the page says the check is unavailable rather than reporting the roster as complete. The same data is available from `GET /api/v1/persons/roster-health` and the `get_roster_health` MCP tool.
+
 ### Identification Pipeline
 
 Two identification paths exist, depending on the calling system:
@@ -41,7 +45,8 @@ Two identification paths exist, depending on the calling system:
 1. The frame pipeline extracts person crops from YOLO detections at native resolution
 2. Each crop is encoded as a JPEG and sent individually to `POST /api/v1/identify`
 3. The service returns face detections within the crop, with normalized bounding boxes mapped back to the original frame
-4. Face results are rate-limited per camera (default cooldown: 5 s) and associated with tracked individuals via `tracklet_id`
+4. Face queries are rate-limited per tracked person on each camera (default cooldown: 5 s), and each face result is attached to the detection it came from by `detection_id`
+5. Every face result is also recorded as a measurement row (face size, interocular distance, scores, and what the tracker did with it) so face resolution can be measured per camera; see [Measuring your cameras](/development/face-confidence-calibration#measuring-your-cameras)
 
 CTS uses only the single-image endpoint so that person crops are sent at full resolution, preserving fine facial detail that would be lost in downscaled full-frame images.
 
@@ -57,9 +62,17 @@ When `include_annotated_image` is enabled in a pipeline step's config, the perso
 - Available for forwarding to downstream notification steps
 - Useful for visual confirmation in Telegram and WebSocket alerts
 
-### Confidence Thresholds
+### Recognition thresholds
 
-The recognition threshold is configured in the person-ID service's `config/settings.yaml` under `recognition.threshold` (default `0.4`). Detections below this threshold are reported as "unknown". Override it at deployment time with the `RECOGNITION_THRESHOLD` environment variable.
+The person-ID service compares each face with the closest enrolled person and reports one of three states, based on raw cosine similarity (a match score, not a probability):
+
+| State | Raw similarity | Meaning |
+| --- | --- | --- |
+| `recognized` | at or above `recognition.threshold` (default `0.4`) | Named as the closest enrolled person |
+| `candidate` | from `recognition.unknown_threshold` (default `0.25`) up to the threshold | Reported as unknown, with the closest person as `best_candidate_id` |
+| `unrecognized` | below `recognition.unknown_threshold` | A face was found but matches no one |
+
+Both thresholds live in the person-ID service's `config/settings.yaml`; override the first with the `RECOGNITION_THRESHOLD` environment variable. The Continuous Tracking orchestrator applies its own floor on top: it discards `recognized` faces below `face_id.min_confidence` (default `0.6`, compared with raw similarity) and passes `candidate` faces to the identity resolver as weak evidence. A calibrated probability is reported separately as `calibrated_confidence` once a calibration artifact is deployed; see [Face confidence calibration](/development/face-confidence-calibration).
 
 ### Guest Image Saving
 
@@ -256,6 +269,7 @@ MCP tools that return person locations use the same envelope via `envelope_to_mc
 | `POST` | `/persons/{id}/enroll` | Upload reference photos to enroll a face (multipart) |
 | `GET` | `/persons/{id}/enrollment` | Get enrollment details (embedding count, created date) |
 | `DELETE` | `/persons/{id}/enrollment` | Remove face enrollment data |
+| `GET` | `/persons/roster-health` | Members needing more enrollment photos and recurring visitors awaiting review |
 
 ### Location Tracking
 

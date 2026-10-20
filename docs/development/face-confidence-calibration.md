@@ -178,6 +178,29 @@ The JSON schema lives at `schemas/calibration_artifact.schema.json` in the `pers
 
 The deprecated `confidence` field mirrors `raw_similarity` for backward compatibility. Consumers must not use it for authority decisions.
 
+## Measuring your cameras
+
+Before fitting or trusting any calibration, check how large faces actually are on your cameras. Recognition accuracy depends mostly on the distance between the eyes in pixels: below about 16 px it is unreliable, 16 to 24 px is marginal, and above about 40 px the ArcFace template (roughly 35 px between the eyes) is already filled, so accuracy stops improving. On a wide-angle home camera that usually means faces are usable within 2 to 3 m.
+
+Every face the person-ID service returns carries its size in pixels of the submitted image: `face_width_px`, `face_height_px`, and `interocular_px` (the distance between the two eye keypoints that face alignment uses, or `null` when it cannot be measured). The Continuous Tracking orchestrator records one row per face in `continuous_tracking.face_observation_stats` with these sizes, the detection score, head pose, raw similarity, recognition state, the closest enrolled identity id, and what the tracker did with the face (`emitted`, `dropped_min_confidence`, `dropped_no_candidate`, or `dropped_no_detection`). Rows hold no embeddings, crops, or names, and expire after 14 days.
+
+Run the report from `continuous-tracking/tracking-orchestrator` after a week of normal activity:
+
+```bash
+DATABASE_URL=postgresql://... .venv/bin/python scripts/face_resolution_report.py --since 2026-10-20
+DATABASE_URL=postgresql://... .venv/bin/python scripts/face_resolution_report.py --since 2026-10-20 --camera cam-01 --format json
+```
+
+Per camera it shows interocular percentiles, the share of faces in each pixel band, raw similarity by recognition state, how many recognized faces the tracker's `face_id.min_confidence` floor discarded and at what similarity, and recognized faces per enrolled identity. Use it to decide where a camera needs a narrower lens or a lower mounting point.
+
+Two live metrics complement the table:
+
+| Metric | Service | Shows |
+| --- | --- | --- |
+| `pid_face_interocular_px` | person-ID | Histogram of interocular distance by recognition state |
+| `cts_face_queries_total{camera_id, result}` | tracking orchestrator | Person crops sent for face identification, by `face_found`, `no_face`, `too_small`, or `error`; the face hit rate per camera comes from here |
+| `cts_face_gate_outcomes_total{camera_id, outcome}` | tracking orchestrator | What the tracker did with each returned face |
+
 ## Privacy and data handling
 
 - Do not commit calibration datasets, household face pairs, or populated manifests to version control.
