@@ -50,7 +50,7 @@ The fetched image is compared against the `FrameReady`-reported dimensions. A mi
 
 ## 2. Person detection
 
-YOLO26L ONNX runs on Triton, returning normalized bounding boxes (`[x1, y1, x2, y2]` in `[0, 1]` space) with confidence scores. The default confidence threshold is 0.25.
+YOLO26L ONNX runs on Triton, returning normalized bounding boxes (`[x1, y1, x2, y2]` in `[0, 1]` space) with confidence scores. Detections below `pipeline.detector_confidence` (default 0.7) are discarded.
 
 Post-decode IoU deduplication suppresses near-duplicate detections that survive the model's baked NMS. A greedy algorithm processes boxes in descending confidence order: a box is suppressed if its IoU with any already-kept box exceeds `detection_iou_dedup_threshold` (default: 0.55). This is belt-and-braces: the ONNX model already applies NMS, but double detections still occur at scene boundaries.
 
@@ -78,17 +78,25 @@ If the ReID embedder is unavailable, an empty embedding list is returned and the
 
 ## 6. Face identification
 
-Per-camera, rate-limited calls to the person-identification-service send person crops to `POST /api/v1/identify`. The ArcFace-based service returns face detections with identity assignments and confidence scores.
+Face identification sends one crop per person to `POST /api/v1/identify` on the person-identification-service, which returns the faces it finds with an identity, a recognition state, and a raw similarity score.
 
-| Parameter | Default | Description |
+**Face crop.** The face path cuts its own crop from the frame: the person box padded upward by 15% and sideways by 10% of its size (never downward), so a head at the top edge of the detector box keeps the context face detection needs. Privacy zones are already blurred or masked in the frame before any crop is taken, so padding cannot expose them. Crops are encoded at JPEG quality 95. ReID and pose keep using the tight person crop.
+
+**One face per person.** A person crop can contain someone else's face when two people overlap. A face is attributed to the person only if its centre lies in the person's head region: the top 35% of the person box (plus the upward padding), widened by 10% of the box width on each side. If two faces fall in that region, the crop is ambiguous and produces no face evidence; an unknown identity is safer than a swapped one. Each resulting face anchor is attached to the observation of the detection it came from, never to another person seen by the same camera.
+
+| Setting (`face_id.*`) | Default | Description |
 |-----------|---------|-------------|
-| `face_id_cooldown_s` | 5.0 | Minimum seconds between calls per camera |
-| `face_id_timeout_s` | 2.0 | HTTP request timeout |
-| `face_id_min_confidence` | 0.4 | Global minimum ArcFace confidence |
-| `face_id_enabled` | true | Master switch |
-| Per-camera overrides | camera_id to `FaceIdCameraConfig` | Enable/disable per camera, override min confidence |
+| `cooldown_s` | 5.0 | Minimum seconds between queries for the same tracked person on a camera |
+| `timeout_s` | 2.0 | HTTP request timeout |
+| `min_confidence` | 0.6 | Recognized faces below this raw similarity are dropped |
+| `head_region_height_frac` | 0.35 | Share of the person box, from the top, that can hold the face |
+| `head_region_side_margin_frac` | 0.10 | Horizontal tolerance per side, as a share of box width |
+| `crop_pad_top_frac` / `crop_pad_side_frac` | 0.15 / 0.10 | Face crop padding |
+| `crop_jpeg_quality` | 95 | JPEG quality of face crops |
+| `enabled` | true | Master switch |
+| Per-camera overrides | camera_id to `FaceIdCameraConfig` | Enable/disable per camera, override the minimum similarity |
 
-Face identification can be disabled per camera (e.g., top-down surveillance views where faces are not visible). Each `FaceAnchor` carries `person_id`, `confidence`, `tracklet_id`, and `camera_id`. The identity resolver uses these as high-weight evidence (3x over ReID).
+Face identification can be disabled per camera (for example, top-down views where faces are never visible). Each `FaceAnchor` carries `person_id`, `confidence` (raw similarity for recognized and candidate faces), `detection_id`, and `camera_id`. The identity resolver weights face evidence 3x over ReID. Every face result is also recorded for measurement; see [Measuring your cameras](/development/face-confidence-calibration#measuring-your-cameras).
 
 ## 7. World tracking
 
@@ -154,7 +162,7 @@ The `WorldTracker` maps confirmed per-camera tracks to `PersonHypothesis` (PH) e
 posterior(identity) proportional to prior(identity) x face_likelihood(identity) x reid_likelihood(identity)
 ```
 
-**Temporal prior.** Encodes continuity from the previous identity assignment. The previous MAP identity receives `prior_weight = 0.6` of the probability mass. Identity persists for `prior_maintenance_max_age_s` (120 s) without new evidence; beyond that window, the prior alone cannot sustain a commit.
+**Temporal prior.** Encodes continuity from the previous identity assignment. The previous MAP identity receives `prior_weight = 0.6` of the probability mass. Identity persists for `prior_maintenance_max_age_s` (30 s) without new evidence; beyond that window, the prior alone cannot sustain a commit.
 
 **Face likelihood.** Face anchors carry a `p_face` probability derived from a sigmoid of confidence and quality. Face evidence receives a `face_weight_multiplier` of 3.0 over ReID evidence: ArcFace is more reliable than body appearance for disambiguating identities in multi-person households.
 
@@ -164,11 +172,11 @@ posterior(identity) proportional to prior(identity) x face_likelihood(identity) 
 
 ```
 commit if: top_prob >= commit_prob (0.65)
-          AND margin >= commit_margin (0.25)
+          AND margin >= commit_margin (0.15)
           AND sensory_evidence_present (face or ReID, not prior alone)
 ```
 
-High-confidence face anchors (confidence >= 0.85) trigger an immediate commit bypassing the 3-second buffer.
+A calibrated direct face match at or above `arcface_authority_calibrated_confidence` (0.80) grants direct-face authority; without a deployed calibration artifact this path stays closed.
 
 **Identity feedback loop.** When a face anchor identifies a person on one camera, the resolved identity is stamped onto all gallery entries for that PH's detections, creating a self-reinforcing cycle that allows cross-camera identity carry even when a face is not visible on the second camera.
 
