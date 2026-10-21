@@ -8,6 +8,8 @@ The thinking that makes the system work, recognizing people, reading a scene, an
 
 The cameras and the wall display talk to that home computer directly over your own network, with no relay in between. If your internet goes down, the core of the system keeps running.
 
+When you calibrate face recognition for your cameras, the system keeps a sample of face crops from the home's cameras for an admin to label. They are stored on the home computer like every other image, never sent anywhere, and any that are not labeled are deleted after 30 days. Calibration is off unless you turn it on.
+
 ## What does leave the home, and only if you turn it on
 
 A few features reach outside the network on purpose, and each is something you choose to enable:

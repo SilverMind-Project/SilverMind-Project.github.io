@@ -39,7 +39,7 @@ This is not a concept. As of v0.7.2 the system runs an end-to-end stack across s
 - Nine behavioral signals for dementia care: pacing, sundowning, long bathroom visits, nighttime movement, prolonged stillness, unexplained absence, suspected falls, gait slowing, and elevated restlessness, each measured against a person's own history. Fall detection and restlessness are opt-in per deployment.
 - A composable rules pipeline with 24 step types and 7 notification channels, driving both caregiver alerts and proactive reminders to the senior.
 - A personal knowledge repository with caregiver-curated info cards, memory quizzes, and a voice companion the senior can talk to.
-- An MCP server exposing 60 tools, so external AI agents and the built-in voice agent operate the household through one authenticated interface.
+- An MCP server exposing 61 tools, so external AI agents and the built-in voice agent operate the household through one authenticated interface.
 - A unified caregiver workspace and live process views over the running pipeline.
 
 Each of these landed behind tests and, for the tracking work, frame-replay proofs. The roadmap records the milestones as they shipped.

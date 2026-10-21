@@ -1,6 +1,6 @@
 # MCP Integration
 
-Cognitive Companion treats the home as something an AI agent can safely operate. A built-in [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, exposes 60 tools for AI agent integration: agents can discover system state, query sensor data, inspect enrollment and e-ink status, check person locations, review activity timelines and daily reports, explore semantic memory, read the unified signals feed, acknowledge behavioral signals with feedback, drive and analyze guided routine sessions, propose identity corrections, trigger rule executions, author new rules, and inspect plugin metadata. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
+Cognitive Companion treats the home as something an AI agent can safely operate. A built-in [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, exposes 61 tools for AI agent integration: agents can discover system state, query sensor data, inspect enrollment, face calibration progress, and e-ink status, check person locations, review activity timelines and daily reports, explore semantic memory, read the unified signals feed, acknowledge behavioral signals with feedback, drive and analyze guided routine sessions, propose identity corrections, trigger rule executions, author new rules, and inspect plugin metadata. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
 
 This makes Cognitive Companion agent-native: household state has one governed, authenticated tool surface, and every agent, whether Claude Desktop, a custom orchestrator, or the internal voice companion, goes through it. There is no separate integration to audit per client, and tools stay in lockstep with the UI because both read the same service layer.
 
@@ -57,6 +57,7 @@ A `GeminiToolAdapter` reads the same tool definitions and converts them to Gemin
 | `get_person_locations`     | Current location of all tracked members                      | None                                          |
 | `get_enrolled_persons`     | Household members with face enrollment data                  | None                                          |
 | `get_roster_health`        | Members with too few enrolled face photos, plus recurring visitors awaiting review | None                         |
+| `get_face_calibration_summary` | Face calibration labeling progress per resident, walks, and visitor labels (read-only) | None |
 | `get_person_sightings`     | Camera sighting history for a person                         | `person_id`, `limit`                          |
 | `get_person_activities`    | Recent detected activities (eating, sleeping, etc.)          | `person_id`, `activity_type`, `minutes`       |
 | `get_workflow_executions`  | Recent pipeline workflow executions                          | `rule_name`, `status`, `limit` (optional)     |

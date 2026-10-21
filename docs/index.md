@@ -96,7 +96,7 @@ hero:
       <span class="card-number">03</span>
       <h3>Open to the agent ecosystem</h3>
       <p>
-        A built-in Model Context Protocol server exposes 60 tools, so Claude, custom agents, and the voice companion all operate the household through one governed, authenticated interface. The home becomes something an agent can safely act on.
+        A built-in Model Context Protocol server exposes 61 tools, so Claude, custom agents, and the voice companion all operate the household through one governed, authenticated interface. The home becomes something an agent can safely act on.
       </p>
     </article>
     <article class="outcome-card">
@@ -171,7 +171,7 @@ hero:
     <div class="section-kicker">For builders</div>
     <h2>Beneath the calm surface is a serious agent stack.</h2>
     <p>
-      Cognitive Companion combines distributed systems, applied machine learning, and agent orchestration. The stack includes realtime sensor fusion, Bayesian identity resolution, edge-native local inference, vision reasoning inside composable agent workflows, a 60-tool MCP server, and a realtime voice agent with function calling. Every layer is documented for teams who want to deploy, inspect, or extend the system.
+      Cognitive Companion combines distributed systems, applied machine learning, and agent orchestration. The stack includes realtime sensor fusion, Bayesian identity resolution, edge-native local inference, vision reasoning inside composable agent workflows, a 61-tool MCP server, and a realtime voice agent with function calling. Every layer is documented for teams who want to deploy, inspect, or extend the system.
     </p>
   </div>
   <div class="builder-actions">
