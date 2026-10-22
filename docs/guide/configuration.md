@@ -240,30 +240,37 @@ device_keys:
 
 ### Permission Map
 
-Permissions use `fnmatch` patterns to control endpoint access:
+Roles under `permission_map` list endpoint patterns (`fnmatch`) and named tokens. An excerpt of
+the shipped file:
 
 ```yaml
-permissions:
+permission_map:
   admin:
-    - "*"                                    # Full access
+    - "*"                                    # Full access, every token included
 
   caregiver:
     - "GET /api/v1/*"                        # Read everything
-    - "POST /api/v1/alerts/*/action"         # Dismiss/assist alerts
+    - "POST /api/v1/persons/*/enroll"        # Enroll faces
 
   mcp_readonly:
-    - "GET /api/v1/*"                        # Read everything
-    - "POST /api/v1/mcp/tools/*"            # Execute MCP tools
-    - "POST /api/v1/rules/*/execute"         # Trigger rules
+    - "mcp.tools:read"                       # Reach /mcp and call its read tools
+    - "GET /api/v1/rooms*"                   # ...plus selected REST reads
+
+  rules:write_via_mcp:
+    - "POST /api/v1/rules/import"
+    - "rules:import"                         # The MCP import_rule_bundle tool
 ```
+
+MCP tools that change state each require their own token (`rules:execute`,
+`cts.signals:acknowledge`, `cts.identity:propose`, `rules:import`), so a key holding only
+`mcp_readonly` can read through MCP but cannot change anything. See
+[MCP integration](/features/mcp-integration#authentication).
 
 ### Key Resolution
 
-Keys are resolved from (in priority order):
-
-1. `X-API-Key` HTTP header
-2. `?api_key` query parameter
-3. `device_key` field in JSON request body
+Browser and agent requests send the key in the `X-API-Key` header (the MCP endpoint also
+accepts `Authorization: Bearer <key>`). Only the device endpoints, for hardware that cannot set
+headers, also accept a `?api_key` query parameter or a `device_key` field in the JSON body.
 
 ## notifications.yaml {#notifications}
 

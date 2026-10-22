@@ -256,7 +256,7 @@ Browser-visible endpoints follow the BFF API design rule.
 
 1. Define a Pydantic response envelope in `backend/schemas/`
 2. Implement the business logic once in `backend/services/`
-3. Wire the service in `backend/main.py` lifespan and expose a typed router dependency when useful
+3. Wire the service in the matching `backend/bootstrap/` phase and expose a typed router dependency when useful
 4. Create or edit a router file in `backend/routers/`
 5. Add permission patterns in `config/auth.yaml`
 6. If agents need the same data, expose an MCP tool that calls the same service function
@@ -264,10 +264,9 @@ Browser-visible endpoints follow the BFF API design rule.
 
 ### Adding a New MCP Tool
 
-1. Add a `@_register` decorated async function in `backend/mcp/server.py`. Type hints on parameters auto-generate JSON schemas.
-2. Add the tool name to `config/settings.yaml` under `mcp.tools`.
-3. If the tool should be available in voice conversations, also add it to `mcp.gemini_tools`.
-4. Add the tool name to the smoke test in `backend/tests/mcp/` so the registry assertion stays current.
+1. Add a `@_register(token=...)` decorated async function in `backend/mcp/server.py`. Type hints on parameters auto-generate JSON schemas. The token is mandatory: `TOOLS_READ` for a read tool; a tool that changes state gets its own `<resource>:<action>` token, defined in `config/auth.yaml` and granted only to the roles that should call it.
+2. If the tool should be available in voice conversations, add it to `mcp.gemini_tools` in `config/settings.yaml` (the voice agent's exact allowlist).
+3. Add the tool name to the smoke test in `backend/tests/integrations/test_mcp_tools_smoke.py`, and a state-changing tool's token to `backend/tests/mcp/test_mcp_tool_authorization.py`.
 
 MCP tools must call a service method; they may not query a repository directly (import-linter enforces this).
 

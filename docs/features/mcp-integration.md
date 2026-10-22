@@ -120,7 +120,20 @@ api_keys:
       - mcp_readonly
 ```
 
-The `mcp_readonly` permission grants access to the `/mcp` endpoint. Pass the key via the `X-API-Key` header or `Authorization: Bearer <key>` header.
+Pass the key in the `X-API-Key` header or an `Authorization: Bearer <key>` header. A key in the query string is rejected.
+
+Every tool is listed to every authenticated agent, and each call is authorized against the token the tool requires:
+
+| Tools | Token | Granted to |
+| --- | --- | --- |
+| All read tools | `mcp.tools:read` | `mcp_readonly`, `admin` |
+| `import_rule_bundle` | `rules:import` | `rules:write_via_mcp` (the shipped agent key), `admin` |
+| `trigger_rule` | `rules:execute` | `admin` |
+| `acknowledge_dementia_signal` | `cts.signals:acknowledge` | `admin` |
+| `propose_identity_correction` | `cts.identity:propose` | `admin` |
+| Resident session tools (quiz answers, guided steps, preferences, `submit_user_response`) | `resident_session:act` | no API key: these are for the built-in voice companion only |
+
+So the `mcp_readonly` key can read anything the read tools expose but cannot trigger a rule, acknowledge a signal, or act for the resident. To let an agent key call a state-changing tool, add that tool's token to the key's role in `config/auth.yaml`. A denied call returns HTTP 403 with a JSON-RPC error and never runs the tool; a batch containing one denied call is rejected whole.
 
 ## Endpoint
 
@@ -219,7 +232,7 @@ mcp:
     - "record_resident_preference"
 ```
 
-Destructive tools like `trigger_rule` are excluded from the voice subset by default. The guided-session tools are voice-enabled by design: they are how the realtime agent proposes step completion, repeats a step, or escalates to a caregiver during a [guided routine](/features/guided-companion). `get_person_timeline`, `get_daily_report`, and `get_open_sessions` are the typed daily-living ledger tools: the agent answers countable questions ("has she had her medication today") by calling these, never by aggregating semantic-memory captions.
+The voice agent can declare and call exactly the tools in `mcp.gemini_tools`, checked again when it calls one, and an empty list gives it no tools. Destructive tools like `trigger_rule` are not in the shipped list. The guided-session tools are voice-enabled by design: they are how the realtime agent proposes step completion, repeats a step, or escalates to a caregiver during a [guided routine](/features/guided-companion). `get_person_timeline`, `get_daily_report`, and `get_open_sessions` are the typed daily-living ledger tools: the agent answers countable questions ("has she had her medication today") by calling these, never by aggregating semantic-memory captions.
 
 ## Network Considerations
 
@@ -230,8 +243,7 @@ The MCP server runs on the same backend instance, so no additional deployment is
 
 ## Adding New Tools
 
-1. Add a `@_register` decorated async function in `backend/mcp/server.py`. Type hints on parameters auto-generate JSON schemas.
-2. Add the tool name to `config/settings.yaml` under `mcp.tools`.
-3. If the tool should be available in voice conversations, also add it to `mcp.gemini_tools`.
+1. Add a `@_register(token=...)` decorated async function in `backend/mcp/server.py`. Type hints on parameters auto-generate JSON schemas. The token is required: `TOOLS_READ` for a read tool, or a new `<resource>:<action>` token (defined in `config/auth.yaml`) for a tool that changes state.
+2. If the tool should be available in voice conversations, add it to `mcp.gemini_tools` in `config/settings.yaml`.
 
 See the [development guide](/development/extending-pipeline) for more details.
