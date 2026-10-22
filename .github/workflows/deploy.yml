@@ -32,6 +32,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The Claude Code hooks committed under .claude/hooks/ (post-edit, stop scan).
+      - name: Claude Code hook tests
+        run: npm run hooks:test
+
       - name: Build documentation
         run: npm run docs:build
 

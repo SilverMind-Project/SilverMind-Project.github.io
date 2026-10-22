@@ -210,3 +210,12 @@ The site deploys automatically via GitHub Actions on push to `main`. No manual d
 - **Add milestone or sprint labels** (U1, R2, M3, WTR5) to feature descriptions.
 - **Document aspirational behavior**: every statement must match the merged code.
 - **Modify the GitHub Actions workflow** without testing locally first.
+
+
+## Claude Code guardrails
+
+Start sessions in this directory (or `/cd` here): `.claude/settings.json` applies only from the
+session's working directory. Its hooks (`.claude/hooks/`) flag an em-dash in an edited `.md`
+file, scan the diff for added em-dashes before Claude finishes (blocking once), and print the
+gate at session start. `npm run hooks:test` runs the hook test table, and the deploy workflow
+runs it before building.
