@@ -286,7 +286,13 @@ Verify claims against the codebase before publishing.
 | Frontend behavior | Vue components and API calls |
 | CTS streams and schemas | `continuous-tracking/` proto, transport, and migrations |
 
-Numbers must match across the docs. If a page says "22 step types", grep the docs for every related count before changing it.
+Numbers must match the code. A count of MCP tools, step types, channels, or filters carries a
+marker immediately before the number, `<!-- count:mcp_tools -->61 tools`, naming a list in
+cognitive-companion's `frontend/src/generated/vocabularies.json` (`mcp_tools`, `step_types`,
+`channel_types`, `filter_types`, `signal_kinds`, `wire_signal_kinds`). A deliberate subset
+("two notification channels") is marked `<!-- count:none -->`. `npm run docs:check-counts` (run
+before every deploy) fails on a mismatch or on an unmarked count phrase; mermaid blocks are not
+checked, so update their numbers by hand.
 
 Do not expose internal deployment details:
 

@@ -38,7 +38,7 @@ flowchart TB
         direction TB
         Aggregator["EventAggregator"]
         RulesEngine["RulesEngine"]
-        Executor["PipelineExecutor<br/>(24 step types)"]
+        Executor["PipelineExecutor<br/>(28 step types)"]
         Dispatcher["NotificationDispatcher<br/>(7 channels)"]
         CTS["CTSRuntime<br/>(Redis Streams)"]
         Presence["PresenceService<br/>(fused)"]
@@ -80,8 +80,8 @@ flowchart TB
 
 | Capability | Description |
 | --- | --- |
-| 24 pipeline step types | `llm_call`, `person_identification`, `scene_analysis`, `image_crop`, `semantic_memory_query`, `semantic_memory_write`, `object_trend_analysis`, `presence_query`, `home_state`, `notification`, `ha_action`, `activity_detection`, `activity_session_start`, `activity_session_end`, `daily_report`, `verification`, `condition`, `wait`, `interactive_prompt`, `info_card`, `quiz_start`, `guided_task_start`, `gate_verdict`, `media_window_poll`. |
-| 7 notification channels | `pwa_popup_text`, `pwa_realtime_ai`, `pwa_tts_announcement`, `telegram`, `eink`, `ha_speaker_tts`, `webhook`. |
+| <!-- count:step_types -->28 pipeline step types | `llm_call`, `person_identification`, `scene_analysis`, `image_crop`, `semantic_memory_query`, `semantic_memory_write`, `object_trend_analysis`, `presence_query`, `home_state`, `notification`, `ha_action`, `activity_detection`, `activity_session_start`, `activity_session_end`, `daily_report`, `verification`, `condition`, `wait`, `interactive_prompt`, `info_card`, `quiz_start`, `guided_task_start`, `gate_verdict`, `media_window_poll`, `media_presign`, `novelty_gate`, `region_presence`, `signal_emit`. |
+| <!-- count:channel_types -->7 notification channels | `pwa_popup_text`, `pwa_realtime_ai`, `pwa_tts_announcement`, `telegram`, `eink`, `ha_speaker_tts`, `webhook`. |
 | 13 context filters | `room`, `time_range`, `day_of_week`, `person_presence`, `person_activity`, `room_transition`, `person_movement_memory`, `scene_contains`, `scene_trend`, `home_state`, `presence_status`, `presence_dwell`, `dementia_signal`. |
 | 8 trigger types | `sensor_event`, `cron`, `manual`, `webhook` (HMAC), `telegram` (bot command), `occupancy_duration`, `cts_window`, `dementia_signal`. |
 | Person tracking | ArcFace face recognition fused with HA presence sensors, with whole-house location. |
@@ -92,7 +92,7 @@ flowchart TB
 | Visual pipeline builder | Graph canvas with nodes, edges, output ports, dynamic step palette, and per-step config dialogs. |
 | Presence fusion | Priority-ordered chain: bed sensor, CTS, HA device tracker, fallback. Configured in `config/presence.yaml`. |
 | E-ink displays | Per-device notification images with template editor and refresh suppression. |
-| MCP tool server | 61 tools (read-only queries plus rule triggering, rule authoring, guided-session control, signal acknowledgment, and interactive response recording). |
+| MCP tool server | <!-- count:mcp_tools -->61 tools (read-only queries plus rule triggering, rule authoring, guided-session control, signal acknowledgment, and interactive response recording). |
 | Plugin systems | Step handlers, channels, and filters auto-discovered as Python files. |
 | RBAC | API keys, hardware device keys, and `fnmatch` permission patterns. |
 

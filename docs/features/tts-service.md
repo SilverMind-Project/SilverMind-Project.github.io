@@ -86,7 +86,7 @@ Samples are stored in `data/voice_samples/` with a `meta.json` metadata file alo
 
 ## Integration with Cognitive Companion
 
-The TTS service integrates with Cognitive Companion through two notification channels:
+The TTS service integrates with Cognitive Companion through <!-- count:none -->two notification channels:
 
 ### TTS Channel (Home Assistant playback)
 

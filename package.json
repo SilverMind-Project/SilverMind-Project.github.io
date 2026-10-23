@@ -9,7 +9,8 @@
     "hooks:test": "bash .claude/hooks/tests/run.sh",
     "docs:preview": "vitepress preview docs",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "docs:check-counts": "node scripts/check-counts.mjs"
   },
   "devDependencies": {
     "@fontsource/hanken-grotesk": "^5.2.8",

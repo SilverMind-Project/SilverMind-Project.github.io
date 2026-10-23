@@ -159,7 +159,7 @@ The caregiver reviews the draft, edits as needed, and approves it. The draft is 
 
 ### Delivery
 
-Info cards are delivered via pipeline rules using the `info_card` step type. The delivery service broadcasts to three channels simultaneously:
+Info cards are delivered via pipeline rules using the `info_card` step type. The delivery service broadcasts to <!-- count:none -->three channels simultaneously:
 
 - **PWA popup**: a popup appears on the companion tablet showing the card title, body, and images with a timed dismiss button
 - **E-ink display**: the card title and body are rendered onto an e-ink template and pushed to targeted displays

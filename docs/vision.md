@@ -36,10 +36,10 @@ The same properties that make an agent safe around a vulnerable adult, auditabil
 This is not a concept. As of v0.7.2 the system runs an end-to-end stack across several services, with each major capability shipped and tested:
 
 - Multi-camera tracking with a floor-plane world tracker and Bayesian identity resolution, including cross-camera handoff that holds a person's identity through turns and camera gaps.
-- Nine behavioral signals for dementia care: pacing, sundowning, long bathroom visits, nighttime movement, prolonged stillness, unexplained absence, suspected falls, gait slowing, and elevated restlessness, each measured against a person's own history. Fall detection and restlessness are opt-in per deployment.
-- A composable rules pipeline with 24 step types and 7 notification channels, driving both caregiver alerts and proactive reminders to the senior.
+- <!-- count:wire_signal_kinds -->Ten behavioral signals, each measured against a person's own history: nine for dementia care (pacing, sundowning, long bathroom visits, nighttime movement, prolonged stillness, unexplained absence, suspected falls, gait slowing, and elevated restlessness) and a same-clothes hygiene signal. Fall detection, restlessness, and same-clothes are opt-in per deployment.
+- A composable rules pipeline with <!-- count:step_types -->28 step types and <!-- count:channel_types -->7 notification channels, driving both caregiver alerts and proactive reminders to the senior.
 - A personal knowledge repository with caregiver-curated info cards, memory quizzes, and a voice companion the senior can talk to.
-- An MCP server exposing 61 tools, so external AI agents and the built-in voice agent operate the household through one authenticated interface.
+- An MCP server exposing <!-- count:mcp_tools -->61 tools, so external AI agents and the built-in voice agent operate the household through one authenticated interface.
 - A unified caregiver workspace and live process views over the running pipeline.
 
 Each of these landed behind tests and, for the tracking work, frame-replay proofs. The roadmap records the milestones as they shipped.

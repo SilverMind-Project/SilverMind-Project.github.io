@@ -5,8 +5,7 @@ export default defineConfig({
   plugins: [vue()],
   test: {
     environment: 'node',
-    // No unit tests remain after the animated NeuronHeroText hero was retired
-    // for the calm Design System v2 hero; keep the script green until specs return.
+    // scripts/check-counts.test.mjs is the only spec today.
     passWithNoTests: true,
   },
 })

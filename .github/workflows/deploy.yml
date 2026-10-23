@@ -40,6 +40,14 @@ jobs:
       - name: Markdown has no em-dashes
         run: make check-md
 
+      # Public counts (MCP tools, step types, channels) must match cognitive-companion's exported
+      # vocabularies on its main branch; the unit tests prove the check can fail.
+      - name: Count check unit tests
+        run: npm test
+
+      - name: Public counts match the code
+        run: npm run docs:check-counts
+
       - name: Build documentation
         run: npm run docs:build
 
