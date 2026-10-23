@@ -36,6 +36,10 @@ jobs:
       - name: Claude Code hook tests
         run: npm run hooks:test
 
+      # A page with an em-dash never deploys.
+      - name: Markdown has no em-dashes
+        run: make check-md
+
       - name: Build documentation
         run: npm run docs:build
 

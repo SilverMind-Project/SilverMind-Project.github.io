@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Versioned pre-commit hook (installed by `make install-hooks`, which sets core.hooksPath).
+#
+# 1. On every commit: refuse staged markdown containing an em-dash (before any side effect).
+# 2. On commits to main: pull the current cognitive-companion version from its main branch on
+#    GitHub and update the nav bar version in config.mts. A network failure only warns: the
+#    version catches up on the next commit, and a docs commit must never depend on GitHub.
+
+set -euo pipefail
+
+# The em-dash check runs first, so a refused commit leaves no version bump behind.
+mapfile -t staged_md < <(git diff --cached --name-only --diff-filter=ACM -- '*.md')
+if [[ "${#staged_md[@]}" -gt 0 ]]; then
+  bash scripts/check-no-em-dash.sh "${staged_md[@]}"
+fi
+
+branch=$(git symbolic-ref --short HEAD 2>/dev/null || true)
+if [[ "$branch" == "main" ]]; then
+  CONFIG="docs/.vitepress/config.mts"
+  RAW_URL="https://raw.githubusercontent.com/SilverMind-Project/cognitive-companion/main/backend/_version.py"
+
+  new=$(curl -fsSL --max-time 5 "$RAW_URL" 2>/dev/null | grep -oP '(?<=__version__ = ")[^"]+' || true)
+  if [[ -z "$new" ]]; then
+    echo "pre-commit: warning: could not fetch the cognitive-companion version; nav version unchanged" >&2
+  else
+    current=$(grep -oP '(?<=text: "v)[^"]+' "$CONFIG" | head -1)
+    if [[ "$current" != "$new" ]]; then
+      sed -i "s/text: \"v${current}\"/text: \"v${new}\"/" "$CONFIG"
+      git add "$CONFIG"
+      echo "pre-commit: docs version synced ${current} -> ${new}"
+    fi
+  fi
+fi
