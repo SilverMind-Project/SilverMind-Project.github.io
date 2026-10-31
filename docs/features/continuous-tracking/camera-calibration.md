@@ -1,4 +1,4 @@
-# Camera Calibration
+# Camera calibration
 
 How homography calibration, visibility polygons, overlap groups, and adjacency edges work together to enable cross-camera person tracking on a floor plan.
 
@@ -133,8 +133,8 @@ These are distinct concepts:
 
 | Type | Meaning | Transit bounds | Edge color |
 |------|---------|---------------|------------|
-| **Overlap** | Cameras share a physical viewing zone (e.g., two angles of the same doorway). Detections may be simultaneous. | 0–2 s | Green |
-| **Adjacent** | Cameras are physically next to each other but do not overlap. Person moves sequentially between views. | 2–15 s | Purple |
+| **Overlap** | Cameras share a physical viewing zone (e.g., two angles of the same doorway). Detections may be simultaneous. | 0 to 2 s | Green |
+| **Adjacent** | Cameras are physically next to each other but do not overlap. Person moves sequentially between views. | 2 to 15 s | Purple |
 
 Both must be configured for correct cross-camera association.
 
@@ -143,8 +143,8 @@ Both must be configured for correct cross-camera association.
 The "Infer from coverage" button on the Adjacency page analyzes visibility polygons with Shapely geometry:
 
 1. Computes IoU (intersection over union) for every camera pair
-2. **IoU ≥ 0.05**: marks as overlap, suggests 0–2 s transit, creates bidirectional edges
-3. **IoU < 0.05 but centroids within 35% of floor-plan width**: marks as adjacent, suggests 2–15 s transit, creates bidirectional edges
+2. **IoU ≥ 0.05**: marks as overlap, suggests 0 to 2 s transit, creates bidirectional edges
+3. **IoU < 0.05 but centroids within 35% of floor-plan width**: marks as adjacent, suggests 2 to 15 s transit, creates bidirectional edges
 4. Cameras without visibility polygons are skipped and reported
 
 Inference produces bidirectional edges for all detected pairs. Review the staged edges (transit times in particular) and adjust before saving.
@@ -160,7 +160,7 @@ flowchart TB
     Groups --> Hint["UI hint: 'These cameras\nshare overlap group X'"]
 ```
 
-In the calibration UI, when the operator selects two cameras that belong to the same overlap group, a hint appears: "These cameras share overlap group X. Apply overlap defaults (0–2 s)." This helps configure adjacency for cameras that cover the same physical area.
+In the calibration UI, when the operator selects two cameras that belong to the same overlap group, a hint appears: "These cameras share overlap group X. Apply overlap defaults (0 to 2 s)." This helps configure adjacency for cameras that cover the same physical area.
 
 ### Declared overlap groups (uncalibrated cross-camera)
 
@@ -197,7 +197,7 @@ Without homography and adjacency, every cross-camera pair uses neutral geo scori
 
 ### Zero-calibration cross-camera (learned topology)
 
-The default design point is zero-calibration: cross-camera linking does not require homography. When a person crosses between cameras, CTS reuses the recently-closed PersonHypothesis on the new camera (cross-camera revival) instead of spawning a fresh UNKNOWN track. Two signals gate the link, so it stays safe without geometry:
+The default design point is zero-calibration: cross-camera linking does not require homography. When a person crosses between cameras, CTS reuses the recently closed PersonHypothesis on the new camera (cross-camera revival) instead of spawning a fresh UNKNOWN track. Two signals gate the link, so it stays safe without geometry:
 
 - **Learned camera topology.** Each accepted handoff records a directed edge with a running transit-time distribution (`camera_topology_edges`). A candidate link must clear `plausible_transit >= cross_camera_min_plausibility = 0.05`. Unseen edges return the floor, so the first legitimate handoff is never blocked, and topology tightens as it learns.
 - **Multi-view appearance.** The best cosine across the closed PH's view-binned prototypes and the new observation must clear `cross_camera_revive_appearance_min_sim = 0.60`. A recognized different-identity face blocks the link.

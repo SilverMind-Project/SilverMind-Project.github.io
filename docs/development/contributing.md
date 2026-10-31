@@ -1,10 +1,10 @@
 # Contributing
 
-Thank you for your interest in contributing to Cognitive Companion. Contributions of all kinds are welcome.
+Contributions of all kinds are welcome: issues, code, documentation, and shared configurations.
 
-## Ways to Contribute
+## Ways to contribute
 
-### Report Issues
+### Report issues
 
 Found a bug or have a feature request? [Open an issue](https://github.com/SilverMind-Project/cognitive-companion/issues) on GitHub. Good bug reports include:
 
@@ -13,7 +13,7 @@ Found a bug or have a feature request? [Open an issue](https://github.com/Silver
 - System information (OS, Python version, GPU model)
 - Relevant log output
 
-### Submit Code
+### Submit code
 
 1. **Fork** the repository
 2. **Create a branch** from `main` for your changes
@@ -21,28 +21,28 @@ Found a bug or have a feature request? [Open an issue](https://github.com/Silver
 4. **Test** your changes locally
 5. **Submit** a pull request with a clear description
 
-### Improve Documentation
+### Improve documentation
 
 Documentation improvements are always welcome. This docs site is built with [VitePress](https://vitepress.dev/) and lives in a separate repository. See the docs site's AGENTS.md for content guidelines.
 
-### Share Configurations
+### Share configurations
 
 If you've built interesting pipeline configurations or rule sets, consider sharing them as examples in the documentation.
 
-## Development Workflow
+## Development workflow
 
-### Setting Up
+### Setting up
 
 Follow the [Development Setup](/development/setup) guide to get your local environment running.
 
-### Making Changes
+### Making changes
 
 1. **Read the code** before modifying it. Understand the existing patterns.
 2. **Follow existing conventions.** Don't introduce new abstractions where existing patterns work.
 3. **Keep changes focused.** One feature or fix per pull request.
 4. **Update documentation** if your change affects user-facing behavior.
 
-### Code Review Checklist
+### Code review checklist
 
 Before submitting a PR, verify:
 
@@ -61,7 +61,7 @@ Before submitting a PR, verify:
 - [ ] New behavior in `backend/services/*` has a corresponding test under `backend/tests/services/`
 - [ ] Frontend builds without errors
 
-### Commit Messages
+### Commit messages
 
 Use clear, descriptive commit messages:
 
@@ -74,7 +74,7 @@ pipeline execution. Activities are stored as PersonActivity
 records for use as context filters in downstream rules.
 ```
 
-## Architecture Decisions
+## Architecture decisions
 
 When proposing significant changes, consider:
 

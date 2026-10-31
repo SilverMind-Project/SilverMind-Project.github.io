@@ -1,6 +1,6 @@
 # Run Continuous Tracking inference on Jetson Orin Nano Super
 
-This guide explains how to move the latency-sensitive vision models used by the
+Move the latency-sensitive vision models used by the
 Continuous Tracking System (CTS) from a larger NVIDIA server to an NVIDIA
 Jetson Orin Nano Super with 8 GB of unified memory.
 

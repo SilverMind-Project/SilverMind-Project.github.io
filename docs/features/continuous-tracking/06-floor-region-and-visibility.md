@@ -1,6 +1,6 @@
-# Floor Region and Visibility
+# Floor region and visibility
 
-The floor-region work fixes the one place where wall pixels really did affect geometry: Cognitive Companion's camera visibility polygon.
+The floor-region work fixes the one place where wall pixels did affect geometry: Cognitive Companion's camera visibility polygon.
 
 This polygon is not used by the CTS runtime tracker. It is used by CC for camera adjacency inference and operator UI. Bad visibility polygons can make two cameras look adjacent when the shared area is actually a wall projection.
 
@@ -49,7 +49,7 @@ Cognitive Companion stores the polygon on `cts_cameras`:
 
 ## Operator editing
 
-The auto-derived region is a proposal, not a hidden truth. The calibration UI overlays it on the camera snapshot. An operator can accept it, move vertices, or hand-draw a replacement. Saving the region stores `source="manual"` when edited.
+The auto-derived region is a starting proposal. The calibration UI overlays it on the camera snapshot. An operator can accept it, move vertices, or hand-draw a replacement. Saving the region stores `source="manual"` when edited.
 
 If the camera already has a committed homography, saving a floor region recomputes the visibility polygon immediately. That keeps adjacency/UI behavior aligned with the latest operator-reviewed geometry.
 

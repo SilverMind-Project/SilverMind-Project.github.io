@@ -36,7 +36,7 @@ export default defineConfig({
     logo: { light: "/logo-mark.svg", dark: "/logo-mark-inverse.svg" },
 
     nav: [
-      { text: "For Families", link: "/families/overview" },
+      { text: "For families", link: "/families/overview" },
       { text: "Vision", link: "/vision" },
       {
         text: "Developers",
@@ -50,7 +50,7 @@ export default defineConfig({
       },
       { text: "Roadmap", link: "/roadmap" },
       {
-        text: "v0.7.143",
+        text: "v0.7.147",
         items: [
           {
             text: "Code",
@@ -67,7 +67,7 @@ export default defineConfig({
     sidebar: {
       "/families/": [
         {
-          text: "For Families",
+          text: "For families",
           items: [
             { text: "Overview", link: "/families/overview" },
             { text: "What the senior experiences", link: "/families/what-the-senior-experiences" },
@@ -80,10 +80,10 @@ export default defineConfig({
       ],
       "/guide/": [
         {
-          text: "Getting Started",
+          text: "Getting started",
           items: [
             { text: "Introduction", link: "/guide/introduction" },
-            { text: "Quick Start", link: "/guide/getting-started" },
+            { text: "Quick start", link: "/guide/getting-started" },
             { text: "Deployment", link: "/guide/deployment" },
             { text: "Configuration", link: "/guide/configuration" },
             { text: "Architecture", link: "/guide/architecture" },
@@ -92,74 +92,74 @@ export default defineConfig({
       ],
       "/features/": [
         {
-          text: "Core Features",
+          text: "Core features",
           items: [
-            { text: "Composable Pipelines", link: "/features/pipeline" },
-            { text: "Knowledge Repository", link: "/features/knowledge-repository" },
-            { text: "Person Tracking", link: "/features/person-tracking" },
+            { text: "Composable pipelines", link: "/features/pipeline" },
+            { text: "Knowledge repository", link: "/features/knowledge-repository" },
+            { text: "Person tracking", link: "/features/person-tracking" },
             {
-              text: "Continuous Tracking (CTS)",
+              text: "Continuous tracking (CTS)",
               link: "/features/continuous-tracking",
               collapsed: true,
               items: [
                 { text: "Overview", link: "/features/continuous-tracking" },
-                { text: "Tracking Concepts", link: "/features/continuous-tracking/tracking-concepts" },
-                { text: "Frame Pipeline", link: "/features/continuous-tracking/frame-pipeline" },
+                { text: "Tracking concepts", link: "/features/continuous-tracking/tracking-concepts" },
+                { text: "Frame pipeline", link: "/features/continuous-tracking/frame-pipeline" },
                 {
-                  text: "Identity Integrity",
+                  text: "Identity integrity",
                   link: "/features/continuous-tracking/identity-integrity",
                   collapsed: true,
                   items: [
-                    { text: "Architecture and Baseline", link: "/features/continuous-tracking/identity-integrity" },
-                    { text: "Identity Authority", link: "/features/continuous-tracking/identity-integrity/identity-authority" },
-                    { text: "ReID Gallery Governance", link: "/features/continuous-tracking/identity-integrity/reid-gallery-governance" },
-                    { text: "Revision Projections", link: "/features/continuous-tracking/identity-integrity/revision-projections" },
-                    { text: "Visitor Identities", link: "/features/continuous-tracking/identity-integrity/visitor-identities" },
-                    { text: "Cross-Repository Contracts", link: "/features/continuous-tracking/identity-integrity/contracts" },
+                    { text: "Architecture and baseline", link: "/features/continuous-tracking/identity-integrity" },
+                    { text: "Identity authority", link: "/features/continuous-tracking/identity-integrity/identity-authority" },
+                    { text: "ReID gallery governance", link: "/features/continuous-tracking/identity-integrity/reid-gallery-governance" },
+                    { text: "Revision projections", link: "/features/continuous-tracking/identity-integrity/revision-projections" },
+                    { text: "Visitor identities", link: "/features/continuous-tracking/identity-integrity/visitor-identities" },
+                    { text: "Cross-repository contracts", link: "/features/continuous-tracking/identity-integrity/contracts" },
                   ],
                 },
-                { text: "Camera Calibration", link: "/features/continuous-tracking/camera-calibration" },
-                { text: "Camera to Floor Basics", link: "/features/continuous-tracking/01-camera-to-floor-basics" },
-                { text: "Why One Dot Jitters", link: "/features/continuous-tracking/02-why-one-dot-jitters" },
-                { text: "Measurement Uncertainty", link: "/features/continuous-tracking/03-measurement-uncertainty" },
-                { text: "Multi-Camera Fusion", link: "/features/continuous-tracking/04-multi-camera-fusion" },
-                { text: "Posture Fusion", link: "/features/continuous-tracking/05-posture-fusion" },
-                { text: "Floor Region and Visibility", link: "/features/continuous-tracking/06-floor-region-and-visibility" },
-                { text: "Operations and Drift", link: "/features/continuous-tracking/07-operations-drift-and-recalibration" },
-                { text: "Dementia Signals", link: "/features/continuous-tracking/dementia-signals" },
-                { text: "CC Integration", link: "/features/continuous-tracking/cc-integration" },
+                { text: "Camera calibration", link: "/features/continuous-tracking/camera-calibration" },
+                { text: "Camera to floor basics", link: "/features/continuous-tracking/01-camera-to-floor-basics" },
+                { text: "Why one dot jitters", link: "/features/continuous-tracking/02-why-one-dot-jitters" },
+                { text: "Measurement uncertainty", link: "/features/continuous-tracking/03-measurement-uncertainty" },
+                { text: "Multi-camera fusion", link: "/features/continuous-tracking/04-multi-camera-fusion" },
+                { text: "Posture fusion", link: "/features/continuous-tracking/05-posture-fusion" },
+                { text: "Floor region and visibility", link: "/features/continuous-tracking/06-floor-region-and-visibility" },
+                { text: "Operations and drift", link: "/features/continuous-tracking/07-operations-drift-and-recalibration" },
+                { text: "Dementia signals", link: "/features/continuous-tracking/dementia-signals" },
+                { text: "CC integration", link: "/features/continuous-tracking/cc-integration" },
               ],
             },
-            { text: "Voice Companion", link: "/features/voice-companion" },
-            { text: "Guided Companion", link: "/features/guided-companion" },
-            { text: "Daily Living", link: "/features/daily-living" },
-            { text: "E-Ink Displays", link: "/features/eink-display" },
+            { text: "Voice companion", link: "/features/voice-companion" },
+            { text: "Guided companion", link: "/features/guided-companion" },
+            { text: "Daily living", link: "/features/daily-living" },
+            { text: "E-ink displays", link: "/features/eink-display" },
             { text: "Notifications", link: "/features/notifications" },
-            { text: "TTS Service", link: "/features/tts-service" },
-            { text: "MCP Integration", link: "/features/mcp-integration" },
-            { text: "Marauder's Map Mode", link: "/features/marauders-map-mode" },
+            { text: "TTS service", link: "/features/tts-service" },
+            { text: "MCP integration", link: "/features/mcp-integration" },
+            { text: "Marauder's Map mode", link: "/features/marauders-map-mode" },
           ],
         },
       ],
       "/development/": [
         {
-          text: "Developer Guide",
+          text: "Developer guide",
           items: [
-            { text: "Development Setup", link: "/development/setup" },
-            { text: "Extending the Pipeline", link: "/development/extending-pipeline" },
-            { text: "Code Standards", link: "/development/code-standards" },
-            { text: "Identity Integrity Verification", link: "/development/identity-integrity-verification" },
-            { text: "Identity Data Reset", link: "/development/identity-data-reset" },
-            { text: "Private Identity Replay Dataset", link: "/development/private-identity-replay" },
-            { text: "Identity Integrity Rollout", link: "/development/identity-integrity-rollout" },
-            { text: "Face Confidence Calibration", link: "/development/face-confidence-calibration" },
+            { text: "Development setup", link: "/development/setup" },
+            { text: "Extending the pipeline", link: "/development/extending-pipeline" },
+            { text: "Code standards", link: "/development/code-standards" },
+            { text: "Identity integrity verification", link: "/development/identity-integrity-verification" },
+            { text: "Identity data reset", link: "/development/identity-data-reset" },
+            { text: "Private identity replay dataset", link: "/development/private-identity-replay" },
+            { text: "Identity integrity rollout", link: "/development/identity-integrity-rollout" },
+            { text: "Face confidence calibration", link: "/development/face-confidence-calibration" },
             { text: "Contributing", link: "/development/contributing" },
           ],
         },
       ],
       "/api/": [
         {
-          text: "API Reference",
+          text: "API reference",
           items: [{ text: "REST API", link: "/api/reference" }],
         },
       ],
@@ -167,13 +167,13 @@ export default defineConfig({
         {
           text: "Hardware",
           items: [
-            { text: "Supported Devices", link: "/hardware/" },
-            { text: "Jetson CTS Deployment", link: "/hardware/jetson-cts" },
+            { text: "Supported devices", link: "/hardware/" },
+            { text: "Jetson CTS deployment", link: "/hardware/jetson-cts" },
             {
-              text: "Model Quantization",
+              text: "Model quantization",
               link: "/hardware/model-quantization",
             },
-            { text: "Camera Setup", link: "/hardware/camera-setup" },
+            { text: "Camera setup", link: "/hardware/camera-setup" },
           ],
         },
       ],

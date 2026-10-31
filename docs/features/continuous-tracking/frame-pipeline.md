@@ -1,4 +1,4 @@
-# Frame Processing Pipeline
+# Frame processing pipeline
 
 The orchestrator's `FrameProcessingPipeline` (`app/pipeline/frame_pipeline.py`) processes each frame through 17 stages: from JPEG decode through person detection, privacy enforcement, spatial floor projection, ReID and pose inference, face identification, world tracking (which includes pre-association cross-camera dedup and Bayesian identity resolution), detection backfill, PH lifecycle management, posture classification, trajectory writing, keyframe sampling, identity revision, trail management, durable provenance persistence, governed ReID candidate creation, and event publishing. (A conditional fall-detection stage also runs between posture classification and trajectory writing when `fall_detection.enabled`; it is omitted from the count and diagram here because it is off by default.)
 
@@ -109,7 +109,7 @@ flowchart TD
   s3["3. associate()\nHungarian over cost matrix with gating"] --> s4
   s4["4. Update matched PHs\nKalman update, gallery-mean EMA, height EMA,\nmean_quality EMA, expand active_cameras"] --> s5
   s5["5. Spawn PHs for unmatched obs\ngated by room polygon if configured\ninit Kalman; seed identity from face anchor"] --> s6
-  s6["6. Emit PHContinuationCandidate\nfor each spawn near a recently-closed PH"] --> s7
+  s6["6. Emit PHContinuationCandidate\nfor each spawn near a recently closed PH"] --> s7
   s7["7. Close unmatched PHs past ph_close_grace_s\nelse keep open with predicted state"] --> s8
   s8["8. Persist all updated PHs"] --> s9
   s9["9. Identity resolution\napply decisions, collect revisions"] --> s10

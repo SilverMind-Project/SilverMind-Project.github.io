@@ -1,4 +1,4 @@
-# Why One Dot Jitters
+# Why one dot jitters
 
 The symptom was simple: a person stood still, but the live map showed one dot vibrating in place.
 

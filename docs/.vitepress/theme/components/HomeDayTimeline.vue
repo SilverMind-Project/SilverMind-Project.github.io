@@ -86,7 +86,7 @@ onBeforeUnmount(() => {
 <template>
   <section id="day-at-home" class="home-section day-section">
     <div class="section-kicker">A day at home</div>
-    <h2>Built around real caregiving moments.</h2>
+    <h2>From morning reminder to evening summary.</h2>
 
     <div
       ref="root"
@@ -302,11 +302,11 @@ onBeforeUnmount(() => {
         </article>
         <article class="cc-day-item">
           <span>Evening</span>
-          <p>A senior asks about grandchildren and hears a trusted answer from family-curated memory.</p>
+          <p>A senior asks about her grandchildren and hears an answer from facts the family added.</p>
         </article>
         <article class="cc-day-item">
           <span>Night</span>
-          <p>A caregiver receives a concise summary instead of a stream of false alarms.</p>
+          <p>A caregiver gets one short summary of the day.</p>
         </article>
       </div>
     </div>

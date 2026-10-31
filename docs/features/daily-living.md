@@ -1,10 +1,9 @@
-# Daily Living
+# Daily living
 
 Cognitive Companion also watches for the rhythm of an ordinary day: has she eaten, how long
 was the TV on, does today's outfit look like yesterday's, does it look like she's about to make
 tea. These signals feed two things: a countable record a caregiver can ask about later, and a
-small number of gentle, evidence-backed alerts. None of it replaces a caregiver's judgment; it
-gives them something to act on with confidence instead of a guess.
+small number of gentle, evidence-backed alerts. None of it replaces a caregiver's judgment.
 
 ## Ask the companion about the day
 
@@ -27,7 +26,7 @@ routine with the resident: the companion says "she completed the medication rout
 at 9:05" only when that is what actually happened, and something more hedged, like "she was
 near the medicine cabinet, but I can't confirm she took them," when the evidence is weaker. A
 false "yes, she took her medication" is a real risk for a dementia resident's care team, so the
-companion is built to be honest about how sure it is, not just confident-sounding.
+companion says how sure it is.
 
 ## Hygiene: same clothes, and a missed wash-up
 
@@ -71,7 +70,7 @@ where the companion offers to walk her through the tea routine step by step when
 same pattern. That is a deliberate settings change, not something that turns on by itself, and
 it is additionally held back until the guided companion's own safety and escalation systems are
 fully in place: a wrong, unprompted conversation with a vulnerable person is a real cost, so
-this one earns its way to full autonomy with evidence, not a code change.
+this one reaches full autonomy only after the evidence supports it.
 
 ## How this stays affordable
 

@@ -1,4 +1,4 @@
-# Dementia Signal Detection
+# Dementia signal detection
 
 CTS emits <!-- count:wire_signal_kinds -->ten signal kinds per tracked identity. A periodic worker (`DementiaSignalWorker`) runs every 60 s (configurable) and computes eight of them; `fall_suspected` comes from the frame pipeline's fall-detection stage, and `same_clothes_suspected` from the daily appearance evaluator that runs on the same scheduler loop. Three are opt-in per deployment and default to off: `fall_suspected`, `agitation_index`, and `same_clothes_suspected`. Each signal is persisted via upsert with a deterministic UUID5 so the same detection window always maps to the same row.
 

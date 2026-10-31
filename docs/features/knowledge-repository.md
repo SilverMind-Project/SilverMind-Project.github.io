@@ -1,10 +1,10 @@
-# Knowledge Repository
+# Knowledge repository
 
-The Knowledge Repository is a caregiver-curated store of stable facts about the senior's life. It captures what matters most: family relationships, personal biography, medications, daily preferences, and routines. The repository produces two types of delivery artifacts: **info cards** (paraphrased text with images) and **quizzes** (multiple-choice or open-ended questions). Both are delivered through PWA popups, e-ink displays, or Gemini Live voice. The senior can also ask voice questions at any time and receive answers retrieved from the repository via RAG.
+The Knowledge Repository is a caregiver-curated store of stable facts about the senior's life. It holds family relationships, personal biography, medications, daily preferences, and routines. The repository produces two types of delivery artifacts: **info cards** (paraphrased text with images) and **quizzes** (multiple-choice or open-ended questions). Both are delivered through PWA popups, e-ink displays, or Gemini Live voice. The senior can also ask voice questions at any time and receive answers retrieved from the repository via RAG.
 
 Every piece of content passes through a review gate. Nothing reaches the senior until a caregiver approves it. Source documents are uploaded by the caregiver, chunked and embedded via a Triton inference server, and used as the foundation for LLM-assisted content generation. The caregiver reviews drafts, edits where needed, and explicitly approves before delivery rules are activated.
 
-## How It Works
+## How it works
 
 ```mermaid
 flowchart TB
@@ -55,7 +55,7 @@ Content-Type: multipart/form-data
 
 Supported image types: `image/jpeg`, `image/png`, `image/webp`, `image/heic`. Maximum file size is 15 MB and maximum pixel count is 40 MP, both configured in settings.
 
-### Chunking and Embedding
+### Chunking and embedding
 
 After upload, the system automatically chunks the source text and embeds each chunk via the Triton inference server using `embeddinggemma-300m`. Chunks are created using a `RecursiveCharacterTextSplitter` with configurable size and overlap, then embedded in batches.
 
@@ -111,11 +111,11 @@ A document cannot be deleted while it has active (draft, caregiver_review, or ap
 
 :::
 
-## Info Cards
+## Info cards
 
 Info cards are paraphrased, caregiver-approved information cards delivered to the senior. Each card has a title, body text, an optional image layout, and a voice instruction for Gemini Live delivery.
 
-### Layout Types
+### Layout types
 
 Five built-in layouts control how text and images are composed on each delivery surface:
 
@@ -129,7 +129,7 @@ Five built-in layouts control how text and images are composed on each delivery 
 
 Layouts are defined in `config/knowledge_layouts.yaml` and validated at startup. Unknown enum values cause the process to fail immediately so a bad config never reaches a senior-facing delivery.
 
-### Image Pipeline
+### Image pipeline
 
 When a caregiver binds a source image to an info card layout slot, the image pipeline generates per-surface variants:
 
@@ -142,7 +142,7 @@ When a caregiver binds a source image to an info card layout slot, the image pip
 
 Each variant is stored as a separate MinIO object referenced by the `InfoCardImageSlot.variants` JSONB column.
 
-### LLM-Assisted Paraphrase Generation
+### LLM-assisted paraphrase generation
 
 Instead of writing info cards from scratch, the caregiver can upload a source document and ask the system to generate a paraphrase draft. The LLM (configurable via `knowledge.paraphrase_model`) rewrites the source into simple, warm, senior-friendly language and suggests a voice instruction.
 
@@ -190,7 +190,7 @@ Use `text_only` for simple facts (medication dosage, daughter's phone number). U
 
 Quizzes are interactive question sets designed to reinforce memory and engagement. They support two question types: multiple-choice and open-ended.
 
-### Quiz Structure
+### Quiz structure
 
 Each quiz has a title, an optional intro voice template, and a set of questions. Questions are ordered and support per-question regeneration.
 
@@ -201,7 +201,7 @@ Each quiz has a title, an optional intro voice template, and a set of questions.
 | `voice_instruction` | Instruction for how Gemini Live should conduct the quiz |
 | `questions` | Ordered list of multiple-choice or open-ended questions |
 
-### Question Types
+### Question types
 
 **Multiple-choice**: has 3-4 choices with one marked as correct via `is_correct: true`. The senior sees tappable buttons on the PWA and hears the choices read aloud.
 
@@ -217,7 +217,7 @@ class QuizQuestionSuggestion:
     explanation: str          # Shown in caregiver review
 ```
 
-### LLM-Assisted Generation
+### LLM-assisted generation
 
 The caregiver can generate a complete quiz draft from a source document with a single action. The LLM creates questions, answers, and distractors based on the document content. Questions can be regenerated individually without affecting the rest of the quiz.
 
@@ -229,7 +229,7 @@ POST /api/v1/knowledge/quizzes/{id}/regenerate-question
 }
 ```
 
-### Quiz Session Lifecycle
+### Quiz session lifecycle
 
 A quiz session tracks a single delivery to the senior:
 
@@ -265,7 +265,7 @@ The `per_senior_dedupe_hours` setting (default 12) prevents the same quiz from b
 
 :::
 
-### Per-Question Regeneration
+### Per-question regeneration
 
 Individual quiz questions can be regenerated without affecting other questions in the same quiz. The LLM receives the source document, the current question type, and the existing question text, and produces a replacement.
 
@@ -279,7 +279,7 @@ POST /api/v1/knowledge/quizzes/{id}/regenerate-question
 
 The response replaces the question at that ordinal position. Existing quiz response records are preserved for audit purposes since they snapshot the question text at answer time.
 
-## Senior Knowledge Queries (RAG)
+## Senior knowledge queries (RAG)
 
 The senior can ask factual questions about their own life through the voice companion, and the system answers from the knowledge repository. The flow is:
 
@@ -301,7 +301,7 @@ class KnowledgeAnswer:
     answered_via: Literal["rag", "no_answer"]
 ```
 
-### Query Flow
+### Query flow
 
 ```text
 Senior voice question
@@ -322,7 +322,7 @@ pgvector cosine search on approved document chunks
 
 Every query is logged in the `senior_knowledge_queries` table for caregiver review, including the query text, synthesized answer, source document IDs, similarity score, and latency.
 
-### Answer Synthesis
+### Answer synthesis
 
 The LLM is prompted to answer using only the retrieved context. If the context does not contain the answer, it says "I don't have that information" rather than hallucinating. The answer model is configured via `knowledge.answer_model` in settings.
 
@@ -342,7 +342,7 @@ Question: How many grandchildren do I have?
 Answer (in 1-2 simple sentences):
 ```
 
-### Tool Integration
+### Tool integration
 
 The `query_knowledge_base` MCP tool is available to Gemini Live during voice conversations. It is included in the `mcp.gemini_tools` list by default. The tool returns `{answer, source_documents, found}`. When `found` is `false`, Gemini should respond from another tool or politely say it does not know.
 
@@ -362,7 +362,7 @@ The `query_knowledge_base` MCP tool is available to Gemini Live during voice con
 }
 ```
 
-## Voice Instruction System
+## Voice instruction system
 
 Gemini Live receives a system instruction that controls how it delivers content to the senior. The knowledge repository uses a 3-layer composition to build this instruction:
 
@@ -402,18 +402,18 @@ When a new delivery starts (info card, quiz, or interactive prompt), the system 
 
 Template variables like `{{senior_name}}` are available in voice instruction templates and resolved from the household member records before sending to Gemini.
 
-## Pipeline Steps
+## Pipeline steps
 
 The knowledge repository adds two new pipeline step types and extends one existing step. See [Composable Pipelines](/features/pipeline) for the full pipeline system reference.
 
-### New Step Types
+### New step types
 
 | Step type | Category | Description | Key config |
 | --------- | -------- | ----------- | ---------- |
 | `info_card` | action | Deliver a curated info card | `info_card_id`, `channels` (pwa/eink), `pwa_dismiss_seconds`, `voice_instruction` |
 | `quiz_start` | flow | Start an interactive quiz session | `quiz_id`, `max_questions`, `randomize_order`, `session_timeout_minutes`, `voice_instruction` |
 
-### Extended Step
+### Extended step
 
 The existing `interactive_prompt` step (category: flow) was extended with a `voice_instruction` config key that follows the same 3-layer composition as info cards and quizzes:
 
@@ -426,7 +426,7 @@ config:
   countdown_seconds: 30
 ```
 
-### Example: Morning Info Card Delivery
+### Example: Morning info card delivery
 
 A cron rule fires every morning at 9 AM to deliver a "Today's date and family fact" info card:
 
@@ -452,7 +452,7 @@ Pipeline:
     voice_instruction: "Read this cheerfully. It's a morning greeting."
 ```
 
-### Example: Weekly Quiz Session
+### Example: Weekly quiz session
 
 A weekly quiz about family photos, delivered every Sunday afternoon:
 
@@ -479,7 +479,7 @@ Pipeline:
     voice_instruction: "Conduct this quiz like a friendly conversation. Encourage guessing."
 ```
 
-### Example: Interactive Prompt with Voice Instruction
+### Example: Interactive prompt with voice instruction
 
 A bathroom occupancy safety check-in extended with a voice instruction override:
 
@@ -501,7 +501,7 @@ Keep voice instructions concise (1-3 sentences). Focus on tone and behavior rath
 
 :::
 
-## MCP Tools
+## MCP tools
 
 Three knowledge-related MCP tools are exposed to Gemini Live for voice interactions. See [MCP Integration](/features/mcp-integration) for the full MCP tool reference.
 
@@ -551,11 +551,11 @@ Called at the end of a quiz to finalize the session. Broadcasts a summary to the
 }
 ```
 
-Returns the final score for Gemini to share with the senior in a supportive way (e.g. "Great job! You got 4 out of 5 right!").
+Returns the final score for Gemini to share with the senior in a supportive way (e.g. "Well done, you got 4 out of 5 right.").
 
 ## Configuration
 
-### Knowledge Layouts (`config/knowledge_layouts.yaml`)
+### Knowledge layouts (`config/knowledge_layouts.yaml`)
 
 Defines image layout specifications for info cards and quiz questions. Parsed and validated at startup by the `LayoutRegistry`. Each layout declares which surfaces it targets and exactly which resized variants must exist for each delivery surface.
 
@@ -588,7 +588,7 @@ layouts:
 
 See [Configuration](/guide/configuration) for the full config file reference.
 
-### Voice Instructions (`config/knowledge_voice.yaml`)
+### Voice instructions (`config/knowledge_voice.yaml`)
 
 Default voice instructions per delivery type. These are composed with per-resource and per-step overrides at delivery time.
 
@@ -633,7 +633,7 @@ knowledge:
 | `knowledge.max_pixels` | 40000000 | Max image pixel dimensions |
 | `knowledge.allowed_mime_types` | [...] | Allowed image upload MIME types |
 
-## Related Pages
+## Related pages
 
 - [Composable Pipelines](/features/pipeline): step system, pipeline builder, condition expressions, and prompt templates
 - [Voice Companion](/features/voice-companion): Gemini Live voice delivery, WebSocket lifecycle, and tool calling

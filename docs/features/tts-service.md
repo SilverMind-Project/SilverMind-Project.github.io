@@ -1,8 +1,8 @@
-# TTS Service
+# TTS service
 
 The [TTS Service](https://github.com/SilverMind-Project/tts-service) is a self-hosted text-to-speech microservice that provides an OpenAI-compatible API for speech synthesis. It supports multiple TTS engines optimized for Indian languages and integrates with Home Assistant via the Wyoming protocol.
 
-## Engine Comparison
+## Engine comparison
 
 | Engine | Model | Languages | Voice Cloning | Streaming | VRAM |
 | --- | --- | --- | --- | --- | --- |
@@ -16,21 +16,21 @@ The [TTS Service](https://github.com/SilverMind-Project/tts-service) is a self-h
 
 **Edge TTS** is the best option when no GPU is available. It proxies requests to a remote Microsoft Edge TTS service.
 
-## Streaming Architecture
+## Streaming architecture
 
 The service supports true streaming for reduced time-to-first-audio:
 
-### Token-Level Streaming (Svara)
+### Token-level streaming (Svara)
 
 Svara uses a SNAC (neural audio codec) decoder. During generation, tokens are intercepted via a custom streamer and grouped into 7-token SNAC frames. Frames are accumulated into batches of `stream_frame_buffer` frames (default 21 = ~210ms) and decoded together through SNAC. Batching is essential because SNAC's convolutional decoder needs temporal context from neighboring frames for artifact-free audio.
 
 The decoded PCM is clipped to [-1, 1] before int16 conversion to prevent overflow, and yielded as a single chunk per batch. On the frontend, all chunks are accumulated until the stream ends, then played as a single contiguous buffer via the Web Audio API. This avoids audible gaps when inference is slower than real-time.
 
-### Proxied Streaming (Edge TTS)
+### Proxied streaming (Edge TTS)
 
 The Edge TTS engine opens a streaming HTTP connection to the remote openai-edge-tts service and proxies PCM chunks directly to the client with no local decoding.
 
-### Chunked Fallback
+### Chunked fallback
 
 Engines without native streaming support (parler, fish_speech, seamless) generate audio in full, then chunk the result into PCM segments.
 
@@ -75,7 +75,7 @@ Lists all available voices (built-in + custom voice samples).
 
 Returns GPU status, loaded engines, and voice sample count.
 
-## Voice Cloning
+## Voice cloning
 
 Fish Speech supports voice cloning from short (10-30 second) reference audio samples:
 
@@ -88,11 +88,11 @@ Samples are stored in `data/voice_samples/` with a `meta.json` metadata file alo
 
 The TTS service integrates with Cognitive Companion through <!-- count:none -->two notification channels:
 
-### TTS Channel (Home Assistant playback)
+### TTS channel (Home Assistant playback)
 
 The `tts` channel generates MP3 audio, uploads it to MinIO, and plays it on a configured Home Assistant media player entity. This is the traditional announcement path for smart speakers.
 
-### Announcement Channel (PWA streaming)
+### Announcement channel (PWA streaming)
 
 The `announcement` channel streams TTS audio directly to connected PWA clients via WebSocket. The `TTSClient.stream_audio()` method opens a streaming connection to the TTS service. PCM chunks are broadcast to all connected WebSocket clients as binary frames, and the frontend plays them in real-time using the Web Audio API.
 

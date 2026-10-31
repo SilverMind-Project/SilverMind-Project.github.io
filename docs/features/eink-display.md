@@ -1,4 +1,4 @@
-# E-Ink Display Pipeline
+# E-ink display pipeline
 
 Cognitive Companion renders notification images for color e-ink displays (800x480, targeting Seeed reTerminal). Each device gets its own active image, and ESPHome-based devices poll a static URL to fetch their current display.
 
@@ -19,7 +19,7 @@ Templates define where text can be placed on a background image. Each template h
 - One or more **text regions** defined as bounding boxes
 - **Font configuration** with size range for auto-fitting
 
-### Region Properties
+### Region properties
 
 Each region in a template specifies:
 
@@ -34,7 +34,7 @@ Each region in a template specifies:
 | `bg_color` | Background color for the region |
 | `text_color` | Text color |
 
-### Template Editor
+### Template editor
 
 The admin console provides a visual template editor at `/admin/eink-templates`:
 
@@ -64,11 +64,11 @@ POST /api/v1/image/preview
 
 This returns a PNG image directly for inspection before committing to a device.
 
-## Per-Device Image Serving
+## Per-device image serving
 
 Each e-ink display device is identified by its `sensor_id` (derived from the device key during authentication). Devices poll for their active image at `GET /api/v1/image/active`.
 
-### Fallback Behavior
+### Fallback behavior
 
 When a device polls for its image:
 
@@ -77,7 +77,7 @@ When a device polls for its image:
 3. If no active image file exists: fall back to the default template
 4. If neither exists: respond with `404 Not Found`
 
-### Refresh Suppression
+### Refresh suppression
 
 E-ink displays perform a full pixel refresh on every image they receive. This is visually disruptive, so the endpoint suppresses redundant refreshes:
 
@@ -95,13 +95,13 @@ image:
 
 The delivery record (`last_served_hash`, `last_served_at`) is stored in the `ActiveImageState` row for each device. A new device's first poll always receives the image.
 
-### Image Expiry
+### Image expiry
 
 Active images have an `expires_at` timestamp. When a notification image expires, the device automatically reverts to its default display. The default expiry duration is set per-rule via `eink_expiry_minutes` in a notification step (default: 30 minutes).
 
 Expiry and refresh suppression are independent: an image that has passed its `expires_at` causes the default template to be served. The default template is subject to the same hash-based suppression as any other image.
 
-## Pipeline Integration
+## Pipeline integration
 
 The `notification` pipeline step supports e-ink targeting via the `eink_targets` config field:
 
@@ -125,9 +125,9 @@ When `eink` is included in the notification channels, the `NotificationDispatche
 
 If `eink_targets` is omitted, all registered e-ink sensors are targeted.
 
-## API Reference
+## API reference
 
-### Template Endpoints
+### Template endpoints
 
 | Method | Path | Description |
 | --- | --- | --- |
@@ -138,7 +138,7 @@ If `eink_targets` is omitted, all registered e-ink sensors are targeted.
 | `DELETE` | `/api/v1/image/templates/{id}` | Remove a template |
 | `GET` | `/api/v1/image/templates/{id}/preview` | Serve the raw template image |
 
-### Render Endpoints
+### Render endpoints
 
 | Method | Path | Description |
 | --- | --- | --- |
@@ -147,7 +147,7 @@ If `eink_targets` is omitted, all registered e-ink sensors are targeted.
 | `POST` | `/api/v1/image/preview-form` | Live preview with uploaded image or template overrides |
 | `POST` | `/api/v1/image/reset` | Reset a device's display to the default template |
 
-### State Endpoints
+### State endpoints
 
 | Method | Path | Description |
 | --- | --- | --- |
@@ -155,7 +155,7 @@ If `eink_targets` is omitted, all registered e-ink sensors are targeted.
 | `GET` | `/api/v1/image/states` | List active image state for all devices (admin) |
 | `GET` | `/api/v1/image/fonts` | List available font files (admin) |
 
-## Adding a New E-Ink Device
+## Adding a new e-ink device
 
 1. Add a device key in `config/auth.yaml` with `image:read` permission and a `sensor_id`:
 

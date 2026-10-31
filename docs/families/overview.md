@@ -1,16 +1,12 @@
 # Cognitive Companion for families
 
-Deciding how to help an aging parent stay in their own home is rarely simple. You want to know they are safe without putting a camera on them all day, and you want to help without taking over the small daily decisions that keep them feeling like themselves.
+Cognitive Companion helps an aging parent stay in their own home. It watches for changes in their routine, reminds them of things when they need it, and tells the family what changed.
 
-Cognitive Companion is built for that middle ground. It watches for the changes that actually matter, reminds the senior of things at the moment they need them, and tells the family what is going on in a way you can act on.
-
-This section is for families and care partners weighing whether the system fits their household. It stays out of the technical weeds. If you are the person actually installing it, the [operator guides](/guide/getting-started) are where to go.
+These pages are for families and care partners deciding whether it fits their household. If you are installing it, start with the [operator guides](/guide/getting-started).
 
 ## The problem it solves
 
-Most home monitoring lands at one of two extremes. Basic motion sensors cry wolf and tell you nothing about context. Cloud cameras stream your relative's private life to someone else's servers. Full automation takes over the routines that keep a person sharp.
-
-Cognitive Companion sits between them. Instead of raw footage, you get context: where someone is, what changed, and whether it is worth your attention right now.
+Motion sensors alert often and say little about what happened. Cloud cameras send a relative's private life to someone else's servers. Cognitive Companion runs in the home and tells you where someone is, what changed, and whether it needs you now.
 
 ## What it does, in plain terms
 
@@ -31,4 +27,4 @@ Cognitive Companion sits between them. Instead of raw footage, you get context: 
 
 ## What it will not do
 
-It does not diagnose dementia or anything else, and it is not a substitute for a doctor or a nurse. It reminds and it alerts, but it never acts for the senior: it will prompt someone to take their medication, never administer it. The decisions stay with the person and the family.
+It does not diagnose dementia or anything else, and it does not replace a doctor or a nurse. It reminds and alerts but never acts for the senior: it prompts someone to take their medication and leaves the rest to them.

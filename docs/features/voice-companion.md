@@ -1,6 +1,6 @@
-# Voice Companion
+# Voice companion
 
-The Voice Companion provides real-time conversational AI for seniors, powered by Google Gemini Live with WebSocket audio streaming. It's designed for natural, empathetic conversation, not command-and-control interaction.
+The Voice Companion provides real-time conversational AI for seniors, powered by Google Gemini Live with WebSocket audio streaming. The senior talks to it in ordinary sentences; there are no commands to learn.
 
 ## Overview
 
@@ -14,9 +14,9 @@ Browser Speaker   ← WebSocket ← Backend Audio Handler ← Gemini Live API
 
 The WebSocket connection also carries push notifications (alerts, reminders, medication prompts) from the rule engine to the frontend. These are delivered regardless of whether the user has started a voice session.
 
-## How It Works
+## How it works
 
-### WebSocket Lifecycle
+### WebSocket lifecycle
 
 The frontend connects to `/ws/audio` immediately on page load. This keeps the channel open for push notifications (alerts, reminders) without touching Gemini Live. A Gemini session is opened only when the first audio chunk, text message, or orchestrator prompt arrives. After each session ends naturally (e.g. due to provider-side inactivity), the backend waits for the next burst of activity before reconnecting. No keepalive messages are sent.
 
@@ -27,7 +27,7 @@ User stops      → Gemini session ends  → WebSocket stays open for notificati
 User taps mic   → audio flows          → new Gemini session opens
 ```
 
-### Audio Pipeline
+### Audio pipeline
 
 1. The frontend captures microphone audio through a high-pass filter (cutoff: 150 Hz) that removes fan and AC hum before the signal reaches the VAD or the backend.
 2. A 2.5-second ambient calibration pass adjusts the VAD threshold to the filtered noise floor after the mic opens.
@@ -37,7 +37,7 @@ User taps mic   → audio flows          → new Gemini session opens
 6. Gemini's audio responses stream back through the same WebSocket to the browser.
 7. The frontend plays the audio through the browser's speakers.
 
-### Session Management
+### Session management
 
 - Each WebSocket connection creates one conversation session in the database.
 - The `ConversationManager` maintains conversation history with configurable TTL and max turns.
@@ -45,7 +45,7 @@ User taps mic   → audio flows          → new Gemini session opens
 - The WebSocket connection manager (`backend/websocket/connection_manager.py`) tracks active connections and handles broadcast delivery.
 - Gemini Live sessions open and close as needed within the lifetime of the WebSocket connection. Conversation history is injected into each new Gemini session as context.
 
-### Transcript Actor Delineation
+### Transcript actor delineation
 
 The voice session tracks three distinct actors in the conversation:
 
@@ -55,7 +55,7 @@ The voice session tracks three distinct actors in the conversation:
 
 This separation ensures the senior has a natural conversation experience without seeing internal automation. The full conversation log, including orchestrator turns, is persisted for caregiver review.
 
-### System Instruction
+### System instruction
 
 The Gemini model is configured with a system instruction tailored for senior care:
 
@@ -83,7 +83,7 @@ conversation:
   max_turns: 50
 ```
 
-### Key Settings
+### Key settings
 
 | Setting | Default | Description |
 | ------- | ------- | ----------- |
@@ -91,11 +91,11 @@ conversation:
 | `conversation.history_ttl_minutes` | 30 | How long to keep conversation history |
 | `conversation.max_turns` | 50 | Maximum turns before history is trimmed |
 
-## Background Noise Filtering
+## Background noise filtering
 
-The frontend applies a 150 Hz high-pass BiquadFilter before any audio reaches the VAD or the backend. Low-frequency hum from fans, air conditioning, and HVAC (typically 50-120 Hz) is removed at the signal level, not just masked by threshold tuning. After the filter, a 2.5-second calibration window samples the remaining ambient noise to set a per-session VAD threshold, so the system adapts to each room's acoustic conditions.
+The frontend applies a 150 Hz high-pass BiquadFilter before any audio reaches the VAD or the backend. Low-frequency hum from fans, air conditioning, and HVAC (typically 50-120 Hz) is removed from the signal before thresholds are applied. After the filter, a 2.5-second calibration window samples the remaining ambient noise to set a per-session VAD threshold, so the system adapts to each room's acoustic conditions.
 
-## Tamil Language Support
+## Tamil language support
 
 The system supports Tamil language interaction:
 
@@ -103,7 +103,7 @@ The system supports Tamil language interaction:
 - Voice TTS uses Azure Neural voices (default: `en-IN-NeerjaExpressiveNeural`).
 - The Gemini system instruction can be customized to respond in Tamil.
 
-## Frontend Interface
+## Frontend interface
 
 The Companion View (`frontend/src/views/CompanionView.vue`) provides:
 
@@ -113,11 +113,11 @@ The Companion View (`frontend/src/views/CompanionView.vue`) provides:
 - **Connection status** indicator.
 - **Alert overlay** for emergency, warning, reminder, and info notifications delivered from the rule engine via WebSocket, visible regardless of audio session state.
 
-## Tool Calling
+## Tool calling
 
 The voice companion supports function calling via Gemini Live. A configurable subset of MCP tools is exposed as Gemini function declarations, allowing the companion to answer factual queries using real system data.
 
-### Tool Call Flow
+### Tool call flow
 
 1. When a Gemini Live session opens, the `GeminiToolAdapter` converts MCP tool schemas into Gemini `FunctionDeclaration` objects and includes them in the session config.
 2. When the senior asks something like "what's the weather?" or "where is everyone?", Gemini recognizes that a tool call is needed.
@@ -125,7 +125,7 @@ The voice companion supports function calling via Gemini Live. A configurable su
 4. The tool result is sent back to Gemini, which incorporates it into a natural spoken response.
 5. The senior hears the answer as part of the conversation; raw tool data is never displayed.
 
-### Available Voice Tools
+### Available voice tools
 
 The tool subset is configured in `settings.yaml` under `mcp.gemini_tools`:
 
@@ -145,18 +145,18 @@ mcp:
 
 See [MCP Integration](/features/mcp-integration#voice-companion-integration) for the full voice-enabled subset. Destructive tools like `trigger_rule` are excluded to prevent unintended actions during voice conversations.
 
-### Example Queries
+### Example queries
 
 - "What time is it?" calls `get_local_datetime`
 - "What's the weather like?" calls `get_weather`
 - "Where is grandma?" calls `get_person_locations`
 - "Are there any alerts?" calls `get_signals_feed`
 
-### Conversation Logging
+### Conversation logging
 
 Tool calls are persisted in the conversation database as `system` turns with the tool name, arguments, and result stored in the `metadata_json` field. This provides a full audit trail for caregiver review.
 
-## Optional: Gemini Dependency
+## Optional: Gemini dependency
 
 The Gemini Live integration requires the `google-genai` package, which is an optional dependency:
 

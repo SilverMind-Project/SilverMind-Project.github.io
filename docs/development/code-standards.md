@@ -1,8 +1,8 @@
-# Code Standards
+# Code standards
 
-This document outlines the coding standards and conventions used in Cognitive Companion. Following these ensures consistency and helps AI coding agents work effectively with the codebase.
+Coding standards and conventions for Cognitive Companion. Consistent code is easier for people and AI coding agents to work in.
 
-## Python (Backend)
+## Python (backend)
 
 ### Style
 
@@ -12,7 +12,7 @@ This document outlines the coding standards and conventions used in Cognitive Co
 - **Target**: Python 3.14
 - **Async**: Use `async`/`await` for all I/O operations
 
-### Foundation Layer: `backend.core.*`
+### Foundation layer: `backend.core.*`
 
 The `backend/core/` package holds a higher bar than the rest of the tree and
 is the reference implementation new contributors should read first. A
@@ -101,7 +101,7 @@ logger.error("pipeline_step_failed", step_type=step.step_type, error=str(e))
 logger.exception("flush_db_error", sensor_id=sensor_id)  # includes traceback
 ```
 
-### Error Handling
+### Error handling
 
 Raise custom exceptions from `backend/core/exceptions.py`:
 
@@ -124,7 +124,7 @@ except SomeError as e:
     raise
 ```
 
-### Service Pattern
+### Service pattern
 
 Services are instantiated in the FastAPI lifespan and attached to `app.state`:
 
@@ -151,7 +151,7 @@ interval = settings.get("homeassistant.poll_interval_seconds", 30)
 
 Store secrets in environment variables, referenced in YAML via `${ENV_VAR}` syntax. Never hardcode secrets.
 
-## JavaScript/Vue (Frontend)
+## JavaScript/Vue (frontend)
 
 ### Framework
 
@@ -160,7 +160,7 @@ Store secrets in environment variables, referenced in YAML via `${ENV_VAR}` synt
 - **Pinia** for state management
 - **Vite** for build tooling
 
-### User Feedback
+### User feedback
 
 Use composables instead of browser dialogs:
 
@@ -185,7 +185,7 @@ if (confirmed) {
 }
 ```
 
-### Error Handling
+### Error handling
 
 Never swallow errors silently. Bare `catch {}` blocks must log:
 
@@ -202,7 +202,7 @@ try {
 }
 ```
 
-### Component Cleanup
+### Component cleanup
 
 Always clean up event listeners and intervals:
 
@@ -271,7 +271,7 @@ CTS stream consumers that cannot process a message dead-letter it: they XACK the
 
 Any data exposed to the Vue UI through a FastAPI router must be exposed to MCP tools by reading the **same** service function. MCP tools may not contain query logic; they call service methods and adapt the result. Import-linter contracts in `pyproject.toml` enforce that `backend.mcp` may not import from `backend.models` or repository modules directly.
 
-## Frontend visualisation rules (D2/D3)
+## Frontend visualization rules (D2/D3)
 
 - **One shared component per data shape.** Time series, bars, heatmaps, scatter, and DAGs are rendered by the shared ECharts components in `components/charts/` and `components/process/`. No view hand-rolls a chart of the same shape.
 - **ECharts via `vue-echarts`, explicit imports only.** No full-bundle ECharts import; no second charting library.

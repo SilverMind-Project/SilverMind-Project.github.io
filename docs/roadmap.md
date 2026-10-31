@@ -1,8 +1,8 @@
 # Roadmap
 
-Proposed features and integration pathways for future development. We welcome community input. If you're interested in working on any of these, [open an issue](https://github.com/SilverMind-Project/cognitive-companion/issues) to discuss your approach.
+Proposed features, and features that have shipped. To work on one, [open an issue](https://github.com/SilverMind-Project/cognitive-companion/issues) to discuss your approach.
 
-## ~~Home Assistant Webhook Triggers~~ :white_check_mark:
+## ~~Home Assistant webhook triggers~~ :white_check_mark:
 
 **Status:** Implemented
 
@@ -10,13 +10,13 @@ Rules can now be triggered via `POST /api/v1/webhooks/{rule_id}` with an `X-Webh
 
 See [API Reference: Webhooks](/api/reference#webhooks) for details.
 
-## ~~Enhanced Pipeline Triggers with Input Parameters~~ :white_check_mark:
+## ~~Pipeline triggers with input parameters~~ :white_check_mark:
 
 **Status:** Implemented
 
 `TriggerContext` now includes a `webhook_payload` field. Webhook payloads and manual trigger parameters are available in `pipeline_data["trigger_input"]` for downstream steps to reference.
 
-## ~~Gemini Live Tool Calling~~ :white_check_mark:
+## ~~Gemini Live tool calling~~ :white_check_mark:
 
 **Status:** Implemented
 
@@ -24,7 +24,7 @@ The voice companion supports function calling via the Gemini Live session. Tool 
 
 Configure which tools are available to the voice companion via `mcp.gemini_tools` in `settings.yaml`. See [MCP Integration](/features/mcp-integration) for the full tool list.
 
-## ~~Knowledge Repository~~ :white_check_mark:
+## ~~Knowledge repository~~ :white_check_mark:
 
 **Status:** Implemented
 
@@ -41,31 +41,31 @@ Key capabilities:
 
 See [Knowledge Repository](/features/knowledge-repository) for full documentation.
 
-## ~~Cross-Camera Dedup (Hallway/Bathroom Case)~~ :white_check_mark:
+## ~~Cross-camera dedup (hallway/bathroom case)~~ :white_check_mark:
 
 **Status:** Implemented (May 2026)
 
 When a hallway camera and an adjacent camera both observe the same senior at a bathroom door, the pre-association floor-point dedup pass resolves them to a single PersonHypothesis. This ensures the `bathroom_dwell_anomaly` signal starts from the correct time and that the admin live view shows one person rather than two phantom tracks. The integration proof is `test_hallway_bathroom_one_person` replaying `hallway_bathroom_door.bin`.
 
-## ~~Dashboard Unification~~ :white_check_mark:
+## ~~Dashboard unification~~ :white_check_mark:
 
 **Status:** Implemented (May 2026)
 
 The separate CTS Dashboard and Presence Fusion dashboards have been collapsed into a single role-aware Tracking workspace (`TrackingWorkspace.vue`). All six panels (presence map, occupancy table, signal feed, trajectory heatmap, quality gauge, and floor plan) read from `usePersonPresence` as a single data layer. Role-aware panel visibility is controlled by permissions, not separate page code. The previous per-role dashboards and their redundant fetch paths have been removed.
 
-## ~~Live Process Visualisation~~ :white_check_mark:
+## ~~Live process visualization~~ :white_check_mark:
 
 **Status:** Implemented (May 2026)
 
 The Process Activity view (`/activity/process`) streams real-time pipeline execution events via `GET /ws/pipeline`. It shows active rule pipeline runs as live DAGs (via `CcDagChart`), recent ingest activity from reCamera sensors (via `CcLiveActivityFeed`), and a historical step timeline (via `CcStatusTimeline`). The `useLivePipeline` composable manages connection state with 3-second exponential backoff and never shows a stale DAG as live data.
 
-## ~~CTS Robustness: Continuity, Multi-View ReID, and Zero-Calibration Cross-Camera~~ :white_check_mark:
+## ~~CTS robustness: continuity, multi-view ReID, and zero-calibration cross-camera~~ :white_check_mark:
 
 **Status:** Implemented (June 2026)
 
-Tracking now holds identity through turns, walks, and camera handoffs instead of fragmenting into many short-lived UNKNOWN tracks. PersonHypothesis revival reuses a recently-closed track instead of spawning a new one; sticky maintenance holds a committed identity through evidence gaps unless a recognized different-identity face contradicts it. Face evidence is three-valued (recognized, candidate, unrecognized) and pose-aware, so a resident at a bad angle corroborates their own identity rather than vanishing. Multi-view ReID represents body appearance per orientation and matches by the best view, so a person who turned around is still re-identified. Cross-camera linking works without homography: a learned camera-adjacency topology plus multi-view appearance carries identity across uncalibrated cameras, and overlapping opposite-perspective cameras are joined at the identity level with a co-presence link. CTS also emits low-rate semantic state-change events (presence, dwell) so the rule-trigger load is decoupled from camera frame rate. Each mechanism shipped behind a config flag with a frame-replay proof and a guardrail that a stranger never inherits a resident's identity.
+Tracking now holds identity through turns, walks, and camera handoffs instead of fragmenting into many short-lived UNKNOWN tracks. PersonHypothesis revival reuses a recently closed track instead of spawning a new one; sticky maintenance holds a committed identity through evidence gaps unless a recognized different-identity face contradicts it. Face evidence is three-valued (recognized, candidate, unrecognized) and pose-aware, so a resident at a bad angle corroborates their own identity rather than vanishing. Multi-view ReID represents body appearance per orientation and matches by the best view, so a person who turned around is still re-identified. Cross-camera linking works without homography: a learned camera-adjacency topology plus multi-view appearance carries identity across uncalibrated cameras, and overlapping opposite-perspective cameras are joined at the identity level with a co-presence link. CTS also emits low-rate semantic state-change events (presence, dwell) so the rule-trigger load is decoupled from camera frame rate. Each mechanism shipped behind a config flag with a frame-replay proof and a guardrail that a stranger never inherits a resident's identity.
 
-## Pipeline Templates / Presets
+## Pipeline templates / presets
 
 **Status:** Proposed
 
@@ -84,7 +84,7 @@ A `GET /rules/templates` endpoint lists presets, and `POST /rules/from-template`
 
 **Impact:** Dramatically lowers the barrier to entry for new users.
 
-## Activity Timeline
+## Activity timeline
 
 **Status:** Proposed
 
@@ -104,13 +104,13 @@ A `GET /rules/templates` endpoint lists presets, and `POST /rules/from-template`
 
 ---
 
-## Contributing to the Roadmap
+## Contributing to the roadmap
 
 Have an idea that's not listed here? We'd love to hear it. The best way to propose a new feature is to [open a GitHub issue](https://github.com/SilverMind-Project/cognitive-companion/issues) with:
 
 1. **Problem statement**: what limitation does this address?
 2. **Proposed design**: how would you implement it?
 3. **Use cases**: who benefits and how?
-4. **Impact**: what does this unlock for the project?
+4. **Impact**: what does this make possible?
 
 We prioritize features that maintain the project's core values: privacy-first, on-premise, composable, and accessible to multigenerational households.

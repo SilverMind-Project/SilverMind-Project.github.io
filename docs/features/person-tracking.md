@@ -1,8 +1,8 @@
-# Person Identification and Tracking
+# Person identification and tracking
 
 Cognitive Companion uses GPU-accelerated face recognition to identify household members across camera feeds, then fuses those detections with Home Assistant presence sensors for whole-house location tracking.
 
-## Face Recognition
+## Face recognition
 
 The person identification system runs as a [companion microservice](https://github.com/SilverMind-Project/person-identification-service) using InsightFace (buffalo_l model pack) with ArcFace 512-dimensional embeddings.
 
@@ -29,7 +29,7 @@ Upload 5-10 reference photos per person through the admin UI (**Members & Enroll
 
 **Roster health.** The **Members & Enrollment** page shows a warning when the roster is incomplete: it lists active, non-guest members with fewer than `roster.min_face_embeddings` enrolled photos (default 5, set in the Cognitive Companion `config/settings.yaml`) and counts recurring visitors waiting for review. If the person-ID service is unreachable, the page says the check is unavailable rather than reporting the roster as complete. The same data is available from `GET /api/v1/persons/roster-health` and the `get_roster_health` MCP tool.
 
-### Identification Pipeline
+### Identification pipeline
 
 Two identification paths exist, depending on the calling system:
 
@@ -54,7 +54,7 @@ For the floor-plane side of CTS, including camera calibration, measurement uncer
 fusion, posture fusion, visibility polygons, and drift detection, read the progressive
 [Continuous Tracking floor series](/features/continuous-tracking/01-camera-to-floor-basics).
 
-### Annotated Images
+### Annotated images
 
 When `include_annotated_image` is enabled in a pipeline step's config, the person-ID service returns a copy of each frame with bounding boxes and name labels drawn over detected faces. These annotated images are:
 
@@ -74,7 +74,7 @@ The person-ID service compares each face with the closest enrolled person and re
 
 Both thresholds live in the person-ID service's `config/settings.yaml`; override the first with the `RECOGNITION_THRESHOLD` environment variable. The Continuous Tracking orchestrator applies its own floor on top: it discards `recognized` faces below `face_id.min_raw_similarity` (default `0.6`) and passes `candidate` faces to the identity resolver as weak evidence. A calibrated probability is reported separately as `calibrated_confidence` once a calibration artifact is deployed; see [Face confidence calibration](/development/face-confidence-calibration).
 
-### Guest Image Saving
+### Guest image saving
 
 When the `save_guest_images` flag is set to `true` on an identification request, the person-ID service uploads the **full frame image** to MinIO whenever unidentified guests are detected. Images are stored under the `guests/` prefix organized by date:
 
@@ -85,7 +85,7 @@ guests/2026-03-23/143022-234567_f1_1guests.jpg
 
 The filename encodes: `{UTC time}_{frame index}_{guest count}.jpg`. Metadata is recorded in the `guest_visits` hypertable for querying. Guest images are stored in MinIO (the shared S3-compatible object store), not on the local filesystem.
 
-## Motion Direction Detection
+## Motion direction detection
 
 Cross-frame centroid tracking classifies movement direction:
 
@@ -99,7 +99,7 @@ Cross-frame centroid tracking classifies movement direction:
 
 **Use case:** Door-mounted cameras can infer entering vs. leaving a room based on movement direction relative to camera placement.
 
-## Camera Topology
+## Camera topology
 
 Raw motion directions carry no room-level meaning on their own. Camera topology maps each raw direction to a semantic transition for a specific camera, so a rule can fire when someone *enters* the kitchen rather than just when motion is detected.
 
@@ -142,7 +142,7 @@ class RoomTransition:
 
 Each computed transition is stored in `PersonLocationService` presence segments with the `direction_semantic` field populated. The `person_identification` step also writes transitions to `pipeline_data["room_transitions"]` for use in downstream steps and notification templates.
 
-### Room Transition filter
+### Room transition filter
 
 The `room_transition` context filter lets rules fire only when a person makes a specific type of transition. Configure it on a rule alongside other context filters:
 
@@ -167,7 +167,7 @@ config:
 
 This filter is evaluated against `PersonLocationService` presence segments, so it works correctly across both direct camera detections and HA-sensor-inferred transitions.
 
-## Whole-House Location Tracking
+## Whole-house location tracking
 
 The presence system maintains real-time location state for each household member via `PersonLocationService` by fusing multiple data sources (`world_tracker`, `face_sighting`, `sensor`, `manual`). Source arbitration priority and per-source evidence aging govern active presence segments.
 
@@ -208,7 +208,7 @@ When CTS is enabled, the tracking orchestrator identifies persons across multipl
 
 For rooms without cameras (such as bathrooms), HA presence sensors (PIR/mmWave) provide occupancy data. The `ha_bed_sensor` provider reads from a dedicated bed-occupancy binary sensor. The `ha_device_tracker` provider reads phone or watch location from HA's `device_tracker` entity.
 
-### Location State and History
+### Location state and history
 
 All person location state lives in `PersonLocationService` (`location_observations` and `presence_segments` tables):
 
@@ -218,7 +218,7 @@ All person location state lives in `PersonLocationService` (`location_observatio
 - **Quiet gap / TTL**: per-source evidence aging automatically closes segments when a source goes quiet
 - **History timeline**: `presence_history()` queries presence segments and bucketed observations over arbitrary time ranges. Query via `GET /api/v1/persons/{id}/history?hours=24`.
 
-### Home Assistant Propagation
+### Home Assistant propagation
 
 Person locations are pushed to Home Assistant `input_text` helpers:
 
@@ -249,9 +249,9 @@ The `PersonLocationEnvelope` retains all prior `CurrentLocationOut` fields while
 
 MCP tools that return person locations use the same envelope via `envelope_to_mcp()`: the mapping is done once in `backend/schemas/cts_envelopes.py` and both the router and the MCP adapter call the same service function (design rule D6).
 
-## API Endpoints
+## API endpoints
 
-### Member Management
+### Member management
 
 | Method | Path | Description |
 | --- | --- | --- |
@@ -261,7 +261,7 @@ MCP tools that return person locations use the same envelope via `envelope_to_mc
 | `PATCH` | `/persons/{id}` | Update a member |
 | `DELETE` | `/persons/{id}` | Remove a member and their data |
 
-### Face Enrollment
+### Face enrollment
 
 | Method | Path | Description |
 | --- | --- | --- |
@@ -271,7 +271,7 @@ MCP tools that return person locations use the same envelope via `envelope_to_mc
 | `DELETE` | `/persons/{id}/enrollment` | Remove face enrollment data |
 | `GET` | `/persons/roster-health` | Members needing more enrollment photos and recurring visitors awaiting review |
 
-### Location Tracking
+### Location tracking
 
 | Method | Path | Description |
 | --- | --- | --- |
@@ -280,7 +280,7 @@ MCP tools that return person locations use the same envelope via `envelope_to_mc
 | `GET` | `/persons/{id}/history` | Location timeline (`?hours=24`) |
 | `GET` | `/persons/{id}/sightings` | Recent camera sightings (`?limit=20`) |
 
-## Activity Tracking
+## Activity tracking
 
 The `activity_detection` pipeline step records detected activities for tracked persons:
 
@@ -298,11 +298,11 @@ Query activities via `GET /api/v1/activities?person_id=...&activity_type=...`.
 These two systems are independent. **Person tracking** identifies *who* is *where* using face recognition cameras and presence sensors. **Activity tracking** identifies *what* a person is doing using vision and logic LLMs. A rule can use both as separate context filters: for example, "only trigger when grandma is home in the kitchen AND no eating activity was recorded in the last 30 minutes."
 :::
 
-## Context Filters for Rules
+## Context filters for rules
 
 Person tracking and activity data are available as rule context filters, allowing rules to fire only when specific presence or activity conditions are met.
 
-### Person Presence Filter
+### Person presence filter
 
 The `person_presence` filter checks whether a person is home, away, or in a specific room.
 
@@ -320,7 +320,7 @@ The `person_presence` filter checks whether a person is home, away, or in a spec
 
 The filter checks `PersonLocationService` presence state, which is continuously updated by camera tracking observations, reCamera face sightings, and HA sensor correlation. Locations older than their per-source quiet gap are considered stale and treated as away.
 
-### Person Activity Filter
+### Person activity filter
 
 The `person_activity` filter checks whether a person performed a specific activity within a time window.
 
@@ -330,7 +330,7 @@ The `person_activity` filter checks whether a person performed a specific activi
 | `activity_type` | string (required) | Activity to look for (e.g. `eating`, `medication`) |
 | `within_minutes` | number | Time window to search (default: 30) |
 
-### Multi-Camera Room Mapping
+### Multi-camera room mapping
 
 Each camera sensor is associated with a room. When a face is detected on any camera, the person's location is updated to that camera's room. This enables room-level presence tracking across the house:
 

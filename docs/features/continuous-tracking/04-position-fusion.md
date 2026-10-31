@@ -1,4 +1,4 @@
-# Multi-Camera Position Fusion
+# Multi-camera position fusion
 
 This page moved to the canonical documentation series:
 

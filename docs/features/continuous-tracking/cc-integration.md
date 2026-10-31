@@ -1,6 +1,6 @@
-# Cognitive Companion Integration
+# Cognitive Companion integration
 
-This page covers how Cognitive Companion consumes CTS data. Every browser, MCP, and rule-engine path into CTS goes through the CC backend.
+How Cognitive Companion consumes CTS data. Every browser, MCP, and rule-engine path into CTS goes through the CC backend.
 
 ## Enabling CTS in CC
 

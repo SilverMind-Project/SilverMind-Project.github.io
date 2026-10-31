@@ -1,4 +1,4 @@
-# Measurement Uncertainty
+# Measurement uncertainty
 
 CTS projects each detection's footpoint from image pixels into the shared floor-plan frame with a camera homography. The detector's pixel error is roughly circular in the image, but the homography can stretch that error unevenly on the floor. Oblique or far views therefore produce an elongated floor-plane error ellipse.
 

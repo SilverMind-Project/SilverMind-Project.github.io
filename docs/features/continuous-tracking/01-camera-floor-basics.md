@@ -1,4 +1,4 @@
-# Camera to Floor Basics
+# Camera to floor basics
 
 This page moved to the canonical documentation series:
 

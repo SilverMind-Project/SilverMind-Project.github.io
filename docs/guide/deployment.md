@@ -6,7 +6,7 @@ Cognitive Companion can be deployed via Docker Compose for single-machine setups
 
 Each repository ships its own `docker-compose.yml`, so services are independently deployable. External dependencies (vLLM, Ollama, MinIO, Home Assistant, TTS) are expected to be running separately.
 
-### Quick Start
+### Quick start
 
 ```bash
 # Clone both repositories
@@ -38,7 +38,7 @@ curl http://localhost:8200/health
 
 The backend Dockerfile lives at `backend/Dockerfile` and uses the repository root as its build context (it needs `backend/`, `config/`, and `pyproject.toml`). The frontend Dockerfile lives at `frontend/Dockerfile`.
 
-### Person Identification Service (`person-identification-service/docker-compose.yml`)
+### Person identification service (`person-identification-service/docker-compose.yml`)
 
 | Service     | Container   | Port | Notes                |
 | ------------- | ------------- | ------ | ---------------------- |
@@ -46,7 +46,7 @@ The backend Dockerfile lives at `backend/Dockerfile` and uses the repository roo
 
 Requires the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) for GPU access.
 
-### Environment Variables
+### Environment variables
 
 Each repository has its own `.env.example`. The Cognitive Companion `.env` configures all external service URLs:
 
@@ -87,7 +87,7 @@ CC_MCP_API_KEY=change-me-mcp-key
 When running inside Docker, use `host.docker.internal` instead of `localhost` to reach services on the host machine. If external services are on different machines, use their LAN IP addresses.
 :::
 
-### External Services
+### External services
 
 The following services run **outside** Docker Compose and must be accessible from the backend container:
 
@@ -100,14 +100,14 @@ The following services run **outside** Docker Compose and must be accessible fro
 | **Home Assistant**            | Sensor integration                  | `http://homeassistant.local:8123` |
 | **TTS service**               | Text-to-speech                      | `http://localhost:8600/v1`        |
 
-### Persistent Volumes
+### Persistent volumes
 
 | Volume           | Compose File                  | Container Path | Contents                                     |
 | ------------------ | ------------------------------- | ---------------- | ---------------------------------------------- |
 | `backend-data`   | cognitive-companion           | `/app/data`    | PostgreSQL data, media cache                 |
 | `person-id-data` | person-identification-service | `/app/data`    | ONNX model files, model cache |
 
-### Frontend Image
+### Frontend image
 
 The frontend uses a multi-stage Docker build:
 
@@ -155,7 +155,7 @@ flowchart TB
     Ingress --> MinioNS
 ```
 
-### Design Principles
+### Design principles
 
 - **Single namespace (`nanai`)**: all application workloads, databases, and shared infrastructure run in the same namespace for simplified DNS (`postgres.nanai.svc.cluster.local`) and RBAC.
 - **ClusterIP services**: all services use ClusterIP, routed through a single nginx ingress. No unnecessary LoadBalancer IPs.
@@ -163,7 +163,7 @@ flowchart TB
 - **Health probes**: readiness and liveness probes on all pods for automatic restart and traffic routing.
 - **Kustomize base + overlay**: portable base manifests in `kubernetes/` use `IMAGE_PLACEHOLDER`; the `overlays/local/` directory patches in registry images and cluster-specific values.
 
-### Manifest Structure
+### Manifest structure
 
 All subproject manifests are consolidated under `kubernetes/` at the root, organized by service and infrastructure layer.
 
@@ -217,7 +217,7 @@ kubernetes/
 | PostgreSQL (shared) | `postgres` | 5432 | Headless |
 | Redis | `redis` | 6379 | Headless |
 
-### Deploying to a Local Cluster
+### Deploying to a local cluster
 
 ```bash
 # 1. Create the namespace
@@ -237,7 +237,7 @@ kubectl -n nanai get svc
 kubectl -n nanai get ingress
 ```
 
-### Ingress Configuration
+### Ingress configuration
 
 The local overlay includes a TLS ingress for the API:
 
@@ -247,7 +247,7 @@ The local overlay includes a TLS ingress for the API:
 
 TLS certificates are provisioned automatically by cert-manager with the `letsencrypt-prod` ClusterIssuer.
 
-### GPU Scheduling
+### GPU scheduling
 
 The person-ID deployment requests a GPU via the NVIDIA device plugin:
 
@@ -261,7 +261,7 @@ resources:
 
 This requires the [NVIDIA GPU Operator](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/latest/getting-started.html) or the microk8s `gpu` addon enabled on the cluster.
 
-### Persistent Volumes
+### Persistent volumes
 
 | PVC | Size | Contents |
 | ----- | ------ | ---------- |

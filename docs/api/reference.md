@@ -1,4 +1,4 @@
-# API Reference
+# API reference
 
 All endpoints are under `/api/v1`. Endpoints require authentication unless the route uses a documented device key or webhook secret flow.
 

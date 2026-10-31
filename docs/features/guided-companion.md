@@ -1,10 +1,10 @@
-# Guided Companion
+# Guided companion
 
 The Guided Companion walks a resident through a routine one small step at a time. It is built for dementia care, where effective help is continuous and in small bites: one instruction, then a wait for the resident to finish that step before the next. The canonical routine is making tea.
 
 Unlike a one-shot reminder, a guided session is long-lived and stateful. It holds its place across interruptions, speaks to the resident in her own language through the realtime voice agent, advances only when she confirms a step, and notifies the caregiver when she is stuck.
 
-The Guided Companion is also a working answer to the hardest question in deploying autonomous agents: how much authority to give the model. Here the split is explicit. The voice agent handles the conversation; deterministic code owns advancement, escalation, and safety; and every session writes an auditable event timeline a caregiver can review. The same pattern generalizes to any setting where an agent acts around people who depend on it.
+The model's authority is limited. The voice agent handles the conversation; deterministic code owns advancement, escalation, and safety; and every session writes an event timeline a caregiver can review.
 
 ## Mental model: deterministic spine, agent per turn
 
@@ -97,7 +97,7 @@ A routine must not talk to an empty room. When a rule starts a routine through t
 - Otherwise the session enters a `summoning` state and announces over the configured summon channels (a room speaker or an on-screen popup) to draw her to the surface, then rechecks.
 - If she does not arrive within the summon timeout, the session is abandoned with a `summon_timeout` outcome and the owning pipeline resumes so the rule can take a fallback path.
 
-When a realtime voice session opens (she walks up and taps the mic), the companion immediately rechecks any summoning sessions so the start feels instant. The scheduled recheck remains the robust fallback.
+When a realtime voice session opens (she walks up and taps the mic), the companion immediately rechecks any summoning sessions so the start feels instant. The scheduled recheck remains the fallback.
 
 ### Companion surfaces
 

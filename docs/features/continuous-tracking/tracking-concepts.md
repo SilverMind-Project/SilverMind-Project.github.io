@@ -1,4 +1,4 @@
-# Tracking Concepts
+# Tracking concepts
 
 Explanations of the core algorithms used by the world-coordinate tracker (`app/tracking/world/tracker.py`). These concepts underpin the [Frame Processing Pipeline](./frame-pipeline.md).
 
@@ -140,7 +140,7 @@ A PH with `observation_count < min_observations_to_publish` is tracked internall
 
 ### PH revival (continuity)
 
-Before spawning a brand-new UNKNOWN PH for an unmatched observation, the tracker tries to revive a recently-closed PH that matches on space, time, and appearance, reusing its `ph_id`, identity, and gallery state. This keeps one person mapped to one PH through brief occlusions, turns, and association gaps, instead of fragmenting into many short-lived hypotheses. Same-camera revival uses `revive_*` thresholds above; cross-camera revival is gated by the learned camera topology and multi-view appearance (see [How identity crosses cameras](#how-identity-crosses-cameras)).
+Before spawning a brand-new UNKNOWN PH for an unmatched observation, the tracker tries to revive a recently closed PH that matches on space, time, and appearance, reusing its `ph_id`, identity, and gallery state. This keeps one person mapped to one PH through brief occlusions, turns, and association gaps, instead of fragmenting into many short-lived hypotheses. Same-camera revival uses `revive_*` thresholds above; cross-camera revival is gated by the learned camera topology and multi-view appearance (see [How identity crosses cameras](#how-identity-crosses-cameras)).
 
 ## PersonHypothesis (PH)
 

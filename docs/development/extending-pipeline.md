@@ -1,8 +1,8 @@
-# Extending the Pipeline
+# Extending the pipeline
 
 Cognitive Companion uses a plugin architecture for pipeline steps, notification channels, and context filters. Each plugin is a single file that is auto-discovered at startup.
 
-## Adding a Pipeline Step
+## Adding a pipeline step
 
 Use the scaffolding CLI to generate boilerplate:
 
@@ -75,7 +75,7 @@ class YourStepHandler(StepHandler):
 
 That's it. The step is auto-discovered at startup and appears in the rule canvas palette, loaded dynamically from `GET /api/v1/pipeline/step-types`.
 
-### StepMetadata Fields
+### StepMetadata fields
 
 | Field | Required | Description |
 | --- | --- | --- |
@@ -93,7 +93,7 @@ That's it. The step is auto-discovered at startup and appears in the rule canvas
 | `ui_hints` | No | `x-ui` widget hints for the `SchemaForm` generic renderer |
 | `tags` | No | Tuple of strings for palette grouping and search |
 
-### Custom Frontend Config Form
+### Custom frontend config form
 
 For a richer editing experience, either use `x-ui` hints in your `config_schema` (consumed by `SchemaForm.vue`), or add a custom component. `x-ui` hints are preferred for new step types as they require zero frontend edits.
 
@@ -114,7 +114,7 @@ For a richer editing experience, either use `x-ui` hints in your `config_schema`
 
 Supported widgets: `text`, `textarea`, `template-textarea`, `template-text`, `number`, `slider`, `checkbox`, `select`, `multiselect`, `chips`, `code-json`, `cron`, `time-of-day`, `step-label-ref`. Unknown widgets fall back to the generic JSON editor.
 
-### Key Types
+### Key types
 
 All core types live in `backend/steps/base.py`:
 
@@ -134,7 +134,7 @@ All core types live in `backend/steps/base.py`:
   - `webhook_payload`: payload from webhook triggers (also in `pipeline_data["trigger_input"]`)
 - **`ServiceContainer`**: holds all shared services (LLM providers, HA client, DB session factory, notification dispatcher, etc.)
 
-### Test Your Step
+### Test your step
 
 1. Restart the backend (discovery runs at startup)
 2. Create a rule in the admin console
@@ -171,7 +171,7 @@ return StepResult(
 )
 ```
 
-## Adding a Notification Channel
+## Adding a notification channel
 
 Create a single file in `backend/channels/builtin/` (or `backend/channels/contrib/`):
 
@@ -198,7 +198,7 @@ class YourChannel(NotificationChannel):
 
 The channel is auto-discovered and available to the `NotificationDispatcher`. Add routing config in `config/notifications.yaml` to map alert levels to your channel.
 
-## Adding a Context Filter
+## Adding a context filter
 
 Create a single file in `backend/filters/builtin/` (or `backend/filters/contrib/`):
 
@@ -225,7 +225,7 @@ class YourFilter(ContextFilter):
 
 The filter is auto-discovered and used by `RulesEngine._matches_context()` when a rule has a context with `context_type="your_filter"`. Add form support in `frontend/src/views/admin/RuleDetailView.vue` for the filter's config fields.
 
-### Context Filter Negation
+### Context filter negation
 
 Every context filter supports negation via the `negate` flag on `RuleContext`. When `negate` is `True`, the filter result is inverted. For example, a room filter with `negate=True` means "NOT in this room". This is handled generically by the rules engine; individual filter implementations don't need to be aware of it.
 
@@ -241,16 +241,16 @@ The above means: "fire this rule when the event is NOT in the Kitchen."
 
 Composition rules remain the same: within a `context_type` group, contexts are ORed; across groups, they are ANDed. Negation is applied per-context before the OR grouping.
 
-## Adding an LLM Provider
+## Adding an LLM provider
 
 1. Implement the `LLMProvider` interface from `backend/integrations/llm/base.py`
 2. Register it via `register_provider(name, provider)` in `backend/integrations/llm/__init__.py`
 3. Add config in `config/settings.yaml` under the appropriate `llm.*` section
 4. Optionally configure as part of a chain (fallback) or pool (load balancing) in `settings.yaml`
 
-## Other Extension Points
+## Other extension points
 
-### Adding a New API Endpoint
+### Adding a new API endpoint
 
 Browser-visible endpoints follow the BFF API design rule.
 
@@ -262,7 +262,7 @@ Browser-visible endpoints follow the BFF API design rule.
 6. If agents need the same data, expose an MCP tool that calls the same service function
 7. Add router tests, and add MCP parity tests when the endpoint has an MCP counterpart
 
-### Adding a New MCP Tool
+### Adding a new MCP tool
 
 1. Add a `@_register(token=...)` decorated async function in `backend/mcp/server.py`. Type hints on parameters auto-generate JSON schemas. The token is mandatory: `TOOLS_READ` for a read tool; a tool that changes state gets its own `<resource>:<action>` token, defined in `config/auth.yaml` and granted only to the roles that should call it.
 2. If the tool should be available in voice conversations, add it to `mcp.gemini_tools` in `config/settings.yaml` (the voice agent's exact allowlist).
@@ -276,7 +276,7 @@ CC pipeline steps publish live execution events through the `PipelineExecutor` e
 
 Rich inspection data comes from `GET /api/v1/workflows/{execution_id}/detail`. Lightweight live lists come from `GET /api/v1/pipeline/runs`.
 
-### Adding a New Database Model
+### Adding a new database model
 
 1. Define the model in `backend/models/` (inherit from `Base`)
 2. Import it in `backend/models/__init__.py` and add to `__all__`
@@ -284,7 +284,7 @@ Rich inspection data comes from `GET /api/v1/workflows/{execution_id}/detail`. L
 4. Review the migration and apply it with `make migrate`
 5. Add model, service, or router tests that exercise the new table
 
-### Frontend Widget System
+### Frontend widget system
 
 The CompanionView uses a widget registry for extensibility. Register a new widget:
 

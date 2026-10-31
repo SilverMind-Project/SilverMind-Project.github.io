@@ -1,4 +1,4 @@
-# Multi-Camera Fusion
+# Multi-camera fusion
 
 CTS keeps one floor position per person hypothesis (PH), even when several overlapping cameras see the same person. Each camera measures that position with different view-dependent uncertainty. Fusion means combining those measurements without pretending they are equally precise.
 

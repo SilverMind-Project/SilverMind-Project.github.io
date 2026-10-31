@@ -1,8 +1,8 @@
-# MCP Integration
+# MCP integration
 
-Cognitive Companion treats the home as something an AI agent can safely operate. A built-in [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, exposes <!-- count:mcp_tools -->61 tools for AI agent integration: agents can discover system state, query sensor data, inspect enrollment, face calibration progress, and e-ink status, check person locations, review activity timelines and daily reports, explore semantic memory, read the unified signals feed, acknowledge behavioral signals with feedback, drive and analyze guided routine sessions, propose identity corrections, trigger rule executions, author new rules, and inspect plugin metadata. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
+A built-in [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, exposes <!-- count:mcp_tools -->61 tools for AI agent integration: agents can discover system state, query sensor data, inspect enrollment, face calibration progress, and e-ink status, check person locations, review activity timelines and daily reports, explore semantic memory, read the unified signals feed, acknowledge behavioral signals with feedback, drive and analyze guided routine sessions, propose identity corrections, trigger rule executions, author new rules, and inspect plugin metadata. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
 
-This makes Cognitive Companion agent-native: household state has one governed, authenticated tool surface, and every agent, whether Claude Desktop, a custom orchestrator, or the internal voice companion, goes through it. There is no separate integration to audit per client, and tools stay in lockstep with the UI because both read the same service layer.
+Every agent, whether Claude Desktop, a custom orchestrator, or the internal voice companion, uses this one authenticated tool surface, so there is one integration to audit. Tools and the UI read the same service layer and stay in step.
 
 ## What is MCP?
 
@@ -41,7 +41,7 @@ flowchart TB
 
 A `GeminiToolAdapter` reads the same tool definitions and converts them to Gemini `FunctionDeclaration` format, so the voice companion can call tools during conversations without duplicating implementations.
 
-## Available Tools
+## Available tools
 
 | Tool                       | Description                                                  | Parameters                                    |
 |----------------------------|--------------------------------------------------------------|-----------------------------------------------|
@@ -143,7 +143,7 @@ The MCP server is available at a single endpoint:
 |--------|--------|--------------------------------------------------|
 | `POST` | `/mcp` | MCP protocol endpoint (streamable HTTP, JSON-RPC) |
 
-### Tool Discovery
+### Tool discovery
 
 ```bash
 curl -X POST \
@@ -153,7 +153,7 @@ curl -X POST \
   http://localhost:8000/mcp
 ```
 
-### Tool Execution
+### Tool execution
 
 ```bash
 curl -X POST \
@@ -163,7 +163,7 @@ curl -X POST \
   http://localhost:8000/mcp
 ```
 
-## Integration Patterns
+## Integration patterns
 
 ### With Claude Desktop
 
@@ -182,11 +182,11 @@ Configure Claude Desktop's MCP settings to point to your Cognitive Companion ins
 }
 ```
 
-### With Custom Agents
+### With custom agents
 
 Any agent framework that supports the MCP protocol can integrate with Cognitive Companion by pointing to the `/mcp` endpoint. The standard JSON-RPC interface handles tool discovery and execution.
 
-### Example Agent Workflow
+### Example agent workflow
 
 An AI agent monitoring the household might:
 
@@ -196,7 +196,7 @@ An AI agent monitoring the household might:
 4. If lunch has not been detected, call `trigger_rule` on the lunch reminder rule
 5. Call `get_signals_feed` to check for any unacknowledged signals
 
-## Voice Companion Integration
+## Voice companion integration
 
 A configurable subset of MCP tools is also available to the Gemini Live voice companion via function calling. When the senior asks a question like "what's the weather?" or "where is everyone?", Gemini pauses audio generation, calls the appropriate tool, and incorporates the result into its spoken response. Tool results are never displayed raw to the user; they always flow through Gemini's natural language audio response.
 
@@ -234,14 +234,14 @@ mcp:
 
 The voice agent can declare and call exactly the tools in `mcp.gemini_tools`, checked again when it calls one, and an empty list gives it no tools. Destructive tools like `trigger_rule` are not in the shipped list. The guided-session tools are voice-enabled by design: they are how the realtime agent proposes step completion, repeats a step, or escalates to a caregiver during a [guided routine](/features/guided-companion). `get_person_timeline`, `get_daily_report`, and `get_open_sessions` are the typed daily-living ledger tools: the agent answers countable questions ("has she had her medication today") by calling these, never by aggregating semantic-memory captions.
 
-## Network Considerations
+## Network considerations
 
 The MCP server runs on the same backend instance, so no additional deployment is needed. Since Cognitive Companion runs on-premise without a public endpoint, MCP clients must be on the same local network. For remote agent access, consider:
 
 - VPN or tailnet for secure remote access
 - A reverse proxy with authentication for controlled exposure
 
-## Adding New Tools
+## Adding new tools
 
 1. Add a `@_register(token=...)` decorated async function in `backend/mcp/server.py`. Type hints on parameters auto-generate JSON schemas. The token is required: `TOOLS_READ` for a read tool, or a new `<resource>:<action>` token (defined in `config/auth.yaml`) for a tool that changes state.
 2. If the tool should be available in voice conversations, add it to `mcp.gemini_tools` in `config/settings.yaml`.

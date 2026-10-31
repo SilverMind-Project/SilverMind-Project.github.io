@@ -1,27 +1,27 @@
 # Introduction
 
-This is the technical overview of Cognitive Companion, written for developers and operators who want to deploy, inspect, or extend the system. If you are a family member or care partner deciding whether the system fits your household, start with [Cognitive Companion for families](/families/overview), which covers what the system does without the implementation detail.
+Cognitive Companion is an on-premise AI system for senior care in multigenerational households: safety monitoring, cognitive support, and a personal knowledge repository. Camera and sensor data flow through rule-based pipelines, and the vision and language models run on local hardware.
 
-Cognitive Companion is a privacy-first, on-premise AI system for senior care in multigenerational households. It combines safety monitoring, cognitive support, and a personal knowledge repository. Camera feeds and sensor data flow through composable rule-based pipelines; vision and language models run entirely on local hardware.
+This overview is for developers and operators. Families deciding whether it fits their household should start with [Cognitive Companion for families](/families/overview).
 
 ## The problem
 
-Seniors experiencing cognitive decline face a difficult tradeoff: full-time monitoring that strips away independence, or no monitoring at all. Existing solutions tend toward one extreme:
+Seniors with cognitive decline often get either full-time monitoring that takes away independence or none at all. The usual tools:
 
-- **Basic motion sensors** trigger too many false alarms and lack context awareness.
-- **Cloud-based AI cameras** send private footage off-premises and require internet connectivity.
-- **Full automation systems** remove the daily routines that maintain cognitive function.
+- **Motion sensors** raise false alarms and carry no context.
+- **Cloud AI cameras** send private footage off the premises and need an internet connection.
+- **Full automation** removes the daily routines that keep a person engaged.
 
 ## The approach
 
-Cognitive Companion addresses this through six design choices:
+Six design choices:
 
-1. **Context-aware perception.** Vision LLMs analyze what is happening in each frame rather than flagging all motion. A person in the kitchen at noon is routine; at 3 AM, it warrants attention.
+1. **Context-aware perception.** Vision LLMs describe what is happening in each frame instead of flagging all motion. A person in the kitchen at noon is routine; at 3 AM, it warrants attention.
 2. **Composable pipelines.** Each rule assembles its own graph of steps and edges. Rules are not constrained to a fixed trigger-action template.
-3. **Reminders over automation.** The system delivers suggestions and alerts without acting on the senior's behalf, preserving daily routines and decision-making agency.
+3. **Reminders over automation.** The system suggests and alerts but never acts on the senior's behalf, so they keep their routines and decisions.
 4. **Local inference.** All models run on-premise through vLLM, llama.cpp, and sibling services. Camera frames stay in local MinIO storage. No footage leaves the network unless an outbound channel is explicitly configured.
 5. **Multigenerational interfaces.** Caregivers receive alerts through Telegram, webhooks, or the admin console. Seniors interact through voice, popup notifications, e-ink displays, and TTS.
-6. **Personal knowledge repository.** Caregivers curate facts about people, places, and routines. The system generates narrated info cards, review-gated quizzes, and a voice Q&A interface backed by RAG, helping seniors stay connected to their own history.
+6. **Personal knowledge repository.** Caregivers curate facts about people, places, and routines. The system generates narrated info cards, review-gated quizzes, and voice Q&A backed by RAG.
 
 ## How it works
 
@@ -76,7 +76,7 @@ flowchart TB
 5. Pipeline steps perform person identification, scene analysis, presence queries, LLM reasoning, condition branching, wait and resume, activity recording, daily reports, knowledge retrieval, and so on.
 6. Outputs flow to any combination of channels: PWA popup, Telegram, e-ink display, HA Speaker TTS, PWA TTS announcement, PWA Realtime AI, and outbound webhooks.
 
-## Key capabilities
+## Capabilities
 
 | Capability | Description |
 | --- | --- |
@@ -117,7 +117,7 @@ flowchart TB
 ## Next steps
 
 - [Quick Start](/guide/getting-started): install and run the system.
-- [Architecture](/guide/architecture): deep dive into the system design.
+- [Architecture](/guide/architecture): services, data flow, and boundaries.
 - [Composable Pipelines](/features/pipeline): full pipeline step reference and worked examples.
 - [Continuous Tracking](/features/continuous-tracking): multi-camera tracking and dementia signals.
 - [Development Setup](/development/setup): set up a development environment.

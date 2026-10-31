@@ -1,12 +1,12 @@
-# Composable Pipelines
+# Composable pipelines
 
-The pipeline system is the core of Cognitive Companion: an engine for autonomous workflows that perceive, reason, and act inside the home. Each rule defines its own graph of pipeline steps executed by the `PipelineExecutor`, combining perception steps (person identification, scene analysis), reasoning steps (LLM calls, conditions, verification), and action steps (notifications, Home Assistant actions, guided routines). Caregivers and operators connect steps on a visual canvas, branch through output ports, and review live or historical runs in the execution inspector.
+Pipelines run Cognitive Companion's automated workflows. Each rule defines its own graph of pipeline steps executed by the `PipelineExecutor`, combining perception steps (person identification, scene analysis), reasoning steps (LLM calls, conditions, verification), and action steps (notifications, Home Assistant actions, guided routines). Caregivers and operators connect steps on a visual canvas, branch through output ports, and review live or historical runs in the execution inspector.
 
-Autonomy comes with observability built in. Every execution captures an immutable graph snapshot, a step-by-step timeline, activated output ports, outputs, and errors, so a run can be audited after the fact exactly as it happened. Cool-off windows, context filters, and rate limits bound how often a workflow may act.
+Every execution captures an immutable graph snapshot, a step-by-step timeline, activated output ports, outputs, and errors, so a run can be audited after the fact exactly as it happened. Cool-off windows, context filters, and rate limits bound how often a workflow may act.
 
 Step handlers are self-contained plugins, each in its own file under `backend/steps/builtin/`, auto-discovered at startup via `StepRegistry`. The frontend loads available step types dynamically from the `GET /api/v1/pipeline/step-types` endpoint, so new plugins appear automatically in the step palette and config editor. See [Extending the Pipeline](/development/extending-pipeline) for how to add custom step types.
 
-## How Pipelines Work
+## How pipelines work
 
 When a rule is triggered, the executor:
 
@@ -85,7 +85,7 @@ The executor also injects a localized `system` object into `pipeline_data` using
 
 This makes local wall-clock values available to prompts and notification templates without requiring each step to compute them independently. The complete list of keys is served by `GET /api/v1/pipeline/data-keys` and surfaced as autocomplete suggestions in the admin UI template editors.
 
-## Graph Authoring
+## Graph authoring
 
 The rule canvas stores two resources: `PipelineStep` nodes and `PipelineEdge` connections.
 
@@ -100,7 +100,7 @@ Most step types expose one `main` output port. The `condition` step exposes `tru
 
 Execution review uses `GET /api/v1/workflows/{execution_id}/detail`, which returns the graph snapshot, timeline, skipped nodes, activated output ports, outputs, and errors. Lightweight live lists use `GET /api/v1/pipeline/runs`.
 
-## Cool-Off Behavior
+## Cool-off behavior
 
 Rule cool-off is driven by `EventLog.status == "completed"`. A workflow that runs successfully but does not perform a terminal action is now recorded as `ignored`, so analytical or verification-only passes do not consume the rule's cool-off window.
 
@@ -113,7 +113,7 @@ Built-in steps that can explicitly mark a run as cool-off-worthy:
 
 These steps add `_cooloff_triggered` to `pipeline_data`, and the executor uses that flag when finalizing the related event log.
 
-## Pipeline Step Types
+## Pipeline step types
 
 ### Perception
 
@@ -853,13 +853,13 @@ When using the `voice_prompt_template` channel, the prompt is sent to the Gemini
 
 :::
 
-## Condition Expressions {#condition-expressions}
+## Condition expressions {#condition-expressions}
 
 All template and condition expressions use a unified Lark-based grammar with `{{ }}` wrapping. The grammar supports paths, JMESPath pipes, comparisons, boolean operators, and built-in functions. Simple path references use a fast regex shortcut; complex expressions are parsed into an AST and evaluated.
 
 Server-side validation catches typos and unknown paths at save time, so invalid expressions never persist.
 
-### Path Access
+### Path access
 
 Access nested values in `pipeline_data`:
 
@@ -869,7 +869,7 @@ Access nested values in `pipeline_data`:
 {{ system.local_time }}
 ```
 
-### JMESPath Pipes
+### JMESPath pipes
 
 Apply JMESPath filters and transformations:
 
@@ -888,14 +888,14 @@ Apply JMESPath filters and transformations:
 
 Operators: `==`, `!=`, `>`, `<`, `>=`, `<=`
 
-### Boolean Operators
+### Boolean operators
 
 ```text
 {{ steps.scene_1.outputs.count > 0 and steps.logic_1.outputs.is_notification_needed == true }}
 {{ not exists(steps.translate_1.outputs) or contains(steps.scene_1.outputs.description, "empty") }}
 ```
 
-### Built-in Functions
+### Built-in functions
 
 | Function | Description |
 | --- | --- |
@@ -923,7 +923,7 @@ Operators: `==`, `!=`, `>`, `<`, `>=`, `<=`
 
 Expression validation runs on every step save. A typo like `steps.scene_anaylsis_1.outputs.count` is rejected with a suggestion pointing to the correct label.
 
-## Prompt Templates {#prompt-templates}
+## Prompt templates {#prompt-templates}
 
 ::: v-pre
 Several step config fields support `{{variable}}` template syntax: the `prompt` and `special_instructions` fields in `llm_call`; the `person_id`, `activity_type`, and `room_name` fields in `activity_detection`; and the `person_id` and `room_name` fields in `verification` conditions. At execution time, placeholders are replaced with values from `pipeline_data` and trigger context.
@@ -942,7 +942,7 @@ Several step config fields support `{{variable}}` template syntax: the `prompt` 
 
 Unresolvable placeholders are left as-is so the LLM still sees the intent.
 
-### Available Variables
+### Available variables
 
 Any key in `pipeline_data` is available. The admin UI's template editors load the full reference from `GET /api/v1/pipeline/data-keys` and surface it as autocomplete when you type <code v-pre>{{</code> in a templated field. Common variables:
 
@@ -962,7 +962,7 @@ Any key in `pipeline_data` is available. The admin UI's template editors load th
 | `room_name` | trigger context | `"Kitchen"` |
 | `sensor_id` | trigger context | `"kitchen_cam_01"` |
 
-### Template Examples
+### Template examples
 
 **Vision prompt:**
 
@@ -991,9 +991,9 @@ Reminder for {{person_detections.0.name}} at {{system.local_time}} in the {{room
 {{logic_response.user_notification}}
 ```
 
-## Example Pipeline Configurations
+## Example pipeline configurations
 
-### Camera Monitoring
+### Camera monitoring
 
 The classic detect-analyze-notify chain using the unified `llm_call` step:
 
@@ -1006,7 +1006,7 @@ person_identification → llm_call (vision, output_key: vision_response)
 
 Each `llm_call` step selects its own `model_id`, so vision reasoning can use Cosmos Reason2 while logic and translation use Gemma 4 on the same GPU node.
 
-### Lunch Reminder
+### Lunch reminder
 
 Identify who is in the room, record a lunch activity attributed to them, wait, then verify against the database and remind if they haven't eaten:
 
@@ -1014,7 +1014,7 @@ Identify who is in the room, record a lunch activity attributed to them, wait, t
 person_identification → activity_detection (activity_type: "lunch", person_id: {{person_detections.0.person_id}}) → wait (30 min) → verification → notification
 ```
 
-### Light Monitor
+### Light monitor
 
 Analyze, decide, notify caregiver, wait for response, then act:
 
@@ -1022,7 +1022,7 @@ Analyze, decide, notify caregiver, wait for response, then act:
 llm_call (vision) → llm_call (reasoning, output_key: logic_response) → notification → wait (5 min) → verification → ha_action
 ```
 
-### Conditional Alert Escalation
+### Conditional alert escalation
 
 Use conditions to route based on severity:
 
@@ -1032,7 +1032,7 @@ person_identification → llm_call (vision) → llm_call (reasoning, output_key:
   └── (false: routine)  → notification [info level]
 ```
 
-### Occupancy Safety Alert
+### Occupancy safety alert
 
 Triggered by the `occupancy_duration` trigger type when a presence sensor has been on for longer than the configured threshold. The pipeline below sends a multilingual voice prompt asking if the person needs help:
 
@@ -1050,7 +1050,7 @@ llm_call (translation, output_key: translation) → notification [alert_level: w
 
 The `llm_call` step localises the message before the `notification` step dispatches it. The `pwa_realtime_ai` channel initiates an interactive voice check-in via Gemini Live; the `pwa_popup_text` and `telegram` channels alert the admin console and caregiver simultaneously.
 
-### Dementia Signal Trigger {#dementia-signal-triggers}
+### Dementia signal trigger {#dementia-signal-triggers}
 
 Rules with `trigger_types` containing `"dementia_signal"` fire when the CTS subscriber receives a behavioral signal from the tracking orchestrator that passes the per-person alert configuration gate. This allows caregivers to author rules that respond to pacing, sundowning, bathroom dwell anomalies, absence, or other CTS-detected behavioral patterns.
 
@@ -1114,7 +1114,7 @@ Pipeline:
 
 
 
-### Telegram Command Trigger {#telegram-command-triggers}
+### Telegram command trigger {#telegram-command-triggers}
 
 Rules with `trigger_type: telegram` fire when a matching Telegram bot command is received. The `TelegramTriggerService` polls the Bot API on a short interval (default 5 s, configurable via `notifications.telegram.trigger_poll_interval_seconds`). The service only starts when a Telegram bot token is configured.
 
@@ -1143,7 +1143,7 @@ The `notification` step sends the translated confirmation back to Telegram and p
 
 :::
 
-## Real-world Examples {#real-world-examples}
+## Real-world examples {#real-world-examples}
 
 The examples below assume a household with one senior (`grandma`) and a small set of caregivers. Each example names the trigger, every filter, every step, and every notification channel so you can replicate it end-to-end. All filter and step type names match what `GET /api/v1/pipeline/filter-types` and `GET /api/v1/pipeline/step-types` return on a current build.
 
@@ -1260,7 +1260,7 @@ The goal: if grandma is the only person home and an unidentified face is detecte
 
 - `trigger_types`: `["sensor_event"]`
 - `primary_sensor_id`: entry camera
-- `cool_off_minutes`: `5` (we want quick re-firing if the person stays)
+- `cool_off_minutes`: `5` (re-fires quickly if the person stays)
 
 **Filters:**
 
@@ -1290,7 +1290,7 @@ The reminder examples above push notifications and stop. To turn a reminder into
 
 :::
 
-## Cron Triggers
+## Cron triggers
 
 Cron schedules are decoupled from rules through a dedicated `CronTrigger` model with a many-to-many relationship. A rule can have multiple cron schedules, and multiple rules can share the same schedule.
 
@@ -1300,7 +1300,7 @@ The admin UI includes a **Cron Builder** with preset modes: Daily, Weekly, Hourl
 
 The `POST /api/v1/pipeline/cron/preview` endpoint validates expressions and returns parsed structure plus next-run timestamps.
 
-## Rule Import/Export
+## Rule import/export
 
 Rules can be exported to portable YAML or JSON bundles and imported across installations. Bundles use stable string identifiers (labels, type names, sensor ids) instead of database primary keys, so they survive round-trips between different installs.
 
@@ -1311,7 +1311,7 @@ Rules can be exported to portable YAML or JSON bundles and imported across insta
 
 Bundles are also accessible to AI agents through the MCP server (`get_rule_bundle`, `import_rule_bundle`).
 
-## Live Pipeline Activity View
+## Live pipeline activity view
 
 The **Process Activity** view (`/activity/process`) provides real-time visibility into pipeline runs and CTS ingest activity. It is backed by `PipelineRunService` and a dedicated WebSocket channel.
 
@@ -1346,7 +1346,7 @@ Each run envelope carries:
 | `steps` | List of step summaries with label, type, status, and elapsed_ms |
 | `trigger_type` | How the run was initiated |
 
-## Workflow Execution
+## Workflow execution
 
 When a rule's pipeline is triggered, a `WorkflowExecution` record tracks the full lifecycle:
 

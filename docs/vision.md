@@ -1,65 +1,65 @@
 # Where Cognitive Companion is headed
 
-Cognitive Companion started as an answer to a personal problem: how to help an older relative stay in their own home without either ignoring the risks or putting them under constant surveillance. It has grown into a working system that several services run on, and the direction from here is to make that system something more families and care organizations can actually deploy.
+Cognitive Companion began as a way to help an older relative stay at home without ignoring the risks or watching them all day. It is now a working system of several services. The next step is making it something more families and care organizations can deploy.
 
-This page is for people thinking about that bigger picture: care partners, health plans, and anyone weighing whether to build on the project or back it.
+This page is for care partners, health plans, and anyone deciding whether to build on the project or support it.
 
-## The shift the system is built for
+## Why aging at home needs this
 
-More people are growing old, and more of them want to do it at home. At the same time, the people who would care for them, family members and paid caregivers alike, are stretched thin. Institutional care is expensive and often comes sooner than a family wants. The pressure on all sides is toward keeping people independent at home for longer, with enough awareness to make that safe.
+More people want to grow old at home, and the family members and paid caregivers who look after them are stretched thin. Institutional care is expensive and often comes sooner than a family wants. Staying at home longer needs some way of knowing when something has changed.
 
-Most of the technology aimed at this problem sends a family's private life to a cloud service, or it automates so much that it erodes the very independence it was meant to protect. Cognitive Companion takes a different stance: keep the intelligence in the home, and use it to inform a caregiver rather than to take over.
+Most technology for this either sends a family's private life to a cloud service or automates so much that the person loses the routines that keep them independent. Cognitive Companion keeps the processing in the home and uses it to tell a caregiver what changed.
 
-## Why local-first is the right foundation
+## Why local-first
 
-Running the recognition, scene understanding, and reasoning on hardware in the home is a design choice with two payoffs.
+Recognition, scene understanding, and reasoning run on hardware in the home. That has two consequences.
 
-The first is trust. Families are far more willing to put cameras in a parent's home when the footage stays on a computer they own. Privacy here is structural, built into where the computation happens, which makes it credible in a way that a privacy policy is not.
+**Trust.** Families are more willing to put cameras in a parent's home when the images stay on a computer they own. The privacy comes from where the computation runs, which a policy document cannot promise.
 
-The second is economics. Local inference means there is no per-frame cloud bill scaling with every home and every camera. For a care organization deploying at scale, that changes the unit economics of always-on monitoring and makes earlier, finer-grained risk signals affordable.
+**Cost.** There is no per-frame cloud bill for each home and camera. For a care organization running many homes, the cost of continuous monitoring is the hardware in each home.
 
-## A vertical AI agent for the home
+## A care agent with clear limits
 
-The systems creating real value with AI agents today go deep on one domain: they own the workflow end to end, act autonomously within clear limits, and prove their worth in outcomes the buyer already measures. Cognitive Companion applies that pattern to senior care. It is a domain agent that perceives the home through cameras and sensors, reasons with local vision and language models, and acts through caregiver-approved workflows, rather than a general assistant with a care skin.
+Cognitive Companion is an agent built for one domain. It perceives the home through cameras and sensors, reasons with local vision and language models, and acts through workflows that caregivers approve.
 
-The harder half of deploying agents is governance. Cognitive Companion builds it into the architecture:
+Putting an agent in the home of a vulnerable adult needs controls, and they are part of the architecture:
 
-- Every autonomous run records an immutable graph snapshot and timeline, so a caregiver or operator can inspect exactly what the agent saw, decided, and did.
-- The guided companion follows a strict division of authority: the voice agent proposes, deterministic code decides. Advancement, escalation, and safety are never delegated to the model.
-- Caregivers can confirm or dismiss each behavioral signal, and the feedback stays with the record, giving the system ground truth about which alerts earn their interruption.
-- The MCP tool surface is authenticated, permissioned, and shared with the internal voice agent, so there is one governed path into household state instead of a side door per integration.
+- Every autonomous run records an immutable graph snapshot and timeline, so a caregiver or operator can see what the agent saw, decided, and did.
+- In the guided companion, the voice agent proposes and deterministic code decides. Advancing a step, escalating, and safety checks never depend on the model.
+- Caregivers confirm or dismiss each behavioral signal, and the answer stays with the record. Over time this shows which alerts were worth the interruption.
+- The MCP tools are authenticated, permissioned, and shared with the internal voice agent, so every integration reaches household state through the same path.
 
-The same properties that make an agent safe around a vulnerable adult, auditability, bounded autonomy, and human review, are what let a care organization put it in a member's home and stand behind it.
+These controls are also what a care organization needs before it can put the system in a member's home.
 
-## What already works
+## What works today
 
-This is not a concept. As of v0.7.2 the system runs an end-to-end stack across several services, with each major capability shipped and tested:
+As of v0.7.2 the system runs end to end across several services:
 
-- Multi-camera tracking with a floor-plane world tracker and Bayesian identity resolution, including cross-camera handoff that holds a person's identity through turns and camera gaps.
-- <!-- count:wire_signal_kinds -->Ten behavioral signals, each measured against a person's own history: nine for dementia care (pacing, sundowning, long bathroom visits, nighttime movement, prolonged stillness, unexplained absence, suspected falls, gait slowing, and elevated restlessness) and a same-clothes hygiene signal. Fall detection, restlessness, and same-clothes are opt-in per deployment.
-- A composable rules pipeline with <!-- count:step_types -->28 step types and <!-- count:channel_types -->7 notification channels, driving both caregiver alerts and proactive reminders to the senior.
+- Multi-camera tracking with a floor-plane world tracker and Bayesian identity resolution. Cross-camera handoff keeps a person's identity through turns and camera gaps.
+- <!-- count:wire_signal_kinds -->Ten behavioral signals, each measured against the person's own history: nine for dementia care (pacing, sundowning, long bathroom visits, nighttime movement, prolonged stillness, unexplained absence, suspected falls, gait slowing, and elevated restlessness) and a same-clothes hygiene signal. Fall detection, restlessness, and same-clothes are opt-in per deployment.
+- A rules pipeline with <!-- count:step_types -->28 step types and <!-- count:channel_types -->7 notification channels, used for caregiver alerts and reminders to the senior.
 - A personal knowledge repository with caregiver-curated info cards, memory quizzes, and a voice companion the senior can talk to.
-- An MCP server exposing <!-- count:mcp_tools -->61 tools, so external AI agents and the built-in voice agent operate the household through one authenticated interface.
-- A unified caregiver workspace and live process views over the running pipeline.
+- An MCP server with <!-- count:mcp_tools -->61 tools, used by external AI agents and the built-in voice agent through one authenticated interface.
+- A caregiver workspace and live views of the running pipeline.
 
-Each of these landed behind tests and, for the tracking work, frame-replay proofs. The roadmap records the milestones as they shipped.
+Each capability shipped with tests, and the tracking work with frame-replay proofs. The [roadmap](/roadmap) lists when each landed.
 
 ## What comes next
 
-The near-term work lowers the barrier to getting value out of the system: pipeline templates so a new deployment does not start from a blank canvas, and an activity timeline that gives caregivers the day's story at a glance. The longer arc is to turn a capable open-source project into something a non-specialist can have deployed and rely on.
+Near-term work makes a new deployment useful sooner: pipeline templates, so setup does not start from a blank canvas, and an activity timeline that shows caregivers the day at a glance. Longer term, the goal is a system a non-specialist can have installed and rely on.
 
-See the [roadmap](/roadmap) for the current list, shipped and proposed.
+See the [roadmap](/roadmap) for what has shipped and what is proposed.
 
-## Open source and a path to a product
+## Open source and a supported product
 
-Cognitive Companion is released under the AGPL-3.0 license, and it is meant to stay open. The work people can build on stays in the open.
+Cognitive Companion is released under the AGPL-3.0 license and will stay open.
 
-A sustainable project still needs a way to fund the work. The natural shapes for that are the ones open-source infrastructure companies already use: managed and supported deployments for families and care organizations who do not want to run it themselves, and licensing arrangements for organizations that want to build on it commercially. The open core and the supported offering reinforce each other.
+To fund the work, the project follows the usual models for open-source infrastructure: managed, supported deployments for families and care organizations that do not want to run it themselves, and commercial licenses for organizations that want to build on it.
 
-## Getting involved
+## Get involved
 
-The project lives on GitHub under the [SilverMind Project](https://github.com/SilverMind-Project) organization.
+The project is on GitHub under the [SilverMind Project](https://github.com/SilverMind-Project) organization.
 
 - Developers: start with the [developer guide](/guide/introduction) and the [contribution guide](/development/contributing).
 - Families and care partners: start with [Cognitive Companion for families](/families/overview).
-- Care organizations and partners interested in deployment or collaboration: open a discussion on the project's GitHub organization to start a conversation.
+- Care organizations interested in a deployment or collaboration: open a discussion on the project's GitHub organization.

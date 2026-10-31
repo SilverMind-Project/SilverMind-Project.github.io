@@ -1,6 +1,6 @@
 # Hardware integration
 
-Cognitive Companion is designed to work with affordable, readily available edge hardware. This page covers the supported devices and how they integrate with the system.
+Cognitive Companion runs on affordable edge hardware you can buy off the shelf. These are the supported devices and how each connects.
 
 ## Inference hardware
 
@@ -98,7 +98,7 @@ When a label filter is configured and the image does not match, the endpoint ret
 
 **Placement tips:**
 
-- Mount at doorways to leverage motion direction detection (entering vs. leaving)
+- Mount at doorways to use motion direction detection (entering vs. leaving)
 - Ensure adequate lighting for face recognition. ArcFace works best with even illumination.
 - Consider the field of view. Wider angles capture more context but reduce face resolution.
 - For multi-camera setups, assign each camera to a room for location tracking
@@ -116,7 +116,7 @@ When a label filter is configured and the image does not match, the endpoint ret
 </dl>
 </div>
 
-The reTerminal is an ESP32-based color e-ink display module from Seeed Studio. It serves as the household's notification display and physical interaction point.
+The reTerminal is an ESP32-based color e-ink display module from Seeed Studio. It is the household's notification display and has a physical button.
 
 **E-ink display integration:**
 
@@ -141,7 +141,7 @@ device_keys:
     device_type: reterminal
 ```
 
-### Home Assistant Sensors
+### Home Assistant sensors
 
 <div class="hw-spec">
 <dl>
@@ -153,7 +153,7 @@ device_keys:
 
 The backend polls Home Assistant entities at a configurable interval (default: 30 seconds). Supported sensor types:
 
-#### Presence Sensors (PIR/mmWave)
+#### Presence sensors (PIR/mmWave)
 
 Binary sensors that detect room occupancy. Used for:
 
@@ -161,7 +161,7 @@ Binary sensors that detect room occupancy. Used for:
 - **Person location inference**: correlate presence sensor data with camera sightings to track people in rooms without cameras (e.g., bathrooms)
 - **Bathroom monitoring**: configurable time limit triggers alerts for extended bathroom occupancy
 
-#### Light Sensors
+#### Light sensors
 
 Illuminance sensors used for context-aware rules:
 
@@ -169,7 +169,7 @@ Illuminance sensors used for context-aware rules:
 - Queryable via the `get_light_level` MCP tool
 - Can inform vision analysis prompts (e.g., "analyze this low-light image")
 
-#### Media Players
+#### Media players
 
 Smart speakers, tablets, and other audio devices used for:
 

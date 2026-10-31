@@ -1,4 +1,4 @@
-# Posture Fusion
+# Posture fusion
 
 CTS estimates one posture per person hypothesis (PH), even when several cameras see that person at the same time. Each camera has a different view: one may see the side of a seated person clearly, another may see the same person head-on with the legs foreshortened, and a third may have the lower body partly occluded. Posture fusion keeps those cameras useful without letting a bad view dominate.
 

@@ -1,6 +1,6 @@
-# Quick Start
+# Quick start
 
-This guide walks you through getting Cognitive Companion running on your local network.
+Get Cognitive Companion running on your local network.
 
 ## Prerequisites
 
@@ -17,7 +17,7 @@ This guide walks you through getting Cognitive Companion running on your local n
 | **[uv](https://docs.astral.sh/uv/)** | Python package manager | For local development |
 | **Node.js 24.16.x** | Frontend build | For admin console, WebSocket audio interface |
 
-### Optional Components
+### Optional components
 
 | Component | Purpose |
 | --- | --- |
@@ -61,7 +61,7 @@ These perception models are small in VRAM, about 0.65 GB on the main GPU, so the
 
 See [Run CTS inference on Jetson Orin Nano Super](/hardware/jetson-cts) for the model-by-model quantization recipe, qualification gates, and production metrics.
 
-## Step 1: Configure Environment
+## Step 1: Configure environment
 
 ```bash
 git clone https://github.com/SilverMind-Project/cognitive-companion.git
@@ -96,7 +96,7 @@ CC_MCP_API_KEY=your_mcp_key
 
 Review `config/settings.yaml` for application behavior: event aggregation windows, LLM model names, polling intervals, and more. See [Configuration](/guide/configuration) for a full reference.
 
-## Step 2: Start All Services
+## Step 2: Start all services
 
 ### Option A: Docker Compose
 
@@ -125,7 +125,7 @@ The person-ID service requires GPU access. Ensure the [NVIDIA Container Toolkit]
 
 See [Deployment](/guide/deployment) for the full Docker Compose and Kubernetes reference.
 
-### Option B: Run Services Individually
+### Option B: Run services individually
 
 **Start the Person Identification Service** (GPU-accelerated face recognition):
 
@@ -171,7 +171,7 @@ docker build -t cognitive-companion-ui .
 docker run -p 80:80 cognitive-companion-ui
 ```
 
-## Step 3: Initial Setup
+## Step 3: Initial setup
 
 1. Open the admin console at `http://localhost:5173/admin`
 2. Set your admin API key in the settings
@@ -180,7 +180,7 @@ docker run -p 80:80 cognitive-companion-ui
 5. **Enroll household members.** Go to **Members & Enrollment**, register each person, then click the face-recognition icon to upload 5-10 reference photos per person
 6. **Create rules.** Use the visual pipeline builder to assemble step graphs
 
-### Your First Rule
+### Your first rule
 
 A basic camera monitoring rule might look like:
 

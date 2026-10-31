@@ -1,4 +1,4 @@
-# Camera to Floor Basics
+# Camera to floor basics
 
 This series starts with the simplest question: how does a camera view become a point on a floor plan?
 

@@ -2,11 +2,11 @@
 
 Cognitive Companion uses YAML configuration files with environment variable interpolation. All config files live in the `config/` directory.
 
-## Environment Variables
+## Environment variables
 
 Variables are interpolated into YAML config files using `${ENV_VAR}` syntax. Define them in your `.env` file or set them in your environment.
 
-### Required Variables
+### Required variables
 
 | Variable | Description |
 | ---------- | ------------- |
@@ -20,7 +20,7 @@ Variables are interpolated into YAML config files using `${ENV_VAR}` syntax. Def
 | `PERSON_ID_SERVICE_URL` | Person identification service URL |
 | `CC_ADMIN_API_KEY` | Admin API key |
 
-### Optional Variables
+### Optional variables
 
 | Variable | Description |
 | ---------- | ------------- |
@@ -80,7 +80,7 @@ All timestamps are stored in the database as UTC. The timezone setting affects s
 
 To change the timezone: update `app.timezone` in `config/settings.yaml` and restart the server. The frontend re-reads it on the next page load via `GET /api/v1/admin/app-info`.
 
-### LLM Configuration {#llm}
+### LLM configuration {#llm}
 
 The `llm` section contains two independent subsystems: the legacy per-role providers used by the `vision_analysis`, `logic_reasoning`, and `translation` steps, and the named model registry used by the `llm_call` step.
 
@@ -178,7 +178,7 @@ llm:
 
 Each legacy provider also supports **chain** (primary with fallback) and **pool** (round-robin load balancing) modes. See the `LLM provider chains and pools` feature in the README for syntax.
 
-### Event Aggregator {#event-aggregator}
+### Event aggregator {#event-aggregator}
 
 Controls how sensor events are batched before rule evaluation:
 
@@ -204,7 +204,7 @@ homeassistant:
 
 Authentication uses a role-based model with three key resolution methods.
 
-### API Keys
+### API keys
 
 ```yaml
 api_keys:
@@ -224,7 +224,7 @@ api_keys:
       - mcp_readonly
 ```
 
-### Device Keys
+### Device keys
 
 8-character uppercase alphanumeric strings for hardware devices that cannot set HTTP headers:
 
@@ -238,7 +238,7 @@ device_keys:
     device_type: reterminal
 ```
 
-### Permission Map
+### Permission map
 
 Roles under `permission_map` list endpoint patterns (`fnmatch`) and named tokens. An excerpt of
 the shipped file:
@@ -266,7 +266,7 @@ MCP tools that change state each require their own token (`rules:execute`,
 `mcp_readonly` can read through MCP but cannot change anything. See
 [MCP integration](/features/mcp-integration#authentication).
 
-### Key Resolution
+### Key resolution
 
 Browser and agent requests send the key in the `X-API-Key` header (the MCP endpoint also
 accepts `Authorization: Bearer <key>`). Only the device endpoints, for hardware that cannot set

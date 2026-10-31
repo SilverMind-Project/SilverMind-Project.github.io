@@ -1,10 +1,10 @@
 # What caregivers see
 
-Cognitive Companion gives you context on your own schedule. It stays quiet until something is worth your attention, then tells you what changed and where, with enough detail to decide what to do without opening a video feed.
+Cognitive Companion stays quiet until something needs your attention, then tells you what changed and where. You decide what to do without opening a video feed.
 
-## Alerts you can actually act on
+## Alerts
 
-Alerts reach you on whatever channel you set up, usually a Telegram message, a popup in the companion app, or a spoken announcement in the home. Each one comes with context, the room and a short description of what happened, so the message itself is enough to judge whether it needs you now or can wait.
+Alerts arrive on the channels you set up, usually Telegram, a popup in the companion app, or a spoken announcement in the home. Each names the room and what happened, so you can tell whether it needs you now.
 
 They come at four levels:
 
@@ -15,11 +15,11 @@ They come at four levels:
 | Info | Just so you know | The daily activity summary |
 | Reminder | A gentle prompt for the senior | A medication or mealtime nudge |
 
-An emergency does not rely on you catching the first message. If it goes unacknowledged, the system re-sends it three times at five-minute intervals before it stops.
+An unacknowledged emergency is sent again three times, five minutes apart.
 
 ## The routine changes it watches for
 
-Over time the system learns what a normal day looks like for each person, then flags the moments that fall outside it. There are six of them:
+The system learns each person's normal day and flags six kinds of change:
 
 | Change | What it means in plain terms |
 | --- | --- |
@@ -30,19 +30,19 @@ Over time the system learns what a normal day looks like for each person, then f
 | Stillness | Staying very still for a long stretch somewhere that is not a normal resting spot |
 | Absence | Not being seen for longer than you would expect at this time of day |
 
-Each one is measured against that person's own history, so an ordinary long shower stays quiet. The system also waits for a pattern to hold before it says anything, which keeps a single odd moment from turning into a stream of notifications. These are signals about routine, meant to prompt a check, with no medical conclusion attached.
+Each is measured against that person's own history, so an ordinary long shower stays quiet, and a pattern has to hold before the system says anything. A signal prompts a check; it is not a medical finding.
 
 ## A sense of the whole day
 
-Not everything is an alert. At the end of the day the system can put together a short wellness summary, so you get a feel for how the whole day went.
+At the end of the day the system can send a short summary of how the day went.
 
 ## A place to review and clear things
 
-Caregivers and care teams work from a web console: review alerts, see which rooms are occupied, and acknowledge a signal once you have handled it. Acknowledging clears the alert and opens a quiet window for that kind of event, so you are not nagged about something you already dealt with.
+Caregivers and care teams use a web console to review alerts, see which rooms are occupied, and acknowledge a signal once it's handled. Acknowledging clears the alert and pauses that kind of alert for a while.
 
 ## You decide what reaches whom
 
-You choose which reminders the senior gets and which alerts go to which family member. Anything sensitive waits for a person to decide. The system tells you what it noticed; it does not act on its own.
+You choose which reminders the senior gets and which alerts go to whom. Anything sensitive waits for a person to decide.
 
 ---
 

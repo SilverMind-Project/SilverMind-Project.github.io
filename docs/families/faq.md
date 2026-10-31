@@ -4,7 +4,7 @@ Short answers to the questions families ask first. If yours is not here, the [ov
 
 ## Is it recording my relative all day?
 
-Cameras capture still images of the rooms they cover, and those images are kept on a computer in the home, not in the cloud. The system looks at them to track presence and notice routine changes. It is not a live feed that a family member sits and watches, and there is no outside company holding a recording of the day.
+Cameras take still images of the rooms they cover, kept on a computer in the home. The system uses them to track presence and notice routine changes. Nobody watches a live feed, and no outside company holds a recording of the day.
 
 ## What happens if the internet goes down?
 
@@ -16,7 +16,7 @@ No, not on its own. It notifies the people you choose, and it can hand off to ot
 
 ## Will it take over my parent's routine?
 
-No. The system reminds and alerts, but it never acts for the senior. It will prompt someone to take their medication; it will not administer it. Keeping those small decisions with the person is a deliberate part of the design.
+No. The system reminds and alerts but never acts for the senior. It prompts someone to take their medication; it does not give it to them.
 
 ## Who can see the data?
 

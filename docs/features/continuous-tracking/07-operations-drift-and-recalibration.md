@@ -1,4 +1,4 @@
-# Operations, Drift, and Recalibration
+# Operations, drift, and recalibration
 
 A calibrated camera is assumed to stay fixed. If it is bumped, rotated, or moved, its homography no longer matches the scene. Person localization can become offset, cross-camera dedup can degrade, and room-level signals can become less reliable.
 

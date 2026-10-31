@@ -1,6 +1,6 @@
 # What the senior experiences
 
-For the person being supported, the system mostly stays quiet. There is no screen to monitor, no app to remember to open. What they notice is a handful of friendly prompts and a companion they can talk to when they feel like it.
+For the senior, the system is mostly quiet: a few spoken prompts, and a companion to talk to when they want one. There is no app to remember to open.
 
 ## Reminders that arrive when they help
 
@@ -12,17 +12,17 @@ A few of the things it can remind them about:
 - Safety in context, for instance a word about the stove when they have walked up to it.
 - The ordinary rhythm of the day, such as a nudge toward lunch.
 
-What the system holds back from is deliberate. It never locks the stove, hands out pills, or does anything on the senior's behalf. It prompts, and the person decides, because keeping those small decisions is part of staying independent.
+It never locks the stove, hands out pills, or acts on the senior's behalf. It prompts, and the person decides.
 
 ## A companion to talk to
 
 The senior can hold an ordinary spoken conversation with the companion. They can ask about their own life, and it answers from facts a family member has added ahead of time. "How many grandchildren do I have?" gets a real answer, in their own family's details.
 
-It is built for ordinary conversation, so there is nothing to memorize. The same companion can run a short memory quiz or read aloud an info card a caregiver prepared, which gives the person a gentle way to stay connected to their own history.
+There are no commands to memorize. The same companion can run a short memory quiz or read aloud an info card a caregiver prepared.
 
 ## Devices that suit a home
 
-Nothing here asks the senior to learn a new gadget. The prompts show up on things that already fit a living space.
+Prompts arrive on ordinary household devices.
 
 | Surface | What it does |
 | --- | --- |

@@ -1,6 +1,6 @@
-# Development Setup
+# Development setup
 
-This guide covers setting up a development environment for contributing to Cognitive Companion.
+Set up a development environment for Cognitive Companion.
 
 ## Prerequisites
 
@@ -11,14 +11,14 @@ This guide covers setting up a development environment for contributing to Cogni
 - **NVIDIA GPU** with 10 GB+ VRAM (for running models locally)
 - **Docker** + NVIDIA Container Toolkit (for person-ID service)
 
-## Clone the Repository
+## Clone the repository
 
 ```bash
 git clone https://github.com/SilverMind-Project/cognitive-companion.git
 cd cognitive-companion
 ```
 
-## Backend Setup
+## Backend setup
 
 ### Install uv
 
@@ -26,7 +26,7 @@ cd cognitive-companion
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-### Install Dependencies
+### Install dependencies
 
 ```bash
 cd backend
@@ -55,7 +55,7 @@ make check-all          # lint + typecheck-core + test-core + test-services
 
 The `check` target is the minimum bar before opening a pull request that touches anything under `backend/core/`.
 
-### Configure Environment
+### Configure environment
 
 ```bash
 cp .env.example .env
@@ -68,7 +68,7 @@ At minimum, you need:
 - A MinIO instance for media storage
 - The person-ID service running (or mock it for UI development)
 
-### Run the Backend
+### Run the backend
 
 ```bash
 cd ..  # back to project root
@@ -77,7 +77,7 @@ uv run --directory backend uvicorn backend.main:app --host 0.0.0.0 --port 8000 -
 
 The `--reload` flag enables hot-reloading on file changes. The backend connects to PostgreSQL at the URL specified in `config/settings.yaml`.
 
-### Lint, Type Check, and Format
+### Lint, type check, and format
 
 ```bash
 cd backend
@@ -96,7 +96,7 @@ cd .. && backend/.venv/bin/mypy backend/ --config-file backend/pyproject.toml  #
 
 Ruff is configured in `pyproject.toml` with rules `E`, `F`, `I`, `W`, `UP`, `B`, `SIM`, `RUF`, `PIE`, `PT`, `C4`, `T20` and a 100-character line length. mypy is configured with `enable_error_code = ["import"]` to catch broken imports at type-check time.
 
-### Run Tests
+### Run tests
 
 ```bash
 cd backend
@@ -105,7 +105,7 @@ uv run pytest
 
 Tests use `pytest-asyncio` for async test support. Place test files in `tests/` mirroring the `backend/` directory structure.
 
-## Frontend Setup
+## Frontend setup
 
 ```bash
 cd frontend
@@ -115,7 +115,7 @@ npm run dev                     # Dev server at http://localhost:5173 with HMR
 
 The frontend proxies API calls to `http://localhost:8000` during development.
 
-### Build for Production
+### Build for production
 
 ```bash
 npm run build                   # Output in dist/
@@ -140,7 +140,7 @@ Or use the `standalone` profile for a self-contained Postgres: `docker compose -
 
 For tests, use PostgreSQL testcontainers. Do not use SQLite; the production schema uses PostgreSQL features.
 
-## Person Identification Service
+## Person identification service
 
 The person-ID service is a separate repository. Clone and run it alongside the main backend:
 
@@ -163,7 +163,7 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8200 --reload
 
 Configuration is in `config/settings.yaml`. Override individual values via environment variables (e.g. `CUDA_DEVICE_ID=-1` for CPU fallback). See the service README for the full list.
 
-### Code Quality
+### Code quality
 
 ```bash
 cd person-identification-service
@@ -183,7 +183,7 @@ curl http://localhost:8200/health
 
 Requires NVIDIA Container Toolkit. See the person-ID service README for Kubernetes manifests.
 
-## External Services
+## External services
 
 For local development, you need these services running:
 
@@ -199,7 +199,7 @@ For local development, you need these services running:
 For frontend-only development, you can run the backend without all external services. The backend will start with degraded functionality. LLM calls will fail, but the admin UI, database, and API endpoints will work.
 :::
 
-## Project Structure
+## Project structure
 
 ```text
 cognitive-companion/
@@ -226,7 +226,7 @@ cognitive-companion/
 └── backend/uv.lock             # Locked dependency versions
 ```
 
-## Key Files to Read First
+## Key files to read first
 
 | File | Why |
 | ------ | ----- |

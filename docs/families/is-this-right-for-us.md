@@ -1,12 +1,12 @@
 # Is this right for us?
 
-Cognitive Companion is open-source software you run yourself, and setting it up takes real technical work. Before a family commits, it helps to be honest about what the home needs, who sets it up, and where the system stops. This page is that honest look.
+Cognitive Companion is open-source software you run yourself, and setting it up takes technical work. This page covers who installs it, what the home needs, and where it stops.
 
 ## Who installs it
 
-This is the part most worth being clear about. Setting the system up today means running several services, configuring cameras, and connecting a home automation hub. It expects someone comfortable with that kind of work: a technically inclined family member, a friend who does this for a living, or a care organization deploying it on a family's behalf.
+Setup means running several services, configuring cameras, and connecting a home automation hub. It needs someone comfortable with that: a technical family member, a friend who does it for a living, or a care organization installing it for the family.
 
-A family that wants the benefits but does not have that person is not out of luck. The realistic path is to evaluate the system here, decide it fits, and then have a capable installer stand it up. The split is worth planning for from the start.
+Without that person, decide here whether it fits, then find an installer.
 
 ## What the home needs
 
@@ -29,7 +29,7 @@ You do not need every optional piece. A useful setup can start with a couple of 
 
 ## Where it stops
 
-Being clear about the edges saves disappointment later:
+
 
 - It is not a medical device and does not diagnose dementia or anything else.
 - It does not call 911 by itself. It alerts the people you choose, and it can trigger other systems you connect, but summoning help is a human decision.
@@ -38,5 +38,5 @@ Being clear about the edges saves disappointment later:
 
 ## Next steps
 
-- Reassure yourself on data handling in [privacy and trust](/families/privacy).
+- Read how data is handled in [privacy and trust](/families/privacy).
 - When you are ready to build it, move to the [quick start](/guide/getting-started) and [deployment guide](/guide/deployment).
