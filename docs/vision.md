@@ -29,8 +29,6 @@ Putting an agent in the home of a vulnerable adult needs controls, and they are 
 - Caregivers confirm or dismiss each behavioral signal, and the answer stays with the record. Over time this shows which alerts were worth the interruption.
 - The MCP tools are authenticated, permissioned, and shared with the internal voice agent, so every integration reaches household state through the same path.
 
-These controls are also what a care organization needs before it can put the system in a member's home.
-
 ## What works today
 
 As of v0.7.2 the system runs end to end across several services:

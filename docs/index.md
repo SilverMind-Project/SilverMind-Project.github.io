@@ -169,7 +169,7 @@ hero:
     <div class="section-kicker">For builders</div>
     <h2>What's under the hood.</h2>
     <p>
-      Realtime sensor fusion, Bayesian identity resolution, local inference, vision reasoning inside agent workflows, a <!-- count:mcp_tools -->61-tool MCP server, and a voice agent with function calling. Every layer is documented, from deployment to extension points.
+      Realtime sensor fusion, Bayesian identity resolution, local inference, vision reasoning inside agent workflows, a <!-- count:mcp_tools -->61-tool MCP server, and a voice agent with function calling.
     </p>
   </div>
   <div class="builder-actions">

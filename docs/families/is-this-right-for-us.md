@@ -29,8 +29,6 @@ You do not need every optional piece. A useful setup can start with a couple of 
 
 ## Where it stops
 
-
-
 - It is not a medical device and does not diagnose dementia or anything else.
 - It does not call 911 by itself. It alerts the people you choose, and it can trigger other systems you connect, but summoning help is a human decision.
 - It does not replace in-person care. It gives you awareness between visits.

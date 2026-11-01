@@ -106,11 +106,11 @@ A `GET /rules/templates` endpoint lists presets, and `POST /rules/from-template`
 
 ## Contributing to the roadmap
 
-Have an idea that's not listed here? We'd love to hear it. The best way to propose a new feature is to [open a GitHub issue](https://github.com/SilverMind-Project/cognitive-companion/issues) with:
+To propose a feature, [open a GitHub issue](https://github.com/SilverMind-Project/cognitive-companion/issues) with:
 
 1. **Problem statement**: what limitation does this address?
 2. **Proposed design**: how would you implement it?
 3. **Use cases**: who benefits and how?
 4. **Impact**: what does this make possible?
 
-We prioritize features that maintain the project's core values: privacy-first, on-premise, composable, and accessible to multigenerational households.
+Proposals that fit the project's core values come first: privacy-first, on-premise, composable, and accessible to multigenerational households.

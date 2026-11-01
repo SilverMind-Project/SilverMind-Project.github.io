@@ -35,7 +35,7 @@ Each `DementiaSignal` carries:
 |-------|-------------|
 | `signal_id` | Deterministic UUID5 from `(identity, kind, window_start, window_end)` |
 | `identity_id` | Tracked person |
-| `signal_kind` | One of the 6 kinds above |
+| `signal_kind` | One of the kinds above |
 | `severity` | `info`, `warning`, or `emergency` |
 | `value` | Raw metric value (rate, duration, transition count) |
 | `baseline` | Historical median from the 30-day baseline |

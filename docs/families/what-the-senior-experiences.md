@@ -22,8 +22,6 @@ There are no commands to memorize. The same companion can run a short memory qui
 
 ## Devices that suit a home
 
-Prompts arrive on ordinary household devices.
-
 | Surface | What it does |
 | --- | --- |
 | Smart speaker | Speaks reminders and announcements aloud |

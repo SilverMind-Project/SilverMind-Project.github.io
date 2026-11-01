@@ -32,7 +32,7 @@ The software is free and open-source. The cost is the hardware: a home computer 
 
 ## Do we need a technical person?
 
-Yes, to set it up. It is not yet a plug-in product. A technical family member or a care organization can stand it up, and the family can then use it day to day. The [is this right for us?](/families/is-this-right-for-us) page covers this split.
+Yes, to set it up. It is not yet a plug-in product. A technical family member or a care organization can stand it up, and the family can then use it day to day.
 
 ## Words you will see
 
