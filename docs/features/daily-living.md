@@ -28,6 +28,39 @@ near the medicine cabinet, but I can't confirm she took them," when the evidence
 false "yes, she took her medication" is a real risk for a dementia resident's care team, so the
 companion says how sure it is.
 
+## Medication schedules
+
+Caregivers set each person's schedule on the **Medication** tab of their profile: a name, a time, and the days it applies. Times are wall-clock times in `app.timezone`, so 8:00 stays 8:00 across daylight saving.
+
+The daily report compares logged doses with that schedule. Each scheduled dose reads one of these:
+
+| Status | Meaning |
+| --- | --- |
+| Taken | Confirmed in a guided routine |
+| Likely taken | A camera saw it. It counts toward adherence and stays labelled |
+| Missed | Nothing was logged by `medication.dose_grace_minutes` after its time (default 60) |
+| Upcoming | Not due yet |
+
+A logged dose fills the nearest scheduled dose within `medication.dose_match_window_minutes` (default 240), and fills it once. A routine and a camera logging the same dose cannot hide a missed one.
+
+With no schedule, the report shows no adherence, raises no alert, and leaves medication out of the wellness score.
+
+### Extra doses
+
+Someone with dementia can forget a dose and take it again, so a dose beyond the schedule alerts caregivers within a minute. This check is built in and runs for anyone with a schedule.
+
+| Case | Alert |
+| --- | --- |
+| A second dose near a scheduled time that was already taken | Extra dose |
+| A dose with nothing scheduled near it | Unscheduled dose |
+| A camera sighting within `medication.dose_duplicate_window_minutes` of a counted dose (default 30) | None: it is the same dose |
+
+A dose confirmed in a guided routine is an `emergency`. A camera-only sighting is a `warning`. Alerts go to `medication.alert_channels` (Telegram by default) and never to in-home speakers or screens, so they cannot distress the person they are about. They appear in the Alert Center and the daily report, and repeat until acknowledged.
+
+The system does not know which medicine a dose was, so an as-needed dose also alerts. Mark it inaccurate to dismiss it.
+
+A schedule change applies from the dose's next occurrence, and past reports keep the schedule of their day.
+
 ## Hygiene: same clothes, and a missed wash-up
 
 Two things feed into a single hygiene signal for the caregiver:

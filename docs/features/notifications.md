@@ -6,7 +6,7 @@ Cognitive Companion routes alerts across notification channels via a plugin syst
 
 ### PWA popup text (`pwa_popup_text`)
 
-Real-time push notifications to connected PWA clients. Every alert, regardless of level, includes a popup text notification delivered via WebSocket.
+Real-time push notifications to connected PWA clients. By default, every alert includes a popup text notification delivered via WebSocket.
 
 **How it works:** The `ConnectionManager` tracks active WebSocket connections and broadcasts alert payloads. Clients see alerts in the dashboard and can take action (dismiss, request assistance).
 
@@ -191,8 +191,8 @@ Alert level to channel routing is configured in `config/notifications.yaml`:
 
 | Level | Default Channels | Escalation |
 | ------- | ----------------- | ---------- |
-| `emergency` | PWA Popup Text, Telegram, eInk, HA Speaker TTS | Every 5 min, 3x repeat |
-| `warning` | PWA Popup Text, Telegram, eInk, PWA Realtime AI | Every 10 min |
+| `emergency` | PWA Popup Text, Telegram, eInk, HA Speaker TTS | Excess-dose alerts: every 5 min, 3 times |
+| `warning` | PWA Popup Text, Telegram, eInk, PWA Realtime AI | Excess-dose alerts: every 10 min |
 | `info` | PWA Popup Text only | None |
 | `reminder` | PWA Popup Text, HA Speaker TTS, eInk | None |
 
@@ -200,17 +200,21 @@ The outbound `webhook` channel is available but not enabled in the default level
 
 ## Escalation
 
-For critical alerts, the system automatically re-sends notifications if they are not acknowledged:
+Excess-dose alerts re-send until a caregiver acknowledges them, using these settings:
 
 ```yaml
 notification_defaults:
   emergency:
-    channels: [pwa_popup_text, telegram, eink, ha_speaker_tts]
     escalation_minutes: 5
+    repeat_count: 3
+  warning:
+    escalation_minutes: 10
     repeat_count: 3
 ```
 
-This means an unacknowledged emergency alert will be re-sent 3 times at 5-minute intervals before the escalation stops.
+An unacknowledged emergency alert is sent, then re-sent 3 times at 5-minute intervals. If no channel delivers, the next one-minute check tries again. Acknowledge the alert in the Alert Center to stop it.
+
+Other alerts are sent once.
 
 ## Pipeline integration
 

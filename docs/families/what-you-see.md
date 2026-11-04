@@ -6,6 +6,10 @@ Cognitive Companion stays quiet until something needs your attention, then tells
 
 Alerts arrive on the channels you set up, usually Telegram, a popup in the companion app, or a spoken announcement in the home. Each names the room and what happened. That is enough to tell whether it needs you now.
 
+Set a medication schedule and the daily report shows each dose as taken, likely taken, or missed. A dose the camera saw reads "likely taken", because a camera can show someone at the cabinet but not that they swallowed the tablet. A missed-dose alert fires only when nothing at all was recorded.
+
+A dose beyond the schedule alerts you straight away, because forgetting a dose and taking it again is a real risk. These alerts come to you, never to a speaker or screen in the home, and repeat until you respond.
+
 They come at four levels:
 
 | Level | What it means | Example |

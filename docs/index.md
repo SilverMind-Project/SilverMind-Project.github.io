@@ -84,7 +84,7 @@ titleTemplate: Agentic AI for aging in place
       <article class="hx-tile">
         <div>
           <h3>Open to the agent ecosystem</h3>
-          <p>A built-in Model Context Protocol server exposes <!-- count:mcp_tools -->61 tools. Claude, custom agents, and the voice companion use the same authenticated interface.</p>
+          <p>A built-in Model Context Protocol server exposes <!-- count:mcp_tools -->62 tools. Claude, custom agents, and the voice companion use the same authenticated interface.</p>
         </div>
         <img class="hx-shot" src="/screens/companion.webp" width="1600" height="1112" loading="lazy" alt="The resident tablet with a spoken conversation about a family visit and medication" />
       </article>
@@ -163,7 +163,7 @@ titleTemplate: Agentic AI for aging in place
   <div class="home-section builder-section">
     <div class="builder-copy">
       <h2>Read the code.</h2>
-      <p>Realtime sensor fusion, Bayesian identity resolution, local inference, vision reasoning inside agent workflows, a <!-- count:mcp_tools -->61-tool MCP server, and a voice agent with function calling.</p>
+      <p>Realtime sensor fusion, Bayesian identity resolution, local inference, vision reasoning inside agent workflows, a <!-- count:mcp_tools -->62-tool MCP server, and a voice agent with function calling.</p>
     </div>
     <div class="builder-actions">
       <a class="home-link-button" href="/features/pipeline.html">View features</a>

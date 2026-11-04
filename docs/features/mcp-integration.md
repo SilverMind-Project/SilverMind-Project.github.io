@@ -1,6 +1,6 @@
 # MCP integration
 
-A built-in [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, exposes <!-- count:mcp_tools -->61 tools for AI agent integration: agents can discover system state, query sensor data, inspect enrollment, face calibration progress, and e-ink status, check person locations, review activity timelines and daily reports, explore semantic memory, read the unified signals feed, acknowledge behavioral signals with feedback, drive and analyze guided routine sessions, propose identity corrections, trigger rule executions, author new rules, and inspect plugin metadata. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
+A built-in [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, exposes <!-- count:mcp_tools -->62 tools for AI agent integration: agents can discover system state, query sensor data, inspect enrollment, face calibration progress, and e-ink status, check person locations, review activity timelines and daily reports, explore semantic memory, read the unified signals feed, acknowledge behavioral signals with feedback, drive and analyze guided routine sessions, propose identity corrections, trigger rule executions, author new rules, and inspect plugin metadata. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
 
 Every agent, whether Claude Desktop, a custom orchestrator, or the internal voice companion, uses this one authenticated tool surface, so there is one integration to audit. Tools and the UI read the same service layer and stay in step.
 
@@ -68,6 +68,7 @@ A `GeminiToolAdapter` reads the same tool definitions and converts them to Gemin
 | `get_weather`              | Current weather from Home Assistant                          | None                                          |
 | `get_person_timeline`      | Chronological timeline of activities and sightings for a person | `person_id`, `minutes` (optional)          |
 | `get_daily_report`         | End-of-day wellness report for one or all members            | `person_id`, `report_date` (optional)       |
+| `get_medication_schedule`  | A person's current medication schedule: each dose's name, time, and days |
 | `get_open_sessions`        | Currently open activity sessions (meals, bathroom, etc.)     | `person_id`, `activity_type` (optional)     |
 | `submit_user_response`          | Record user response to an interactive prompt step    | `execution_id`, `step_id`, `action`         |
 | `get_recent_scene_objects`  | Recent object presence in a room                        | `room_id`, `since_minutes`                   |

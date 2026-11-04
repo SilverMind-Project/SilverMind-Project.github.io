@@ -13,7 +13,7 @@ Motion sensors alert often and say little about what happened. Cloud cameras sen
 - Notices routine changes such as pacing, long stretches of stillness, unusually long bathroom visits, and moving around at night.
 - Reminds the senior at the right moment, like a medication prompt in the afternoon or a safety reminder when they step toward the stove.
 - Keeps personal memories close through info cards, short memory quizzes, and a companion they can talk to.
-- Sends caregivers summaries and alerts, and keeps re-sending the urgent ones until someone responds.
+- Sends caregivers summaries and alerts, and repeats an excess-dose alert until someone responds.
 
 ## Where to start
 

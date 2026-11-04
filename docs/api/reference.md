@@ -203,6 +203,17 @@ The validator rejects unknown step IDs, unknown ports, invalid graph structure, 
 
 `calibrated_confidence` is null whenever `calibration_status` is not `ready`, and is always null for `candidate` and `unrecognized` faces.
 
+## Medication schedules
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/persons/{person_id}/medication-schedule` | The current schedule, in time order |
+| `POST` | `/persons/{person_id}/medication-schedule` | Add a dose: `label`, `dose_time` (`HH:MM`), optional `days_of_week` (0 is Monday) |
+| `PATCH` | `/persons/{person_id}/medication-schedule/{entry_id}` | Change a dose |
+| `DELETE` | `/persons/{person_id}/medication-schedule/{entry_id}` | Stop a dose |
+
+A change applies from the dose's next occurrence. A `PATCH` can return a new `id`, because an entry that has taken effect ends and a new one starts.
+
 ## CTS endpoints
 
 CTS routes cover camera admin, calibration, PH identity review, presence, signals, trajectories, live data, overlap groups, and CTS window triggers. They require CTS enablement and the appropriate API permissions.
