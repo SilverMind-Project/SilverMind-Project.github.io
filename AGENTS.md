@@ -229,7 +229,6 @@ file, scan the diff for added em-dashes before Claude finishes (blocking once), 
 gate at session start. `npm run hooks:test` runs the hook test table, and the deploy workflow
 runs it before building.
 
-Once per clone, `make install-hooks` switches git to the versioned hooks in `.githooks/`: on
-`main` they sync the nav version from cognitive-companion (a network failure only warns), and
-on every commit they refuse markdown containing an em-dash. `make check-md` runs the same check
-over every tracked file, and the deploy workflow runs it before building.
+Once per clone, `make install-hooks` switches git to the versioned hooks in `.githooks/`, which
+refuse an em-dash in staged markdown. The nav bar version is read at build time
+(`docs/.vitepress/ccVersion.mts`), so no commit changes it.

@@ -1,4 +1,5 @@
 import { defineConfig } from "vitepress";
+import { ccVersion } from "./ccVersion.mts";
 
 export default defineConfig({
   appearance: false,
@@ -59,7 +60,7 @@ export default defineConfig({
       },
       { text: "Roadmap", link: "/roadmap" },
       {
-        text: "v0.7.147",
+        text: `v${ccVersion()}`,
         items: [
           {
             text: "Code",

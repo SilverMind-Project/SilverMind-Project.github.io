@@ -48,6 +48,12 @@ jobs:
       - name: Public counts match the code
         run: npm run docs:check-counts
 
+      # The nav bar shows the code's version, read at build time.
+      - name: Cognitive Companion version
+        run: |
+          version=$(curl -fsSL https://raw.githubusercontent.com/SilverMind-Project/cognitive-companion/main/backend/_version.py | grep -oP '(?<=__version__ = ")[^"]+')
+          echo "CC_VERSION=${version}" >> "$GITHUB_ENV"
+
       - name: Build documentation
         run: npm run docs:build
 
