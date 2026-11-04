@@ -1,6 +1,7 @@
 import DefaultTheme from "vitepress/theme";
 import Layout from "./Layout.vue";
 import HomeDayTimeline from "./components/HomeDayTimeline.vue";
+import HomeVideo from "./components/HomeVideo.vue";
 import Mermaid from "./components/Mermaid.vue";
 
 // Self-hosted brand fonts (Design System v2): Newsreader (display serif),
@@ -18,12 +19,14 @@ import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 
 import "./custom.css";
+import "./home.css";
 
 export default {
   ...DefaultTheme,
   Layout,
   enhanceApp({ app }) {
     app.component("HomeDayTimeline", HomeDayTimeline);
+    app.component("HomeVideo", HomeVideo);
     app.component("Mermaid", Mermaid);
   },
 };

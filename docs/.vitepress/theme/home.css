@@ -1,0 +1,371 @@
+/*
+ * Home page: one idea per screen, large serif headlines, real photography, and the product's own
+ * screens. Sections run full width, so the page drops the default content container. Everything
+ * sits under .hx, which keeps these rules off the documentation pages.
+ */
+.VPHome .vp-doc.container {
+  max-width: none !important;
+  padding: 0 !important;
+}
+
+.VPHome {
+  padding-bottom: 0 !important;
+}
+
+/* The decorative canvas competes with photography here. */
+html:has(.hx) canvas {
+  display: none;
+}
+
+.hx {
+  --hx-gutter: 32px;
+  color: var(--text-body);
+}
+
+.hx-wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 var(--hx-gutter);
+}
+
+.VPHome .vp-doc .hx h1,
+.VPHome .vp-doc .hx h2 {
+  font-family: var(--font-display);
+  font-weight: var(--weight-display);
+  letter-spacing: -0.025em;
+  line-height: 1.04;
+  color: var(--text-strong);
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.VPHome .vp-doc .hx h1 {
+  font-size: clamp(3rem, 8.2vw, 6.5rem);
+  max-width: 13em;
+  margin: 0 auto;
+  text-wrap: balance;
+}
+
+.VPHome .vp-doc .hx h2 {
+  font-size: clamp(2.4rem, 5.6vw, 4.25rem);
+}
+
+.VPHome .vp-doc .hx h3 {
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 2.2vw, 1.75rem);
+  font-weight: var(--weight-display);
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+  color: var(--text-strong);
+  margin: 0;
+}
+
+.VPHome .vp-doc .hx p {
+  margin: 0;
+}
+
+/* Hero */
+.hx-hero {
+  padding-top: 72px;
+  text-align: center;
+}
+
+.VPHome .vp-doc .hx .hx-name {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--text-brand);
+  margin-bottom: 16px;
+}
+
+.VPHome .vp-doc .hx .hx-lead {
+  max-width: 34em;
+  margin: 28px auto 0;
+  font-size: clamp(1.15rem, 2vw, 1.375rem);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.hx-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin: 32px 0 56px;
+}
+
+.VPHome .vp-doc .hx .hx-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 24px;
+  border: 1px solid var(--stone-300);
+  border-radius: var(--radius-pill);
+  background: var(--surface-card);
+  color: var(--text-strong);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+}
+
+.VPHome .vp-doc .hx .hx-btn--brand {
+  border-color: var(--sage-500);
+  background: var(--sage-500);
+  color: var(--text-on-brand);
+}
+
+.VPHome .vp-doc .hx .hx-btn:focus-visible,
+.hx-video__poster:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+/* Photography */
+.hx-photo {
+  display: block;
+}
+
+.VPHome .vp-doc .hx .hx-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 88vh;
+  object-fit: cover;
+  border-radius: 0;
+}
+
+.VPHome .vp-doc .hx .hx-photo--card img {
+  height: 100%;
+  border-radius: var(--radius-xl);
+}
+
+/* Sections */
+.hx-section {
+  padding: 112px 0;
+}
+
+.hx-section--flush {
+  padding-bottom: 0;
+}
+
+.hx-section--sunk {
+  background: var(--surface-sunk);
+}
+
+.hx-head {
+  text-align: center;
+  margin-bottom: 56px;
+}
+
+.VPHome .vp-doc .hx .hx-sub {
+  max-width: 36em;
+  margin-top: 20px;
+  font-size: clamp(1.1rem, 1.8vw, 1.3rem);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.VPHome .vp-doc .hx .hx-head .hx-sub {
+  margin-inline: auto;
+}
+
+.hx-split {
+  display: grid;
+  gap: 48px;
+  align-items: center;
+}
+
+.hx-points {
+  display: grid;
+  gap: 32px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  padding-top: 56px;
+  padding-bottom: 32px;
+}
+
+.VPHome .vp-doc .hx .hx-points p {
+  margin-top: 10px;
+  color: var(--text-muted);
+}
+
+/* Video */
+.hx-video {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  background: var(--surface-inverse);
+}
+
+.hx-video iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.hx-video__poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+}
+
+.VPHome .vp-doc .hx .hx-video__poster img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hx-video__play {
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
+  padding: 10px 20px;
+  border-radius: var(--radius-pill);
+  background: var(--sage-500);
+  color: var(--text-on-brand);
+  font-weight: var(--weight-semibold);
+}
+
+/* The dark band: the product itself, on warm ink. */
+.hx-ink {
+  padding: 112px 0;
+  background: var(--stone-900);
+}
+
+.VPHome .vp-doc .hx .hx-ink h2 {
+  color: var(--stone-50);
+}
+
+.hx-bento {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.hx-tile {
+  grid-column: span 6;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+  padding: 32px 32px 0;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  background: var(--stone-800);
+}
+
+.VPHome .vp-doc .hx .hx-tile h3 {
+  color: var(--stone-50);
+}
+
+.VPHome .vp-doc .hx .hx-tile p {
+  margin-top: 10px;
+  max-width: 36em;
+  color: var(--stone-300);
+}
+
+.VPHome .vp-doc .hx .hx-shot {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+}
+
+.VPHome .vp-doc .hx .hx-tile .hx-shot {
+  margin-top: auto;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.hx-pair {
+  display: grid;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.hx-routes {
+  display: grid;
+  gap: 32px;
+}
+
+.VPHome .vp-doc .hx .hx-routes p {
+  margin-top: 8px;
+  color: var(--text-muted);
+}
+
+.VPHome .vp-doc .hx .hx-routes a {
+  display: inline-block;
+  margin-top: 8px;
+  font-weight: var(--weight-semibold);
+  color: var(--text-link);
+}
+
+.hx .day-section {
+  margin-top: 112px;
+  margin-bottom: 112px;
+}
+
+.hx .builder-section {
+  margin: 96px 0;
+}
+
+.VPHome .vp-doc .hx .builder-section h2 {
+  color: var(--stone-50);
+}
+
+@media (min-width: 760px) {
+  .hx-tile:not(.hx-tile--wide) {
+    grid-column: span 3;
+  }
+}
+
+@media (min-width: 960px) {
+  .hx-split {
+    grid-template-columns: 0.9fr 1.1fr;
+  }
+
+  .hx-split--routes {
+    grid-template-columns: 1.1fr 0.9fr;
+  }
+
+  .hx-pair {
+    grid-template-columns: 0.8fr 1.2fr;
+  }
+
+  .hx-points--four {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 639px) {
+  .hx {
+    --hx-gutter: 16px;
+  }
+
+  .hx-hero {
+    padding-top: 40px;
+  }
+
+  .hx-section,
+  .hx-ink {
+    padding: 72px 0;
+  }
+
+  .hx-section--flush {
+    padding-bottom: 0;
+  }
+
+  .hx-tile {
+    padding: 24px 24px 0;
+  }
+
+  .VPHome .vp-doc .hx .hx-btn {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}

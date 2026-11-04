@@ -21,7 +21,7 @@ Identify the primary reader before editing:
 
 Do not force one page to serve every reader at once. If a page mixes overview, task, architecture, and reference material, split it or add clear sections.
 
-Use "care partners", "health plans", "senior-care providers", or "care organizations" for non-family audiences. Do not target fundraising audiences unless the user asks for fundraising material.
+Use "care partners", "health plans", "senior-care providers", or "care organizations" for non-family audiences. The home page and Vision page also address investors and technical readers.
 
 ## 2. Voice And Tone
 
@@ -37,6 +37,12 @@ Write like professional product and platform documentation: clear, calm, specifi
 - **Avoid first person.** Use "Cognitive Companion" or "the system", not "we".
 - **Avoid em dashes, en dashes, and exclamation marks.** This is a house-style choice for the portal, not a claim that the dash is an AI tell. Use commas, colons, or separate sentences. Also use straight ASCII quotes and apostrophes, not curly ones.
 - **Document what exists.** Do not describe planned features as shipped.
+
+### Headlines
+
+On the home, family, and Vision pages, write headlines bold and short: six words or fewer where possible, and fragments are welcome. Cut any subhead that repeats the heading. A claim must be true of the shipped system, and safety and privacy wording keeps its full meaning. Reference pages stay calm and precise.
+
+Avoid the reflexes that crept in here before: `rather than`, trailing `, so it` or `, so you` clauses, and colon reveals. Note that `seamless` in the TTS docs is an engine name, not filler.
 
 ### Replace This With That
 
@@ -362,7 +368,7 @@ Before finishing a documentation change:
 - [ ] Code blocks have language tags.
 - [ ] Tables use consistent column order.
 - [ ] Internal links are relative and meaningful.
-- [ ] Public copy avoids hype, fear, and fundraising-oriented targeting.
+- [ ] Public copy avoids hype and fear.
 - [ ] No clustered AI-writing tells: fallback vocabulary, copula avoidance, forced triads, negative parallelism, performed endings.
 - [ ] Each substantial paragraph has a concrete anchor; useful structure (headings, tables, steps) was kept, not flattened.
 - [ ] House style holds: sentence-case headings, straight ASCII quotes, no em or en dashes.

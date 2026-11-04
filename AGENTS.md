@@ -19,10 +19,15 @@ docs/
 │   ├── config.mts           # VitePress configuration (nav, sidebar, theme)
 │   └── theme/
 │       ├── index.ts          # Theme entry point
-│       └── custom.css        # Custom CSS (brand colors, hover effects)
+│       ├── custom.css        # Theme: tokens mapped onto VitePress, docs pages
+│       └── home.css          # The landing page, all under .hx
 ├── public/
-│   └── favicon.svg           # Site favicon/logo
-├── index.md                  # Landing page (hero, feature grid)
+│   ├── favicon.svg           # Site favicon/logo
+│   ├── photos/               # Landing page photography, wide and tall crops
+│   └── screens/              # Product screenshots from ../product-screens
+├── index.md                  # Landing page (photography, product screens, audience routes)
+├── vision.md                 # Where the project is headed; for care partners and investors
+├── families/                 # Family and caregiver pages
 ├── guide/
 │   ├── introduction.md       # Project overview, capabilities, tech stack
 │   ├── getting-started.md    # Installation and first-run guide
@@ -66,6 +71,10 @@ All documentation content is derived from the main Cognitive Companion and Conti
 - **Config files**: `../cognitive-companion/config/`
 
 When updating documentation, verify technical details against the actual codebase. Do not assume documentation is more current than code. For API endpoints, read `backend/routers/`; for step types, read `backend/steps/builtin/`; for default values, read the source.
+
+## Product screenshots
+
+`docs/public/screens/` holds screenshots of the real frontend with made-up data. They come from the sibling `../product-screens` repository: run `make screens` there. Never edit these images by hand.
 
 ## Adding new pages
 

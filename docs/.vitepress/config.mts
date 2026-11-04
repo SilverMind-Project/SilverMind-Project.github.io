@@ -30,6 +30,15 @@ export default defineConfig({
     ["link", { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32x32.png" }],
     ["link", { rel: "icon", type: "image/png", sizes: "16x16", href: "/favicon-16x16.png" }],
     ["link", { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" }],
+    ["meta", { property: "og:type", content: "website" }],
+    ["meta", { property: "og:site_name", content: "Cognitive Companion" }],
+    ["meta", { property: "og:title", content: "Cognitive Companion: agentic AI for aging in place" }],
+    ["meta", { property: "og:description", content: "AI agents that notice changes in a daily routine and act through workflows caregivers approve, on hardware the family owns." }],
+    ["meta", { property: "og:image", content: "https://silvermind-project.github.io/og-card.jpg" }],
+    ["meta", { property: "og:image:width", content: "1200" }],
+    ["meta", { property: "og:image:height", content: "630" }],
+    ["meta", { property: "og:image:alt", content: "A woman in her kitchen talks to a small tablet while she makes tea" }],
+    ["meta", { name: "twitter:card", content: "summary_large_image" }],
   ],
 
   themeConfig: {
