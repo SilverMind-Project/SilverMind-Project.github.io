@@ -228,8 +228,7 @@ Representative paths include:
 
 `GET /api/v1/cts/keyframes` returns one card per physical source frame, even when several Person
 Hypotheses triggered sampling of the same frame. Each card carries every visible bounding box with
-its server-computed effective identity, so a frame that shows two people returns two identities
-rather than only the identity of the PH that triggered the capture.
+its server-computed effective identity, so a frame that shows two people returns two identities, not only the identity of the PH that triggered the capture.
 
 The orchestrator owns identity semantics. The card summary, Unknown count, and conflict count are
 derived once at the BFF from the per-bbox provenance; the browser computes none of them. Effective
@@ -254,7 +253,7 @@ Server-side query parameters: `person_id` (effective household identity), `camer
 `after`, `before`, `explicit_unknown`, `authority`, `decision_source`, `conflict_only`,
 `pending_review_only`, `limit`, and `offset`. Filters apply before grouped-frame pagination; a
 matching frame still returns all of its bboxes for context. A malformed upstream envelope returns
-`502` with code `keyframe.upstream_contract` rather than an empty list. Requires
+`502` with code `keyframe.upstream_contract` instead of an empty list. Requires
 `cts.keyframes.view`. The `list_keyframe_frames` MCP tool reads the same service function.
 
 ### Identity correction workflow
@@ -325,8 +324,7 @@ endpoint: batch selection exposes only rejection. The BFF injects the audited ac
 authentication context, presigns crop and frame media only for a live object (a rejected candidate's
 crop is deleted, so its URL is null), and maps the effective identity onto `person_id`.
 
-This surface is operational biometric administration, not caregiver-facing domain data, so it is
-intentionally excluded from MCP parity. Exposing approve, relabel, or reject as an agent tool would
+This surface is operational biometric administration, not caregiver-facing domain data. It is intentionally excluded from MCP parity. Exposing approve, relabel, or reject as an agent tool would
 let an unattended agent re-identify a household member without operator review. No MCP adapter
 duplicates the review service; the exemption is asserted in the router tests.
 

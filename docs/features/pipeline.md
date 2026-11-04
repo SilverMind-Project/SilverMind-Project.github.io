@@ -303,7 +303,7 @@ Tests person detections from an earlier perception step (typically `scene_analys
 | `skipped` | list | Detections skipped (e.g. `unknown_bbox_space`) with a reason |
 | `evaluated_at` | str | ISO-8601 evaluation timestamp |
 
-A detection whose bounding-box coordinate space cannot be determined is skipped rather than guessed; check `skipped` when a rule that should be matching stays quiet.
+A detection whose bounding-box coordinate space cannot be determined is skipped, never guessed; check `skipped` when a rule that should be matching stays quiet.
 
 #### `novelty_gate`
 
@@ -334,7 +334,7 @@ Fails open (`novel: true`) whenever the embedding is missing, since the gate mus
 
 #### `media_presign`
 
-Resolves MinIO object names referenced in trigger or pipeline context into presigned URLs consumable by a downstream `llm_call` or `notification` step, registering each as a `MediaCache` row for cleanup. The motivating case is a `dementia_signal` trigger's evidence context, which carries bare MinIO object names (e.g. `today_best_keyframe_objects`) rather than URLs a vision step can fetch directly, but the step is generic: any rule that receives object-name references in trigger or prior-step context can use it. Gate-safe.
+Resolves MinIO object names referenced in trigger or pipeline context into presigned URLs consumable by a downstream `llm_call` or `notification` step, registering each as a `MediaCache` row for cleanup. The motivating case is a `dementia_signal` trigger's evidence context, which carries bare MinIO object names (e.g. `today_best_keyframe_objects`) instead of URLs a vision step can fetch directly, but the step is generic: any rule that receives object-name references in trigger or prior-step context can use it. Gate-safe.
 
 **Config fields:**
 
@@ -434,7 +434,7 @@ Graceful degradation: when the semantic-memory-service is unreachable or disable
 
 #### `media_window_poll`
 
-The unified camera polling step for both Continuous Tracking System (CTS) and reCamera sources. It fetches a recent image window, returns presigned MinIO URLs plus metadata, and replaces the former `recamera_media_poll` and `cts_window_poll` step types. The step is gate-safe, so it can also run inside vision-gate graphs.
+The unified camera polling step for both Continuous Tracking System (CTS) and reCamera sources. It fetches a recent image window, returns presigned MinIO URLs plus metadata, and replaces the former `recamera_media_poll` and `cts_window_poll` step types. The step is gate-safe and can also run inside vision-gate graphs.
 
 The `source` config field selects the path:
 
@@ -665,7 +665,7 @@ Open a duration-aware activity session for a person. Idempotent: reuses an exist
 - `person_id`: person to attribute this session to. Supports templates (e.g. `{{person_detections.0.person_id}}`).
 - `room_name`: room where the activity occurs. Supports templates. Defaults to trigger room.
 - `confidence`: detection confidence (0-1). Accepts a fixed number or `{{template}}` syntax (default `0.85`). Clamped to the valid range and recorded on the session row.
-- `source`: how this session was determined, one of `guided_companion`, `ha_state_join`, `sensor`, `vision_inferred` (default `vision_inferred`). Recorded on the session row and used to phrase caregiver answers to the right evidence grade: only a routine the resident completed step-by-step with the companion supports claiming she performed an action. An unrecognized value degrades to `vision_inferred` rather than failing, so a typo can never inflate confidence.
+- `source`: how this session was determined, one of `guided_companion`, `ha_state_join`, `sensor`, `vision_inferred` (default `vision_inferred`). Recorded on the session row and used to phrase caregiver answers to the right evidence grade: only a routine the resident completed step-by-step with the companion supports claiming she performed an action. An unrecognized value degrades to `vision_inferred` instead of failing, so a typo can never inflate confidence.
 - `timeout_minutes`: maximum session duration in minutes before auto-close. Uses built-in default for the activity type when empty. Supports templates.
 - `metadata_extra`: optional JSON string of extra fields to merge into session metadata. Supports `{{template}}` syntax.
 - `output_key`: `pipeline_data` key to write the session result under (default `session`).
@@ -1302,7 +1302,7 @@ The `POST /api/v1/pipeline/cron/preview` endpoint validates expressions and retu
 
 ## Rule import/export
 
-Rules can be exported to portable YAML or JSON bundles and imported across installations. Bundles use stable string identifiers (labels, type names, sensor ids) instead of database primary keys, so they survive round-trips between different installs.
+Rules can be exported to portable YAML or JSON bundles and imported across installations. Bundles use stable string identifiers (labels, type names, sensor ids) instead of database primary keys and survive round-trips between different installs.
 
 - **Export:** `GET /api/v1/rules/{id}/export` returns a self-contained `RuleBundle` document with steps, contexts, dependencies, cron expressions, and external references
 - **Import preview:** `POST /api/v1/rules/import/preview` validates a bundle and returns an `ImportReport` with per-step migration status and any warnings, without writing to the database

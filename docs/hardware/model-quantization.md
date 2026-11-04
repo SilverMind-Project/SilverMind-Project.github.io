@@ -144,7 +144,7 @@ The exporter:
 The accepted run used 128 keyframes across four cameras. SCRFD found 49 usable,
 aligned faces in those person crops.
 
-Public commands use a placeholder rather than a household identity:
+Public commands use a placeholder in place of a household identity:
 
 ```bash
 set -a
@@ -278,8 +278,7 @@ The accepted QAT run used:
 | Student losses | Backbone feature distillation, object-score distillation, box distillation |
 
 The QAT script keeps the teacher frozen, inserts fake INT8 quantizers in the
-student backbone, and chooses the best epoch by detector behavior rather than
-training loss alone.
+student backbone, and chooses the best epoch by detector behavior, not training loss alone.
 
 ```bash
 uv run \
@@ -344,7 +343,7 @@ camera transitions.
 ### SCRFD: validate decoded face evidence
 
 SCRFD has multiple output heads for scores, boxes, and five facial landmarks.
-The validator checks active anchors rather than averaging mostly inactive
+The validator checks active anchors instead of averaging mostly inactive
 background anchors.
 
 | Measure | Result | Gate |

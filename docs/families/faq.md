@@ -8,7 +8,7 @@ Cameras take still images of the rooms they cover, kept on a computer in the hom
 
 ## What happens if the internet goes down?
 
-The core keeps working. Recognition, scene understanding, and routine-change detection all run on the home computer, so they do not need the internet. The features that do reach outside, Telegram alerts and the voice companion, pause until the connection is back. See [privacy and trust](/families/privacy) for the full split.
+The core keeps working. Recognition, scene understanding, and routine-change detection all run on the home computer and do not need the internet. The features that do reach outside, Telegram alerts and the voice companion, pause until the connection is back. See [privacy and trust](/families/privacy) for the full split.
 
 ## Can it call 911 or send an ambulance?
 
@@ -44,7 +44,7 @@ Yes, to set it up. It is not yet a plug-in product. A technical family member or
 | Presence | Whether someone is in a given room right now. |
 | Sundowning | A common late-day restlessness in people with dementia. The system can flag when an evening is more restless than usual for that person. |
 | Companion | The voice assistant the senior can talk to and that reads out reminders. |
-| Local or on-premise | Running on a computer in the home rather than in the cloud. |
+| Local or on-premise | Running on a computer in the home instead of in the cloud. |
 
 ## Next steps
 

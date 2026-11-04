@@ -148,7 +148,7 @@ hours. These values describe current usage and are not Jetson predictions.
 
 The detector request count is close to the consumed-frame count. Under this
 sparse motion workload, many fixed batch-8 requests therefore contain
-duplicate padding rather than eight distinct camera frames. More active
+duplicate padding, with fewer than eight distinct camera frames. More active
 cameras can improve batching efficiency, but they also raise worst-case
 throughput demand.
 
@@ -237,7 +237,7 @@ Jetson with the same JetPack-compatible Triton image that will serve them.
 
 - Jetson Orin Nano 8 GB running a supported JetPack release;
 - Super mode configured with adequate active cooling;
-- NVMe storage rather than relying on a small SD card for build artifacts;
+- NVMe storage for build artifacts, instead of a small SD card;
 - NVIDIA Container Toolkit and Docker;
 - the eight validated `model_int8.onnx` files;
 - enough free disk space for plans, logs, and layer reports.

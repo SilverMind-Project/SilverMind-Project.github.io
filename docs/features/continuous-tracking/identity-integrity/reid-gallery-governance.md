@@ -17,8 +17,7 @@ frame pipeline, after identity resolution and provenance persistence and ahead o
 publish throttle, so candidate creation is never silently dropped on a throttled frame. A
 face-derived candidate is created only when the direct recognized ArcFace identity equals the
 resolved PH identity and the face evidence carries a calibrated confidence; without a deployed
-calibration artifact, the stage produces no candidates at all (fail closed) rather than falling
-back to uncalibrated similarity. A candidate whose calibrated confidence is at or above
+calibration artifact, the stage produces no candidates at all (fail closed) and does not fall back to uncalibrated similarity. A candidate whose calibrated confidence is at or above
 `reid_candidates.auto_verify_min_confidence` (default `0.90`) mints directly into `auto_verified`
 instead of `pending_review`; every other eligible candidate still lands `pending_review`. The
 per-identity, per-orientation cap on gallery growth counts `pending_review`, `auto_verified`, and
@@ -39,8 +38,7 @@ Every `reid_gallery` entry has one state.
 
 `auto_verified` is minted at candidate-creation time, never by a review action: it exists precisely
 because the calibrated evidence at creation already cleared a strict bar (the ArcFace authority
-threshold plus a margin), so the row deserves machine trust with operator veto rather than operator
-trust with machine suggestion. Operators can approve, relabel, reject, or **demote** an
+threshold plus a margin), so the row deserves machine trust with operator veto, not operator trust with machine suggestion. Operators can approve, relabel, reject, or **demote** an
 `auto_verified` row from the same review queue used for `pending_review`. Only `operator_verified`
 and `auto_verified` entries may reach resolver queries or caches; pending and rejected entries never
 vote, including through caches, fallback queries, or compatibility code.
@@ -100,8 +98,7 @@ The server computes eligibility for each candidate from its current state, crop 
 occlusion, and model and preprocessing compatibility. The detail drawer disables Approve when
 eligibility is false and lists the reasons. The server re-checks eligibility and the optimistic
 `audit_version` on every approve and relabel, so a stale or now-ineligible candidate returns `409`
-(`reid_review.stale` or `reid_review.ineligible`) and the browser refreshes rather than forcing the
-change through. The browser cannot fabricate eligibility or override a failed quality gate.
+(`reid_review.stale` or `reid_review.ineligible`) and the browser refreshes instead of forcing the change through. The browser cannot fabricate eligibility or override a failed quality gate.
 
 ### Rejected candidates show a deleted-crop state
 
@@ -118,8 +115,7 @@ broad `GET /api/v1/*` and `POST /api/v1/cts/identity/*` role patterns, so those 
 unlock the review surface on their own. The grant is held by the caregiver-admin role and the admin
 role, not by the read-only caregiver role.
 
-The review queue is an operational biometric-admin surface, not caregiver-facing domain data, so it
-is intentionally not exposed as an MCP agent tool. See the
+The review queue is an operational biometric-admin surface, not caregiver-facing domain data. It is intentionally not exposed as an MCP agent tool. See the
 [API reference](/api/reference) for the endpoints and this exemption.
 
 ## Weight verified evidence
@@ -127,7 +123,7 @@ is intentionally not exposed as an MCP agent tool. See the
 `operator_verified` hits receive a trust multiplier of `2.0` before identity aggregation;
 `auto_verified` hits receive `1.5`. Neither multiplier changes cosine similarity; both are applied
 by the same shared scorer described below, so a query regression that leaks a pending or rejected
-row into scoring is loud (a backstop counter increments) rather than silently miscounted.
+row into scoring is loud (a backstop counter increments), never silently miscounted.
 
 Recency uses exponential decay with a two-day half-life and no floor (shortened
 from the original seven-day default):

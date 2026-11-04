@@ -324,7 +324,7 @@ Every query is logged in the `senior_knowledge_queries` table for caregiver revi
 
 ### Answer synthesis
 
-The LLM is prompted to answer using only the retrieved context. If the context does not contain the answer, it says "I don't have that information" rather than hallucinating. The answer model is configured via `knowledge.answer_model` in settings.
+The LLM is prompted to answer using only the retrieved context. If the context does not contain the answer, it says "I don't have that information" instead of hallucinating. The answer model is configured via `knowledge.answer_model` in settings.
 
 ```text
 You are a helpful assistant for a senior citizen. Answer the question using
@@ -497,7 +497,7 @@ config:
 
 ::: tip voice_instruction best practices
 
-Keep voice instructions concise (1-3 sentences). Focus on tone and behavior rather than content: the content is already in the prompt template. The instruction tells Gemini *how* to say it, not *what* to say.
+Keep voice instructions concise (1-3 sentences). Focus on tone and behavior. The content is already in the prompt template. The instruction tells Gemini *how* to say it, not *what* to say.
 
 :::
 

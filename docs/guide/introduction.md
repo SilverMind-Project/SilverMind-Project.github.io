@@ -18,7 +18,7 @@ Six design choices:
 
 1. **Context-aware perception.** Vision LLMs describe what is happening in each frame instead of flagging all motion. A person in the kitchen at noon is routine; at 3 AM, it warrants attention.
 2. **Composable pipelines.** Each rule assembles its own graph of steps and edges. Rules are not constrained to a fixed trigger-action template.
-3. **Reminders over automation.** The system suggests and alerts but never acts on the senior's behalf, so they keep their routines and decisions.
+3. **Reminders over automation.** The system suggests and alerts but never acts on the senior's behalf. Routines and decisions stay theirs.
 4. **Local inference.** All models run on-premise through vLLM, llama.cpp, and sibling services. Camera frames stay in local MinIO storage. No footage leaves the network unless an outbound channel is explicitly configured.
 5. **Multigenerational interfaces.** Caregivers receive alerts through Telegram, webhooks, or the admin console. Seniors interact through voice, popup notifications, e-ink displays, and TTS.
 6. **Personal knowledge repository.** Caregivers curate facts about people, places, and routines. The system generates narrated info cards, review-gated quizzes, and voice Q&A backed by RAG.

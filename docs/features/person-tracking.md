@@ -27,7 +27,7 @@ Upload 5-10 reference photos per person through the admin UI (**Members & Enroll
 
 **Enroll everyone who comes regularly.** Every face is matched to the closest enrolled person, so a relative, aide, or nurse who visits often but was never enrolled can be mistaken for an enrolled family member who looks similar. Enroll every resident and every person who visits on three or more days a month, and name or dismiss recurring visitors on the **Visitors** page.
 
-**Roster health.** The **Members & Enrollment** page shows a warning when the roster is incomplete: it lists active, non-guest members with fewer than `roster.min_face_embeddings` enrolled photos (default 5, set in the Cognitive Companion `config/settings.yaml`) and counts recurring visitors waiting for review. If the person-ID service is unreachable, the page says the check is unavailable rather than reporting the roster as complete. The same data is available from `GET /api/v1/persons/roster-health` and the `get_roster_health` MCP tool.
+**Roster health.** The **Members & Enrollment** page shows a warning when the roster is incomplete: it lists active, non-guest members with fewer than `roster.min_face_embeddings` enrolled photos (default 5, set in the Cognitive Companion `config/settings.yaml`) and counts recurring visitors waiting for review. If the person-ID service is unreachable, the page says the check is unavailable and does not report the roster as complete. The same data is available from `GET /api/v1/persons/roster-health` and the `get_roster_health` MCP tool.
 
 ### Identification pipeline
 
@@ -101,7 +101,7 @@ Cross-frame centroid tracking classifies movement direction:
 
 ## Camera topology
 
-Raw motion directions carry no room-level meaning on their own. Camera topology maps each raw direction to a semantic transition for a specific camera, so a rule can fire when someone *enters* the kitchen rather than just when motion is detected.
+Raw motion directions carry no room-level meaning on their own. Camera topology maps each raw direction to a semantic transition for a specific camera, so a rule can fire when someone *enters* the kitchen, not merely when motion is detected.
 
 ### Configuration
 
@@ -165,7 +165,7 @@ config:
   within_minutes: 2
 ```
 
-This filter is evaluated against `PersonLocationService` presence segments, so it works correctly across both direct camera detections and HA-sensor-inferred transitions.
+This filter is evaluated against `PersonLocationService` presence segments and works correctly across both direct camera detections and HA-sensor-inferred transitions.
 
 ## Whole-house location tracking
 

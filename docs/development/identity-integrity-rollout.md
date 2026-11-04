@@ -8,7 +8,7 @@ legacy behavior.
 ::: info Implementation status
 The rollout machinery (replay gate, metrics, page-now alerts, and the emergency disable path)
 is delivered. The two-person golden acceptance run and the production flag flip are operator-gated:
-they require the private replay dataset and a running stack, so they happen in a separate, recorded
+they require the private replay dataset and a running stack. They happen in a separate, recorded
 change. Do not read this page as a record that authoritative voting is deployed.
 :::
 
@@ -35,8 +35,7 @@ Unknown is a release-blocking change, not a fix.
 
 ## What is already enabled
 
-Most authority gates landed and run in earlier milestones. The rollout verifies them together rather
-than flipping them for the first time.
+Most authority gates landed and run in earlier milestones. The rollout verifies them together instead of flipping them for the first time.
 
 | Gate | Setting | State |
 | --- | --- | --- |

@@ -163,8 +163,7 @@ decided it. `authority` is a bounded vocabulary, never a raw identity id or name
 
 A card or API response never renders an `authority` value as a person's name. `decision_source`
 (which evidence type led the frame) is a related but distinct field; the two are not
-interchangeable, and consumers must branch on `authority` for authority questions rather than
-inferring authority from `decision_source`.
+interchangeable, and consumers must branch on `authority` for authority questions and never infer authority from `decision_source`.
 
 ## Operational consequences
 

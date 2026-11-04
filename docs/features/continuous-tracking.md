@@ -93,7 +93,7 @@ consumer require a coordinated protobuf cutover. The Python protobuf codec lives
 | `scene.samples` | publish | `"sample"` | `SceneSample` |
 | `cc.identity_assertions` | consume | separate text fields, current exception | Legacy assertion payload |
 
-`tracking.events` is a high-rate live feed for the UI, throttled per camera by `live_publish_max_hz` (default 3 Hz; inference still runs every frame). `tracking.presence` and `tracking.dwell` are low-rate semantic state-change streams, so downstream rule load tracks human activity rather than camera frame rate.
+`tracking.events` is a high-rate live feed for the UI, throttled per camera by `live_publish_max_hz` (default 3 Hz; inference still runs every frame). `tracking.presence` and `tracking.dwell` are low-rate semantic state-change streams, so downstream rule load follows human activity, not camera frame rate.
 
 ::: warning
 Redis clients must set `decode_responses=False` so binary payloads round-trip unchanged.

@@ -80,12 +80,12 @@ Reliable fine-grained computer vision does not exist for every step, so the conv
 
 ## Vision-confirm gates (callable gate graphs)
 
-A step can carry an optional vision-confirm gate that checks, from the cameras, whether the step looks done. Rather than a single fixed model call, a vision gate is authored and run like a small pipeline: a reusable graph of read-only perception and reasoning steps that ends on exactly one verdict.
+A step can carry an optional vision-confirm gate that checks, from the cameras, whether the step looks done. A vision gate is authored and run like a small pipeline: a reusable graph of read-only perception and reasoning steps that ends on exactly one verdict.
 
-- **A gate is a callable graph.** It is stored as a rule with no triggers (so it never fires on its own) and is referenced from a routine step. Because it reuses the normal pipeline canvas and steps, a gate can be as simple as "poll the cameras, ask one vision model, decide" or a cheap-first cascade ("detect the kettle cheaply, and only run the heavy vision model when one is present"). Only side-effect-free steps are allowed in a gate, so it can run often and safely.
+- **A gate is a callable graph.** It is stored as a rule with no triggers (so it never fires on its own) and is referenced from a routine step. Because it reuses the normal pipeline canvas and steps, a gate can be as simple as "poll the cameras, ask one vision model, decide" or a cheap-first cascade ("detect the kettle cheaply, and only run the heavy vision model when one is present"). Only side-effect-free steps are allowed in a gate. It can run often and safely.
 - **One verdict, fail-closed.** The graph ends on a single `gate_verdict` step that produces `{complete, confidence, reason}`. If the verdict is not reached, cannot be parsed, or the confidence is below the configured threshold, the result is `complete = false`. The confidence threshold is one setting, overridable per step or per routine; raising it makes the gate stricter.
 - **Two profiles: Confirm and Watch.** The same graph runs in two modes. **Confirm** is the heavy, authoritative check that runs when the resident says she is done. **Watch** is a cheap, advisory check on a background tick; it is off by default. When on, Watch suppresses unnecessary nagging while she is clearly making progress and warms the verdict cache. Watch can optionally advance a step on its own, but only after several consecutive high-confidence readings, only when a caregiver opts in, and never on a safety-critical step.
-- **Bounded disagreement.** The conversation stays authoritative. If the resident says she is done but the vision gate disagrees, the companion records the disagreement; after a small number of disagreements it defers to her word and advances (or escalates, if configured) rather than trapping her behind a camera that will not agree. A configured vision-confirm gate runs on every "done", regardless of the step's completion mode; the mode setting governs only the optional activity and zone assists.
+- **Bounded disagreement.** The conversation stays authoritative. If the resident says she is done but the vision gate disagrees, the companion records the disagreement; after a small number of disagreements it defers to her word and advances (or escalates, if configured). A camera that will not agree never traps her. A configured vision-confirm gate runs on every "done", regardless of the step's completion mode; the mode setting governs only the optional activity and zone assists.
 - **One camera control, both sources.** Cameras are resolved once through the selection cascade, which spans both the continuous-tracking cameras and the reCamera sensors, and are injected into the gate. There is a single camera picker on the step; leaving it empty auto-selects.
 - **Preset first, canvas for power users.** A caregiver normally picks a vision gate from a small preset library (for example a generic vision confirm, or the kettle-on-hob cascade) without ever seeing a graph. A power user can open the gate in a scoped canvas to edit its logic and test-run it.
 
@@ -104,7 +104,7 @@ When a realtime voice session opens (she walks up and taps the mic), the compani
 A companion surface is a tablet, speaker, or display that the resident interacts with. Surfaces are first class so presence gating knows where each one is.
 
 - A fixed surface has a stable room.
-- A movable tablet's room is caregiver-set and treated as authoritative, because a human moves it deliberately. A continuous-tracking cross-check flags a stale setting (`room_mismatch`) rather than silently overwriting the caregiver's value. Auto-inference only fills the room when no human ever set it.
+- A movable tablet's room is caregiver-set and treated as authoritative, because a human moves it deliberately. A continuous-tracking cross-check flags a stale setting (`room_mismatch`) and never silently overwrites the caregiver's value. Auto-inference only fills the room when no human ever set it.
 
 Surfaces are managed through `GET/POST/PATCH /api/v1/companion-surfaces`, with a device-key `POST /api/v1/companion-surfaces/{id}/heartbeat` that the room kiosk calls.
 
@@ -126,15 +126,15 @@ These tools are added to the `mcp.gemini_tools` allowlist in `settings.yaml`. Th
 
 Language is configurable per resident and per routine, overriding the global default (Chennai Tamil, Tanglish, or simple English). The coach persona is configured in `config/knowledge_voice.yaml` under `guided_task_default`, not hardcoded.
 
-Within a live conversation, the agent speaks the resident's language and any vision reasoning happens in English. The routine's language override is composed into the agent's instructions rather than translated in code, so the agent produces the resident-facing words directly in her language.
+Within a live conversation, the agent speaks the resident's language and any vision reasoning happens in English. The routine's language override is composed into the agent's instructions instead of translated in code, so the agent produces the resident-facing words directly in her language.
 
-The summon announcement is the one exception: it plays before a conversation exists, so it cannot rely on the agent. It resolves from a small per-language message map (`guided_task.summon_messages` in `settings.yaml`), in order: the routine's language override, then the household default, then English. A language missing from the map falls back to English rather than mistranslating.
+The summon announcement is the one exception: it plays before a conversation exists and cannot rely on the agent. It resolves from a small per-language message map (`guided_task.summon_messages` in `settings.yaml`), in order: the routine's language override, then the household default, then English. A language missing from the map falls back to English instead of mistranslating.
 
 ## Escalation and the caregiver safety net
 
 The companion never leaves the resident without help. Within a step the agent rephrases and retries up to the attempt cap. When the cap is reached, or when she asks for help, the caregiver is notified over the configured escalation channels with context: the routine name, the current instruction, and the reason. Emergencies add a Home Assistant speaker announcement.
 
-The escalation message is sent through the existing notification dispatcher, so it reaches the same channels as other alerts (Telegram, on-screen popup, and so on). It also carries a takeover link so the caregiver can open the session directly. When `app.public_base_url` is configured, the link is an absolute URL a caregiver can open from a phone; otherwise it stays a relative path, which only works from an in-app surface.
+The escalation message is sent through the existing notification dispatcher and reaches the same channels as other alerts (Telegram, on-screen popup, and so on). It also carries a takeover link so the caregiver can open the session directly. When `app.public_base_url` is configured, the link is an absolute URL a caregiver can open from a phone; otherwise it stays a relative path, which only works from an in-app surface.
 
 ## Privacy and retention
 

@@ -19,8 +19,7 @@ deployed across all tracking APIs.
 Supersession is always bounded: an operator revision rewrites only the rows inside its explicit
 `range_start`/`range_end`; an automatic (range-less) revision rewrites only rows within
 `cts.revision_horizon_s` of the revision time. A replacement row for a superseded
-`cts_dementia_signals` row re-derives its `signal_id` from the new identity rather than reusing the
-superseded row's ID, so `signal_id` lookups never point at the wrong identity mid-supersession.
+`cts_dementia_signals` row re-derives its `signal_id` from the new identity and does not reuse the superseded row's ID, so `signal_id` lookups never point at the wrong identity mid-supersession.
 :::
 
 ## Keep inferred and effective labels separate
@@ -35,7 +34,7 @@ provenance fields into that internal identity key; it does not deprecate `person
 
 An operator correction:
 
-- targets observation boundaries rather than arbitrary timestamps;
+- targets observation boundaries, not arbitrary timestamps;
 - may cover one frame or a caregiver-confirmed segment;
 - stops at PH split, merge, or earlier operator-revision boundaries;
 - preserves the original inference and evidence;
@@ -199,8 +198,7 @@ guessed room, since `presence_segments.room_id` is not nullable.
 
 **The overlap guard.** If a concurrent live commit already wrote a non-backfill segment for the
 identity inside the backfill range between CTS's emission and Cognitive Companion's projection, a
-backfill dwell that overlaps a live segment by more than 50 percent of its own duration is skipped
-rather than inserted as a duplicate.
+backfill dwell that overlaps a live segment by more than 50 percent of its own duration is skipped, not inserted as a duplicate.
 
 **Confidence comes from the dwell, not the revision.** The wire-level `IdentityRevision` carries no
 numeric confidence field; each segment's `confidence` is the CTS dwell's own `entry_confidence` from

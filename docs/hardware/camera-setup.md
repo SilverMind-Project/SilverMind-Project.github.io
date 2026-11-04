@@ -73,11 +73,11 @@ Place cameras to capture people as they cross room boundaries, not as they sit i
 
 ### Window and backlight
 
-Avoid pointing cameras directly at windows unless the camera has wide dynamic range (WDR) enabled. A window in the background compresses the foreground histogram and produces silhouettes rather than texture-rich crops. Enable WDR if available, or angle the camera 45 degrees away from the window axis.
+Avoid pointing cameras directly at windows unless the camera has wide dynamic range (WDR) enabled. A window in the background compresses the foreground histogram and produces silhouettes with no usable texture. Enable WDR if available, or angle the camera 45 degrees away from the window axis.
 
 ### Camera overlap and adjacency
 
-When two cameras share a physical zone (e.g. two angles of the same doorway), declare them as an overlap group in Admin UI (Admin > CTS > Adjacency). The system uses overlap groups to merge simultaneous detections from different angles into one PersonHypothesis rather than spawning two.
+When two cameras share a physical zone (e.g. two angles of the same doorway), declare them as an overlap group in Admin UI (Admin > CTS > Adjacency). The system uses overlap groups to merge simultaneous detections from different angles into one PersonHypothesis instead of spawning two.
 
 Cameras that are adjacent but do not share a view (e.g. hallway camera and bedroom camera) need an adjacency edge, not an overlap group. See [Camera Calibration](/features/continuous-tracking/camera-calibration) for how overlap inference and manual adjacency configuration work, and for what makes homography calibration accurate: floor texture, six or more reference points spread across the camera frame, and a clean shot without people in frame.
 
@@ -101,7 +101,7 @@ Run NTP on every camera and on every host running rtsp-ingress. Two timing value
 
 2. **Cross-camera transit time.** When a PersonHypothesis closes on one camera and a revival candidate appears on another, the tracker computes `elapsed_s = now - closed_at` using the orchestrator's wall clock. For this estimate to be accurate, the orchestrator host must have a correct clock. Camera clocks do not directly feed into this computation, but a camera with a drifted clock can produce RTSP stream PTS values that cause go2rtc to delay or reorder frame delivery, which may shift the effective ingest time.
 
-**How to spot clock skew.** In the Admin UI person inspector, check whether doorway crossings between two cameras show transit times that are implausibly long or short (under half a second or over a minute for adjacent rooms). One-sided misses (camera A never successfully hands off to camera B but the reverse works) often indicate a clock or topology misconfiguration rather than an appearance problem.
+**How to spot clock skew.** In the Admin UI person inspector, check whether doorway crossings between two cameras show transit times that are implausibly long or short (under half a second or over a minute for adjacent rooms). One-sided misses (camera A never successfully hands off to camera B but the reverse works) are more often a clock or topology misconfiguration than an appearance problem.
 
 ## Privacy zones
 

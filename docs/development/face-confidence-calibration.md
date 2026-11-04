@@ -62,7 +62,7 @@ DATABASE_URL=postgresql://... uv run --extra calibration-tools \
 
 The command opens a read-only database connection. It groups labeled captures into walks (episodes): a run of captures with one label on one camera with gaps under 300 seconds. It then scores every labeled probe against every enrolled resident's centroid, producing genuine records, closed-set impostor records (a resident against another resident), and open-set impostor records (a not-enrolled person against every resident). The manifest and its `.meta.json` sidecar (row count, SHA-256, versions) hold household biometric scores: keep them outside the repository.
 
-To pool a research face set, add `--external set.jsonl`. The listing is one `{"image": ..., "identity_id": ...}` object per line, and it must sit next to `set.jsonl.licence.json` naming the dataset, its version, and its licence; a set without one is refused. External images run through the service's own face engine (this needs Triton), so they are aligned and quality-scored exactly like household captures. External identities are prefixed `external:` and never reach the household holdout.
+To pool a research face set, add `--external set.jsonl`. The listing is one `{"image": ..., "identity_id": ...}` object per line, and it must sit next to `set.jsonl.licence.json` naming the dataset, its version, and its licence; a set without one is refused. External images run through the service's own face engine (this needs Triton). They are aligned and quality-scored exactly like household captures. External identities are prefixed `external:` and never reach the household holdout.
 
 ### 4. Fit
 
@@ -163,7 +163,7 @@ The score is a weighted geometric mean, `resolution^0.45 * sharpness^0.25 * dete
 uv run --extra calibration-tools python scripts/calibrate_face_quality.py manifest.json
 ```
 
-The manifest lists image files and the enrolled identity each shows. The script runs face detection directly (it never calls `/identify`, so it records no visitor sightings), reads enrolled centroids read-only, and prints each input's distribution, its Spearman correlation with raw similarity to the labeled identity, and suggested ramp anchors at the 5th and 95th percentiles. It never writes configuration. Changing an anchor or weight changes what the score means, so it ships as a new scorer version, and any calibration artifact or policy tuned on the old version must be re-checked.
+The manifest lists image files and the enrolled identity each shows. The script runs face detection directly (it never calls `/identify` and records no visitor sightings), reads enrolled centroids read-only, and prints each input's distribution, its Spearman correlation with raw similarity to the labeled identity, and suggested ramp anchors at the 5th and 95th percentiles. It never writes configuration. Changing an anchor or weight changes what the score means. The change ships as a new scorer version, and any calibration artifact or policy tuned on the old version must be re-checked.
 
 ## Measuring your cameras
 

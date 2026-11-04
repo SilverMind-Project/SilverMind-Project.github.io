@@ -182,15 +182,15 @@ A calibrated direct face match at or above `arcface_authority_calibrated_confide
 
 ## 8. Detection backfill
 
-`DetectionBackfillStage` enriches each detection in `ctx.domain_detections` with the `ph_id` assigned by the world tracker. This ensures downstream stages (posture, trajectory, publish) all read the same identity from the detection object rather than maintaining separate maps.
+`DetectionBackfillStage` enriches each detection in `ctx.domain_detections` with the `ph_id` assigned by the world tracker. This ensures downstream stages (posture, trajectory, publish) all read the same identity from the detection object instead of maintaining separate maps.
 
 ## 9. PH lifecycle (ClosePHStage)
 
-`ClosePHStage` closes any PersonHypothesis that was active in the previous frame but no longer has an active detection in this frame. It writes the final trajectory and dwell segments for closed PHs so that dwell intervals are closed promptly rather than on the next detection.
+`ClosePHStage` closes any PersonHypothesis that was active in the previous frame but no longer has an active detection in this frame. It writes the final trajectory and dwell segments for closed PHs so that dwell intervals are closed promptly, without waiting for the next detection.
 
 ## 10. Posture classification
 
-`PostureStage` produces soft posture evidence for each detection rather than a single hard label. The 17 COCO keypoints drive geometric scorers (torso angle, knee bend, head-spine alignment, shin-drop geometry) into a `PostureScores` record with continuous evidence for `lying`, `sitting`, and `standing_walking`, plus a keypoint-confidence value. Soft scoring lets several weak cues accumulate instead of firing on one threshold. In a bedroom, a lying prior is added when the body is occluded.
+`PostureStage` produces soft posture evidence for each detection instead of a single hard label. The 17 COCO keypoints drive geometric scorers (torso angle, knee bend, head-spine alignment, shin-drop geometry) into a `PostureScores` record with continuous evidence for `lying`, `sitting`, and `standing_walking`, plus a keypoint-confidence value. Soft scoring lets several weak cues accumulate instead of firing on one threshold. In a bedroom, a lying prior is added when the body is occluded.
 
 Fusion and the final label happen in stage 11. `GlobalPostureTracker` keeps each camera's latest scores, fuses them quality-weighted across the person's active cameras, and applies hysteresis before committing a posture. Crops without pose output (smaller than 16x32 px or from cameras with pose disabled) contribute `unknown`. See [Handling noisy readings](./tracking-concepts.md#handling-noisy-readings) for the full position and posture fusion model.
 
@@ -227,7 +227,7 @@ When the identity committer is enabled, the `PostgresIdentityRewriter` performs 
 `ProvenancePersistStage` durably persists every identity decision that revises a PH's previous
 identity (`revises_previous=True`), unconditionally. It runs immediately before the per-camera
 publish throttle, and deliberately outside it: a decision that revises identity is audit data a
-caregiver-facing read model joins against, so it must never be dropped just because the frame
+caregiver-facing read model joins against. It must never be dropped just because the frame
 that carried it was rate-limited for live-view publishing. The stage is a no-op when no
 `identity_provenance_repo` is configured.
 
@@ -239,8 +239,7 @@ committed, face-matched detection it evaluates a governed eligibility gate
 creates a `pending_review` candidate with crop and frame provenance, `origin_tracklet_id`, `ph_id`,
 and model/preprocessing versions. A face-derived candidate requires the direct recognized ArcFace
 identity to equal the committed identity with calibrated confidence at or above the authority
-threshold; without a deployed calibration artifact the stage produces no candidates rather than
-falling back to raw similarity. Like provenance persistence, this runs ahead of the publish
+threshold; without a deployed calibration artifact the stage produces no candidates and does not fall back to raw similarity. Like provenance persistence, this runs ahead of the publish
 throttle because candidate creation is audit-visible governance data. The per-(identity,
 orientation) cap on gallery growth counts `pending_review` and `operator_verified` rows together.
 

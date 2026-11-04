@@ -4,7 +4,7 @@ Cognitive Companion stays quiet until something needs your attention, then tells
 
 ## Alerts
 
-Alerts arrive on the channels you set up, usually Telegram, a popup in the companion app, or a spoken announcement in the home. Each names the room and what happened, so you can tell whether it needs you now.
+Alerts arrive on the channels you set up, usually Telegram, a popup in the companion app, or a spoken announcement in the home. Each names the room and what happened. That is enough to tell whether it needs you now.
 
 They come at four levels:
 

@@ -119,12 +119,12 @@ The identity filter options come from the authoritative correction-target endpoi
 (`GET /api/v1/cts/identity/correction-targets`, the active household roster), not from whatever
 identities happen to appear on the current page, plus an explicit Unknown option. The list scans a
 bounded recent window; when that window is full the response sets `truncated` so a caregiver knows
-the count covers recent activity rather than all retained history.
+the count covers recent activity, not all retained history.
 
 The BFF does not copy or delete raw frames. Keyframe cards reference the `frames/...` MinIO objects
 that RTSP ingress wrote, and the BFF resolves a short-lived presigned URL per request. If the
 orchestrator returns a malformed envelope, the BFF returns `502` with code
-`keyframe.upstream_contract` so contract drift is a visible incident rather than an empty page.
+`keyframe.upstream_contract` so contract drift is a visible incident instead of an empty page.
 
 The same `KeyframeReadService.list_frames` function powers both the `GET /api/v1/cts/keyframes`
 router and the `list_keyframe_frames` MCP tool.
@@ -152,15 +152,14 @@ capture time, thumbnail, and the reason it was chosen; a boundary that lands on 
 
 Every apply call carries the proposal's version token. If the track changed since the proposal was
 fetched, the orchestrator returns `409` with code `correction.stale_version`. The workflow then
-re-fetches the proposal, shows the updated range, and requires the caregiver to confirm again rather
-than silently retrying.
+re-fetches the proposal, shows the updated range, and requires the caregiver to confirm again. It never retries silently.
 
 The audited actor comes from the request's authentication context. The browser payload never carries
 an actor field, and the apply schema rejects one. Proposing a segment uses `cts.identity.view`;
 applying or compensating a correction requires `cts.identity.correct`.
 
 The browser shows raw ArcFace similarity only as a labeled detail value, never as a confidence
-percentage. Operator corrections read `Verified` rather than a fabricated number. The "Verify ReID
+percentage. Operator corrections read `Verified` instead of a fabricated number. The "Verify ReID
 crop" action appears only when the server marks a crop eligible; the ReID review queue that produces
 that eligibility signal lands with a later milestone, so the action stays hidden until then. Identity
 correction and bounding-box geometry editing stay separate revision types: the keyframe annotation
