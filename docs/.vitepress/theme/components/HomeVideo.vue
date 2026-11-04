@@ -2,6 +2,8 @@
 import { ref } from "vue";
 
 const VIDEO_ID = "Xur5_7VcWJg";
+// A public file, bound so the template compiler leaves the path alone.
+const POSTER = "/photos/caregiver-work-wide.webp";
 
 // YouTube loads only after a click: opening the page sends nothing to a third party.
 const playing = ref(false);
@@ -18,7 +20,7 @@ const playing = ref(false);
     ></iframe>
     <button v-else class="hx-video__poster" type="button" @click="playing = true">
       <img
-        src="/photos/caregiver-work-wide.webp"
+        :src="POSTER"
         width="2000"
         height="1116"
         loading="lazy"
