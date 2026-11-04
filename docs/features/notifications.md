@@ -216,6 +216,10 @@ An unacknowledged emergency alert is sent, then re-sent 3 times at 5-minute inte
 
 Other alerts are sent once.
 
+## Excess-dose alerts
+
+A dose beyond a person's medication schedule alerts caregivers through `medication.alert_channels`, Telegram by default. These alerts skip the channel defaults above and never reach an in-home speaker or screen, so they cannot distress the person they are about. They are built in, so no rule is needed. See [Extra doses](/features/daily-living#extra-doses).
+
 ## Pipeline integration
 
 Notifications are triggered by `notification` pipeline steps:

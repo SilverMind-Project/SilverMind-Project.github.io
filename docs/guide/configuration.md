@@ -190,6 +190,19 @@ event_aggregator:
   media_retention_hours: 24  # How long to keep media files
 ```
 
+### Medication {#medication}
+
+```yaml
+medication:
+  dose_grace_minutes: 60
+  dose_match_window_minutes: 240
+  dose_duplicate_window_minutes: 30
+  alert_channels:
+    - "telegram"
+```
+
+These control how logged doses match a person's schedule, and where excess-dose alerts go. See [Medication schedules](/features/daily-living#medication-schedules).
+
 ### Home Assistant {#home-assistant}
 
 ```yaml

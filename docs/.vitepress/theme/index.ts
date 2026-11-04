@@ -1,6 +1,7 @@
 import DefaultTheme from "vitepress/theme";
 import Layout from "./Layout.vue";
 import HomeDayTimeline from "./components/HomeDayTimeline.vue";
+import HomeLoopVideo from "./components/HomeLoopVideo.vue";
 import HomeVideo from "./components/HomeVideo.vue";
 import Mermaid from "./components/Mermaid.vue";
 
@@ -26,6 +27,7 @@ export default {
   Layout,
   enhanceApp({ app }) {
     app.component("HomeDayTimeline", HomeDayTimeline);
+    app.component("HomeLoopVideo", HomeLoopVideo);
     app.component("HomeVideo", HomeVideo);
     app.component("Mermaid", Mermaid);
   },

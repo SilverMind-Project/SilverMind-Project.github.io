@@ -14,6 +14,12 @@ The core keeps working. Recognition, scene understanding, and routine-change det
 
 No, not on its own. It notifies the people you choose, and it can hand off to other systems you have connected, but the decision to summon help stays with a person.
 
+## What if my parent takes too much medication?
+
+Set a medication schedule and you hear about any dose beyond it within a minute, whether it is a second dose or one at an unexpected time. Forgetting a dose and taking it again is a real risk with dementia. A dose confirmed in a guided routine is urgent. A camera sighting is a warning, because a camera can show someone at the cabinet but not that they swallowed the tablet.
+
+Alerts come to you on Telegram, never to a speaker or screen in the home, and repeat until you respond. The system cannot tell one medicine from another, so an as-needed dose also alerts. Without a schedule, it has nothing to compare against and stays quiet.
+
 ## Will it take over my parent's routine?
 
 No. The system reminds and alerts but never acts for the senior. It prompts someone to take their medication; it does not give it to them.

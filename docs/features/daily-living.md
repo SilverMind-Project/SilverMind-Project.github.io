@@ -57,7 +57,20 @@ Someone with dementia can forget a dose and take it again, so a dose beyond the 
 
 A dose confirmed in a guided routine is an `emergency`. A camera-only sighting is a `warning`. Alerts go to `medication.alert_channels` (Telegram by default) and never to in-home speakers or screens, so they cannot distress the person they are about. They appear in the Alert Center and the daily report, and repeat until acknowledged.
 
-The system does not know which medicine a dose was, so an as-needed dose also alerts. Mark it inaccurate to dismiss it.
+A dose counts as soon as it is seen, so an alert does not wait for the session to close. A dose logged just after midnight is matched to the night before, and a dose from before the schedule was set up never alerts.
+
+Each dose alerts once. Re-checking never repeats it, and a second extra dose raises its own alert, however soon it follows. If no channel delivers, the next check retries, so an outage or a restart cannot lose an alert. An unacknowledged alert repeats 3 times: every 5 minutes for an `emergency`, every 10 for a `warning`. Acknowledge it in the Alert Center to stop it.
+
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `medication.dose_grace_minutes` | 60 | How long after its time a dose can arrive before it counts as missed |
+| `medication.dose_match_window_minutes` | 240 | How far from a scheduled time a logged dose can be and still fill it |
+| `medication.dose_duplicate_window_minutes` | 30 | How close a camera sighting must be to a counted dose to be the same dose |
+| `medication.alert_channels` | `telegram` | Where excess-dose alerts go |
+
+**Limits.** The system does not know which medicine a dose was, so an as-needed dose also alerts. Mark it inaccurate to dismiss it. With no schedule there is nothing to compare against, so nothing alerts. Two doses scheduled within the duplicate window of each other can read as one, which reports a missed dose instead of hiding one.
+
+These alerts are `medication_excess` signals, which a person's alert profile cannot switch off: setting a schedule is the opt-in.
 
 A schedule change applies from the dose's next occurrence, and past reports keep the schedule of their day.
 

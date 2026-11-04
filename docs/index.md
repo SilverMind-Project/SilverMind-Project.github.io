@@ -72,7 +72,7 @@ titleTemplate: Agentic AI for aging in place
           <h3>Autonomous care workflows</h3>
           <p>Rules run as pipelines of <!-- count:step_types -->28 step types that reason with local vision and language models, branch on conditions, and act through <!-- count:channel_types -->7 notification channels.</p>
         </div>
-        <img class="hx-shot" src="/screens/pipeline.webp" width="1600" height="974" loading="lazy" alt="A rule pipeline: a camera step, scene analysis, and a condition that branches to a reminder or a log" />
+        <HomeLoopVideo name="pipeline" label="A caregiver builds a rule on the canvas: adding camera, scene analysis, condition, and notification steps, then connecting them" :width="1440" :height="820" />
       </article>
       <article class="hx-tile">
         <div>
@@ -86,7 +86,7 @@ titleTemplate: Agentic AI for aging in place
           <h3>Open to the agent ecosystem</h3>
           <p>A built-in Model Context Protocol server exposes <!-- count:mcp_tools -->62 tools. Claude, custom agents, and the voice companion use the same authenticated interface.</p>
         </div>
-        <img class="hx-shot" src="/screens/companion.webp" width="1600" height="1112" loading="lazy" alt="The resident tablet with a spoken conversation about a family visit and medication" />
+        <HomeLoopVideo name="companion" label="The resident tablet: the microphone turns on, the waveform follows speech, and the conversation appears" :width="1280" :height="824" />
       </article>
       <article class="hx-tile hx-tile--wide">
         <div>
