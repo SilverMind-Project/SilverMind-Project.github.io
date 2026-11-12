@@ -193,6 +193,28 @@ stays inside its maintenance window in the shadow too, while after a flip it wou
 seconds after its last calibrated face or ReID vote. The outcome counts are a lower bound on the
 Unknown-rate cost; a replay under `calibrated` measures the rest.
 
+## Face templates
+
+A person walking past a camera gives many small faces that are weak one at a time; a seated
+person gives a few good ones. With `face_templates.mode` on, the tracker keeps the best faces seen
+on each person (up to 8, for 15 seconds) and asks the person-ID service to match them together as
+one template. The service averages the faces' embeddings, weighted by face quality, and reports a
+recognition state, a raw similarity, and a calibrated confidence from its own `template`
+calibration artifact. A single-face calibration is never applied to a template.
+
+| Rule | Why |
+| --- | --- |
+| A template is weighed as calibrated evidence under every evidence policy | Averaging several faces raises raw similarity, so single-face raw thresholds do not apply |
+| Without a template calibration it is capped at 0.55 and only corroborates | Raw template similarity is not a probability |
+| It grants `direct_face` authority only when every member face the service recognized on its own names the same resident | A template mixing two people's faces must not decide on its own |
+| It never enters association, the contradiction check, the duplicate-guard bypass, or face propagation | It describes several frames, not one face in this frame |
+| Only faces attributed to the person join, and a face unlike the others is rejected | An overlapping neighbour's face or an association swap must not be averaged in |
+| A merge, split, correction, identity change, or purge drops the faces and any template computed before it | The faces may belong to someone else now |
+
+The setting ships `off`. In `shadow`, templates are matched and the decision with them is counted
+in `cts_face_template_shadow_outcomes_total` without changing any live decision. Embeddings stay in
+the tracker's memory and are never logged or stored.
+
 ## Authority vocabulary
 
 Every identity decision carries an `authority` field naming which rung of the authority order

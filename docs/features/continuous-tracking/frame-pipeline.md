@@ -97,6 +97,8 @@ Face identification sends one crop per person to `POST /api/v1/identify` on the 
 | `enabled` | true | Master switch |
 | Per-camera overrides | camera_id to `FaceIdCameraConfig` | Enable/disable per camera, override the minimum similarity |
 
+With `face_templates.mode` on, the stage also asks for each face's embedding and hands every face attributed to the person (sub-floor and candidate faces included) to world tracking, which adds it to that person's face template after association; see [Face templates](/features/continuous-tracking/identity-integrity/identity-authority#face-templates).
+
 Face identification can be disabled per camera (for example, top-down views where faces are never visible). Each `FaceAnchor` carries `person_id`, `match_score` (raw cosine similarity for recognized and candidate faces, the face detection score for an unrecognized marker), `det_score`, `quality` (the evidence-path weight: 1.0 for a face seen in this frame, lower for propagated or external evidence), `face_quality` (the person-ID service's image-quality score, null from an older service), `calibrated_confidence` (null unless calibration is ready), `detection_id`, and `camera_id`. The identity resolver weights face evidence 3x over ReID. Every face result is also recorded for measurement; see [Measuring your cameras](/development/face-confidence-calibration#measuring-your-cameras).
 
 ## 7. World tracking
@@ -123,7 +125,7 @@ flowchart TD
 
 **Steps 6-7: continuations and grace.** For each spawn, recently closed PHs within `inferred_handoff_max_s` (600 s) and `inferred_handoff_max_distance_m` (5.0 m) emit a `PHContinuationCandidate`. Unmatched PHs past `ph_close_grace_s` (5.0 s) are closed; those within the grace window keep their predicted state.
 
-**Steps 8-10: persist, resolve, snapshot.** All updated PHs are persisted. The Bayesian identity resolver runs on every PH that received an observation. `WorldFrameSnapshot` objects are built for PHs with `observation_count >= min_observations_to_publish` (3).
+**Steps 8-10: persist, resolve, snapshot.** All updated PHs are persisted. The Bayesian identity resolver runs on every PH that received an observation. Face templates that finished since the previous round are passed to the resolver only, never to association. After the step, world tracking feeds this round's faces into each person's template buffer and starts template requests in the background, on every execution path, so a slow person-ID service never delays a frame. `WorldFrameSnapshot` objects are built for PHs with `observation_count >= min_observations_to_publish` (3).
 
 ### Pre-association cross-camera dedup
 

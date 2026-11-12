@@ -96,6 +96,19 @@ uv run --extra calibration-tools python -m app.calibration.cli validate --artifa
 
 Mount the artifact read-only and point `CALIBRATION_ARTIFACT_PATH` at it. With docker compose, copy it to `./calibration/artifact.json` (mounted at `/app/calibration`) and set `CALIBRATION_ARTIFACT_PATH=/app/calibration/artifact.json`. On Kubernetes, create the `person-id-calibration` secret from the file; the deployment mounts it at the same path. Restart the service and confirm `GET /health` reports `ready` with the new artifact version and the residents you expect under covered identities. Then turn capture off, or lower `per_bucket_per_day` to keep watching for drift.
 
+Face templates (several faces of one person matched together by `POST /api/v1/match-template`) need their own artifact, because a template's similarity is a different score from a single face's. Build it from the same labeled captures:
+
+```bash
+uv run --extra calibration-tools python -m app.calibration.cli build-manifest \
+  --output /secure/template-manifest.jsonl --profile template
+uv run --extra calibration-tools python -m app.calibration.cli fit-v2 \
+  --manifest /secure/template-manifest.jsonl --allow-household-only --output template.json
+uv run --extra calibration-tools python -m app.calibration.cli validate --artifact template.json \
+  --quality-version heuristic-v1 --calibration-profile template
+```
+
+The template manifest draws templates of 2 to 8 faces from within one labeled walk (at most 20 per walk, because templates of one walk are near-duplicates), aggregates and quality-scores them exactly as the endpoint does, and scores them like single probes. The fit counts the coverage gate in distinct holdout walks instead of faces, and records the profile, the aggregator (`qwmean-v1`), and its gates in the artifact. Point `CALIBRATION_TEMPLATE_ARTIFACT_PATH` at it; `GET /health` reports it under `template_calibration`.
+
 Recalibrate when a resident is enrolled, a camera is moved or replaced, or the face quality scorer changes. The tracking orchestrator's `face_id.expected_quality_version` must match the scorer the artifact was fitted on; otherwise the orchestrator drops the calibrated confidence and the authority gate stays closed.
 
 ## Schema 2 artifact
@@ -195,6 +208,7 @@ Two live metrics complement the table:
 - Manifests hold household biometric scores. Do not commit them, household captures, or populated research listings to version control. The service repository's `.gitignore` excludes `/calibration/` and manifest files.
 - Do not download research data automatically in tests or CI. Pool only a set whose licence permits the use, and record it in the sidecar.
 - The artifact carries fitted coefficients, metrics, identity ids, and provenance hashes, never embeddings or images.
+- With face templates on, the tracking orchestrator receives face embeddings from the person-ID service on the home network and holds a few per person in memory for about 15 seconds; it never logs or stores them. Only the person-ID service stores embeddings.
 - Calibration labels never change enrollment.
 
 ## Related pages

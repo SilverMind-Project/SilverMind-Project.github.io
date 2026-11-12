@@ -456,6 +456,24 @@ resolver:
 | `resolver.uncalibrated_face_max_likelihood` | float | `0.55` | Under `calibrated`, the most a recognized face without a calibrated confidence can weigh. Such a face only corroborates other evidence. |
 | Camera field `face_id_min_raw_similarity` | float or empty | empty | Set per camera on the CTS Cameras page as "Minimum raw face similarity (advanced, leave empty)". A camera floor replaces `face_id.min_raw_similarity` under `legacy` and is the only floor under `calibrated`. Leave it empty unless a camera keeps producing wrong face matches. |
 
+Face templates (several faces of one person matched together) have their own section,
+`face_templates:`, which ships `off`:
+
+| Setting | Type | Default | Description |
+| --- | --- | --- | --- |
+| `face_templates.mode` | string | `off` | `off`, `shadow` (matched and counted, live decisions unchanged), or `enabled` |
+| `face_templates.top_k` | int | `8` | Best faces kept per person, by face quality |
+| `face_templates.min_faces` | int | `3` | Faces a person needs before a template is matched |
+| `face_templates.min_face_quality` | float | `0.15` | Faces below this person-ID quality score never join |
+| `face_templates.max_age_s` | float | `15.0` | Seconds a face stays in the buffer after capture |
+| `face_templates.outlier_min_similarity` | float | `0.25` | A face less similar than this to the others is rejected as someone else's |
+| `face_templates.trigger_cooldown_s` | float | `2.0` | Minimum seconds between two template requests for one person |
+| `face_templates.max_concurrency` / `max_in_flight` | int | `2` / `16` | Concurrent template requests, and the most in flight at once |
+
+The person-ID service calibrates templates with its own artifact,
+`calibration.template_artifact_path` (`CALIBRATION_TEMPLATE_ARTIFACT_PATH`), and classifies them
+with `recognition.template_threshold` and `recognition.template_unknown_threshold`.
+
 ::: warning Switching to calibrated
 Set `face_id.evidence_policy: calibrated` only with a deployed calibration artifact that covers
 the residents, after the shadow review in the
