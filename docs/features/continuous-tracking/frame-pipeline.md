@@ -88,7 +88,8 @@ Face identification sends one crop per person to `POST /api/v1/identify` on the 
 |-----------|---------|-------------|
 | `cooldown_s` | 5.0 | Minimum seconds between queries for the same tracked person on a camera |
 | `timeout_s` | 2.0 | HTTP request timeout |
-| `min_raw_similarity` | 0.6 | Recognized faces below this raw similarity are dropped |
+| `min_raw_similarity` | 0.6 | Under the `legacy` evidence policy, recognized faces below this raw similarity are dropped |
+| `evidence_policy` | `shadow` | `legacy`, `shadow`, or `calibrated`: which recognized faces become evidence and how they are weighed ([Identity authority](/features/continuous-tracking/identity-integrity/identity-authority#how-faces-are-weighed)) |
 | `head_region_height_frac` | 0.35 | Share of the person box, from the top, that can hold the face |
 | `head_region_side_margin_frac` | 0.10 | Horizontal tolerance per side, as a share of box width |
 | `crop_pad_top_frac` / `crop_pad_side_frac` | 0.15 / 0.10 | Face crop padding |

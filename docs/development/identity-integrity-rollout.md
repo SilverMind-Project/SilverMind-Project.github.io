@@ -102,7 +102,8 @@ decision, and identity IDs stay in structured logs, never in labels.
 | `cts_correction_projection_lag_seconds` | Seconds from a revision to its CC projection |
 | `cts_correction_projection_failures_total` | Projection applies or acks that failed |
 | `cts_reid_candidate_rejected_total{reason}` | Governed candidates `ReIDCandidateStage` rejected, by bounded reason (for example `calibration_not_authoritative`) |
-| `cts_identity_shadow_mismatch_total{feature}` | Shadow-versus-live decision disagreement, by shadowed feature (`multiview_gallery`, coherence boost). Stays low; a sustained rise means the shadowed config would change production decisions if enabled |
+| `cts_identity_shadow_mismatch_total{feature}` | Shadow-versus-live decision disagreement, by shadowed feature (`multiview_gallery`, coherence boost, `face_quality`, `calibrated_face`). Stays low; a sustained rise means the shadowed config would change production decisions if enabled |
+| `cts_face_shadow_outcomes_total{outcome}` | Per PH with a recognized face under `face_id.evidence_policy: shadow`: how the `calibrated` decision compares with live (`agrees`, `would_commit_new`, `would_change_identity`, `would_become_unknown`) |
 
 Build a dashboard, without paging thresholds at first, for the Unknown rate and durations, the
 conflict distribution, association rejection and batch skew, the review-queue age and action rates,
@@ -136,6 +137,65 @@ zero (projection failures must stay below the retry objective). The rules are in
 5. Load the alert rules and confirm each fires against a synthetic series in a staging Prometheus.
 6. Enable the authority gates together in one reviewed configuration change. Keep shadow metrics for
    comparison and threshold tuning.
+
+## Calibrated face evidence
+
+`face_id.evidence_policy` ships as `shadow`: live decisions keep the 0.6 raw-similarity floor and
+the uncalibrated face weighting, and the resolver measures what `calibrated` would decide. The
+[identity authority](/features/continuous-tracking/identity-integrity/identity-authority#how-faces-are-weighed)
+page explains both policies. Calibration-gated features (ArcFace authority, `auto_verified`
+gallery minting, Unknown backfill) engage only once an artifact is deployed.
+
+### Preconditions
+
+1. Follow the [face confidence calibration](/development/face-confidence-calibration) runbook:
+   capture, label, fit, and deploy an artifact, then turn capture off or throttle it.
+2. Use only calibration captures and face statistics recorded after the person-ID head-pose fix
+   of November 11, 2026. Earlier rows carry inverted yaw and pitch and a crushed quality score.
+3. `GET /health` on the person-ID service reports `calibration.status: ready`. Record the
+   `covered_identities` list: only those residents can gain ArcFace authority or `auto_verified`
+   gallery rows. A resident missing from the list keeps voting through capped, corroborating faces
+   and through ReID, which is expected.
+
+### Shadow review
+
+1. Run with `shadow` and the deployed artifact for 7 days.
+2. Read `cts_face_shadow_outcomes_total` per outcome. The log event
+   `calibrated_face_shadow_mismatch` names the PH and both decisions for every disagreement.
+3. Review a sample of 50 `would_commit_new` cases and every `would_change_identity` case in the
+   CC keyframe review, split by covered and uncovered resident.
+4. Read `would_become_unknown` as a lower bound on the Unknown-rate cost of the flip, mostly
+   residents outside the artifact's coverage. The shadow judges each frame from the live PH state,
+   whose evidence clock uncalibrated faces keep refreshing, so it cannot see an identity that
+   would expire 30 seconds after its last calibrated face or ReID vote. Before the flip, replay
+   the [private identity replay dataset](/development/private-identity-replay) under `calibrated`
+   with the deployed artifact and record its Unknown rate. A higher Unknown rate is acceptable
+   when measured; do not lower thresholds to hide it.
+5. The [face resolution report](/development/face-confidence-calibration#measuring-your-cameras) counts per camera the
+   faces only `calibrated` would emit (`emitted_shadow_only`). From the deploy of `shadow` on,
+   `cts_face_gate_outcomes_total` counts those faces under `outcome="emitted_shadow_only"` instead
+   of `dropped_min_similarity`; update any dashboard that reads the old label.
+
+### Flip and verify
+
+Set `face_id.evidence_policy: calibrated` only when reviewed `would_change_identity` cases are 90%
+or more correct and reviewed `would_commit_new` cases name the wrong person at most 2% of the time.
+Then, after 7 days:
+
+| Check | Expected |
+| --- | --- |
+| Face resolution report | Zero `dropped_min_similarity` and zero `emitted_shadow_only` faces for cameras with no per-camera floor. Under `shadow`, below-floor faces are already counted as `emitted_shadow_only`, so only the post-flip report shows the change |
+| `identity_decisions` | Decisions with authority `direct_face` present |
+| `reid_gallery` | `auto_verified` rows accumulating for covered residents (target 20 or more per resident per day); if zero, read `cts_reid_candidate_rejected_total{reason}` first |
+| Unknown backfill | Enable `resolver.enable_unknown_backfill` with `resolver.backfill_shadow: true` for 7 days, then set `backfill_shadow: false` after reviewing the shadow logs |
+| `resolver.gallery_vote_max_age_s` | Auto-verified rows younger than the cutoff (43200 s) now vote; confirm they appear in gallery votes |
+
+`resolver.cc_assertion_mode` does not benefit: Cognitive Companion sends reCamera assertions
+without a calibrated confidence, because the artifact is fitted on tracker crops, and the tracker
+matches an assertion only on a calibrated confidence. Assertions stay recorded as uncalibrated until
+reCamera images get their own calibration profile.
+
+Rollback is `face_id.evidence_policy: legacy`, a configuration change and an orchestrator restart.
 
 ## Emergency disable
 

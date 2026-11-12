@@ -434,6 +434,35 @@ knowledge:
 | `knowledge.max_upload_bytes` | 15 MB | Per-image upload limit. |
 | `knowledge.max_pixels` | 40 MP | Decoded image dimension cap. |
 
+## CTS face evidence {#cts-face-evidence}
+
+Two tracking-orchestrator settings and one per-camera field decide how recognized faces become
+identity evidence. The [identity authority](/features/continuous-tracking/identity-integrity/identity-authority#how-faces-are-weighed)
+page explains the weighting.
+
+```yaml
+# tracking-orchestrator/config/settings.yaml
+face_id:
+  min_raw_similarity: 0.6
+  evidence_policy: shadow
+resolver:
+  uncalibrated_face_max_likelihood: 0.55
+```
+
+| Setting | Type | Default | Description |
+| --- | --- | --- | --- |
+| `face_id.evidence_policy` | string | `shadow` | `legacy`: faces below `face_id.min_raw_similarity` are dropped and faces weigh by an uncalibrated heuristic. `calibrated`: every recognized face is emitted and weighs by its calibrated confidence. `shadow`: live decisions follow `legacy` while the `calibrated` decision is counted in `cts_face_shadow_outcomes_total`. One key drives both the face stage and the resolver. |
+| `face_id.min_raw_similarity` | float | `0.6` | Raw-similarity floor for recognized faces under `legacy`. Not used by `calibrated`. |
+| `resolver.uncalibrated_face_max_likelihood` | float | `0.55` | Under `calibrated`, the most a recognized face without a calibrated confidence can weigh. Such a face only corroborates other evidence. |
+| Camera field `face_id_min_raw_similarity` | float or empty | empty | Set per camera on the CTS Cameras page as "Minimum raw face similarity (advanced, leave empty)". A camera floor replaces `face_id.min_raw_similarity` under `legacy` and is the only floor under `calibrated`. Leave it empty unless a camera keeps producing wrong face matches. |
+
+::: warning Switching to calibrated
+Set `face_id.evidence_policy: calibrated` only with a deployed calibration artifact that covers
+the residents, after the shadow review in the
+[identity integrity rollout](/development/identity-integrity-rollout#calibrated-face-evidence).
+Rollback is `legacy`, a configuration change and an orchestrator restart.
+:::
+
 ## CTS signal thresholds {#cts-signal-thresholds}
 
 The tracking orchestrator (`continuous-tracking/tracking-orchestrator/`) exposes dementia signal thresholds via `config/settings.yaml` under the `signal:` key. All values can be overridden with environment variables.

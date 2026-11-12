@@ -146,6 +146,53 @@ does not grant or remove ArcFace authority, which still requires a calibrated co
 `enabled` only after reviewed shadow mismatches show the quality-weighted decision moves a correct
 commit to Unknown no more often than it removes a wrong one.
 
+## How faces are weighed
+
+One setting, `face_id.evidence_policy`, decides both which recognized faces the tracker emits and
+how the resolver weighs them, so emission and weighting cannot disagree.
+
+| Policy | Faces emitted | Weight of a recognized face |
+| --- | --- | --- |
+| `legacy` | Recognized faces at or above `face_id.min_raw_similarity` (0.6), or the camera's own floor when one is set | `_p_face`, an uncalibrated heuristic of raw similarity and quality |
+| `shadow` (default in `settings.yaml`) | As `legacy` for every live decision | As `legacy`, plus a calibrated decision measured alongside |
+| `calibrated` | Every recognized face, unless the camera sets a floor | Its calibrated confidence; a face without one is capped and only corroborates |
+
+Under `calibrated`, the calibrated confidence is used directly as the face's likelihood: it is
+already a probability that the face belongs to that resident, and face quality is one of its
+fitted features, so neither `_p_face` nor face quality is applied again. Frontality (head yaw)
+still scales it, because yaw is not a calibration feature.
+
+A recognized face without a calibrated confidence weighs at most
+`resolver.uncalibrated_face_max_likelihood` (0.55). That covers a resident outside the
+calibration artifact's coverage (anyone with too few holdout faces at fit time, or enrolled after
+the fit), propagated evidence, and external assertions. Such a face is corroboration only: it can
+tip a posterior that ReID or a calibrated face already supports, but it never commits an Unknown
+PH, never switches a held identity, and never refreshes the independent-evidence clock. Candidate
+faces follow the same rule under `calibrated`. The cap alone would not be enough: a single 0.55
+face still lifts a one-resident posterior to 0.96, so the evidence rule is the guarantee.
+
+Under `shadow`, a recognized face below the legacy floor is emitted only to the measurement: it
+never reaches association, the gallery, authority, the evidence clock, or duplicate ranking. For
+every PH with a recognized face, the resolver decides the frame as `calibrated` would and counts
+the outcome in `cts_face_shadow_outcomes_total`:
+
+| Outcome | Meaning |
+| --- | --- |
+| `agrees` | Both policies decide the same identity (or both Unknown) |
+| `would_commit_new` | Live leaves the PH Unknown; calibrated names someone |
+| `would_change_identity` | The two policies name different residents |
+| `would_become_unknown` | Live names a resident; calibrated leaves the PH Unknown |
+
+Each disagreement is also logged as `calibrated_face_shadow_mismatch` with the PH id, which is
+what the keyframe review uses. `would_become_unknown` is expected for residents outside the
+artifact's coverage: their faces stop establishing identity on their own.
+
+The shadow decides each frame from the live PH state, and under `shadow` the live
+independent-evidence clock is still refreshed by uncalibrated faces. A held identity therefore
+stays inside its maintenance window in the shadow too, while after a flip it would expire 30
+seconds after its last calibrated face or ReID vote. The outcome counts are a lower bound on the
+Unknown-rate cost; a replay under `calibrated` measures the rest.
+
 ## Authority vocabulary
 
 Every identity decision carries an `authority` field naming which rung of the authority order

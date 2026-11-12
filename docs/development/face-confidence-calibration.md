@@ -178,7 +178,7 @@ DATABASE_URL=postgresql://... .venv/bin/python scripts/face_resolution_report.py
 DATABASE_URL=postgresql://... .venv/bin/python scripts/face_resolution_report.py --since 2026-10-20 --camera cam-01 --format json
 ```
 
-Per camera it shows interocular percentiles, the share of faces in each pixel band, raw similarity by recognition state, how many recognized faces the tracker's `face_id.min_raw_similarity` floor discarded and at what similarity, the face count with median interocular distance and raw similarity in each face-quality band (below 0.2, 0.2 to 0.4, 0.4 to 0.6, 0.6 and above), and recognized faces per enrolled identity. Use it to decide where a camera needs a narrower lens or a lower mounting point.
+Per camera it shows interocular percentiles, the share of faces in each pixel band, raw similarity by recognition state, how many recognized faces the tracker's `face_id.min_raw_similarity` floor discarded and at what similarity, how many only the `calibrated` evidence policy would emit (recorded as `emitted_shadow_only` while `face_id.evidence_policy` is `shadow`), the face count with median interocular distance and raw similarity in each face-quality band (below 0.2, 0.2 to 0.4, 0.4 to 0.6, 0.6 and above), and recognized faces per enrolled identity. Use it to decide where a camera needs a narrower lens or a lower mounting point.
 
 Two live metrics complement the table:
 

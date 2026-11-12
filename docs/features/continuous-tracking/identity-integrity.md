@@ -101,7 +101,8 @@ These values describe the initial baseline in `tracking-orchestrator/config/sett
 | Name | Current value | Current mode |
 | --- | --- | --- |
 | `face_id.enabled` | `true` | Face identification calls are live |
-| `face_id.min_raw_similarity` | `0.6` | Raw similarity gate for recognized face anchors |
+| `face_id.min_raw_similarity` | `0.6` | Raw similarity gate for recognized face anchors under the `legacy` evidence policy |
+| `face_id.evidence_policy` | `shadow` | Live faces follow `legacy`; the `calibrated` decision is measured alongside |
 | `resolver.face_commit_min_similarity` | `0.70` | Current uncalibrated face-lock gate (raw similarity) |
 | `resolver.commit_prob` | `0.65` | Posterior commit threshold |
 | `resolver.commit_margin` | `0.15` | Posterior margin threshold |
