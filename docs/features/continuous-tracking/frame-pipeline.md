@@ -42,9 +42,11 @@ flowchart TB
     ReIDCandidate --> Publish
 ```
 
-## 1. Frame fetch
+## 1. Frame fetch and stream acknowledgement
 
-JPEG frames are fetched from MinIO using the key published in the `FrameReady` proto message. Frames older than 30 s are dropped as stale replay backlog (they are XACK'd normally to keep the pending-entry list clean, but pipeline work is skipped).
+`rtsp-ingress` stamps each published `FrameReady` message with two timestamps: `received_time_unix_ns` (recorded after JPEG decode and rotation) and `capture_time_unix_ns` (recorded before the HTTP fetch to go2rtc minus the camera's configured `capture_latency_ms`). Before uploading and publishing a frame, `rtsp-ingress` runs a 16x9 cell motion gate (`motion_mode: cells` on the 320x180 grayscale thumbnail against both the previous polled frame and the last published frame, with a `motion_hold_s` post-motion publish window).
+
+JPEG frames are fetched from MinIO using the key published in the `FrameReady` proto message. Every consumed `FrameReady` entry is processed at most once and always acknowledged (`XACK`) whether the frame succeeds, is dropped as stale (> 30 s old), or fails in a pipeline stage (`cts_frames_failed_total`). On startup, `RedisStreamsTransport` reclaims and acknowledges any abandoned pending entries older than `redis.pending_reclaim_min_idle_s`.
 
 The fetched image is compared against the `FrameReady`-reported dimensions. A mismatch (e.g., from EXIF rotation or thumbnail storage) is logged and the actual image shape is used for all downstream coordinate transforms.
 

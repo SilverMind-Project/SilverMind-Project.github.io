@@ -83,21 +83,30 @@ Cameras that are adjacent but do not share a view (e.g. hallway camera and bedro
 
 ## Frame cadence and motion gate
 
-rtsp-ingress polls each camera at the rate set by `frame_interval_ms` and drops frames that show little grayscale change between successive polls. Three settings control this behavior, with their defaults documented in the [Jetson CTS deployment settings table](/hardware/jetson-cts#understand-the-incoming-workload):
+rtsp-ingress polls each camera at the rate set by `frame_interval_ms` and evaluates a motion gate before uploading to MinIO. The settings below control this behavior, with their defaults documented in `rtsp-ingress/config/settings.yaml` and the [Jetson CTS deployment settings table](/hardware/jetson-cts#understand-the-incoming-workload):
 
 | Setting | What it does |
 | --- | --- |
 | `frame_interval_ms` | How often (in ms) the worker polls go2rtc for a new JPEG. Lower values increase detector load; higher values reduce temporal resolution for fast motion. |
-| `motion_threshold` | Fractional mean pixel difference below which a frame is dropped as static. A room with a ceiling fan may need a slightly higher value to avoid constantly publishing fan-blade movement. |
-| `static_sample_interval_s` | Forces a frame through even when the motion gate would drop it, as long as this many seconds have elapsed since the last published frame. This captures still presence (seated, sleeping) for downstream analysis. Set to 0 to disable. |
+| `capture_latency_ms` | Per-camera capture-to-fetch latency offset (ms, default 0) subtracted from the HTTP fetch start time when stamping `capture_time_unix_ns`. |
+| `motion_mode` | `cells` (default) divides the 320x180 grayscale thumbnail into a 16x9 grid of 20x20 px cells so a person walking several metres away triggers motion even when the whole-frame average barely changes; `frame_mean` compares only the whole-frame mean. |
+| `motion_cell_threshold` | Fractional per-cell mean difference (default `0.04`) against either the previous polled frame or the last published frame required for a cell to count as active. |
+| `motion_min_cells` | Number of active cells (default `1`) required to trigger motion in `cells` mode. Raise this for a camera that sees a television or moving curtain. |
+| `motion_hold_s` | Seconds (default `3.0`) to keep publishing polled frames after motion is detected, so a person walking across a room produces a continuous track instead of isolated keyframes. |
+| `motion_threshold` | Fractional whole-frame mean pixel difference (default `0.02`) that also triggers motion in both modes (for example, when room lighting changes). |
+| `static_sample_interval_s` | Forces a frame through even when the motion gate reports no change, as long as this many seconds have elapsed since the last published frame. This captures still presence (seated, sleeping) for downstream analysis. Set to 0 to disable. |
 
 Per-camera overrides are not exposed in the Admin UI today; the defaults from `rtsp-ingress/config/settings.yaml` apply to all cameras. Adjust them carefully: lowering `frame_interval_ms` on all cameras raises worst-case detector throughput demand proportionally.
+
+### Reading the "No frames" badge
+
+On the **Tracking Cameras** page (`/admin/cts/cameras`), an enabled camera displays a **No frames** badge next to its status when its last published frame is older than 60 seconds (`health.last_frame_age_s > 60`). Because `static_sample_interval_s` defaults to 5 seconds, a healthy enabled camera publishes at least one frame every 5 seconds even in an empty room. A **No frames** badge therefore means `rtsp-ingress` is not receiving valid frames from `go2rtc` (and is backing off by `health.fetch_backoff_s` between retries). Check the camera's power, Wi-Fi/Ethernet link, and RTSP URL using the **Test RTSP** button.
 
 ## Time synchronization
 
 Run NTP on every camera and on every host running rtsp-ingress. Two timing values matter in the pipeline:
 
-1. **Frame timestamp.** The ingress worker stamps each published frame with the ingress host's wall clock (`time.Now()` in Go, written to `capture_time_unix_ns` in the protobuf). If the ingress host clock is off, displayed frame times in the Admin UI will be off by the same amount.
+1. **Frame timestamp.** The ingress worker records the host wall clock (`time.Now()` in Go) immediately before requesting the JPEG from go2rtc, subtracts `capture_latency_ms`, and writes the result to `capture_time_unix_ns` in the `FrameReady` protobuf (while `received_time_unix_ns` records the post-decode instant). If the ingress host clock is off, displayed frame times in the Admin UI will be off by the same amount.
 
 2. **Cross-camera transit time.** When a PersonHypothesis closes on one camera and a revival candidate appears on another, the tracker computes `elapsed_s = now - closed_at` using the orchestrator's wall clock. For this estimate to be accurate, the orchestrator host must have a correct clock. Camera clocks do not directly feed into this computation, but a camera with a drifted clock can produce RTSP stream PTS values that cause go2rtc to delay or reorder frame delivery, which may shift the effective ingest time.
 
