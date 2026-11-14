@@ -175,7 +175,7 @@ docker run -p 80:80 cognitive-companion-ui
 
 1. Open the admin console at `http://localhost:5173/admin`
 2. Set your admin API key in the settings
-3. **Create rooms.** Define the physical spaces in your home (kitchen, bedroom, etc.)
+3. **Create rooms and the floor plan.** Define the physical spaces in your home (kitchen, bedroom, etc.), upload a floor plan with a scale checked against a tape measure, and draw each room's polygon on it. Camera tracking needs the plan and polygons for room attribution and transit zones; see [Floor frame readiness](/features/continuous-tracking/camera-calibration#floor-frame-readiness)
 4. **Register sensors.** Add cameras and presence sensors, assigning each to a room
 5. **Enroll household members.** Go to **Members & Enrollment**, register each person, then click the face-recognition icon to upload 5-10 reference photos per person
 6. **Create rules.** Use the visual pipeline builder to assemble step graphs

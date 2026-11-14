@@ -12,6 +12,34 @@ CTS tracking within a single camera uses pixel coordinates. For cross-camera ass
 
 With all three configured, the cross-camera associator can compute geometric scores: "these two detections are 1.2 meters apart on the floor plan." Without them, it falls back to appearance-only matching, which produces both false merges (different people linked because they look similar) and missed merges (the same person not linked because ReID similarity is below threshold).
 
+## Floor frame readiness
+
+Cameras, rooms, transit zones, and (later) wearable anchors share one floor frame: the floor-plan image scaled to meters, with its origin at the image's top-left corner, x to the right, y down, and height measured above the floor. Until that frame exists, each camera tracks in its own 4 m virtual room, so one person seen by two cameras becomes two tracks and no speed or distance is real.
+
+The frame is built in two tiers:
+
+| Tier | What the operator provides | What it turns on |
+| --- | --- | --- |
+| 1 | Floor-plan image, a scale checked with a tape measure, a polygon for every room | Room attribution by polygon, transit zones, wearable anchor placement |
+| 2 | A homography per camera within the residual budget, overlap groups, an acceptance walk | Cross-camera dedup by floor distance, walking speed and gait signals, trajectory matching |
+
+**Scale check.** Measure two walls at right angles, each at least 3 m long, and set `floor_meters_per_pixel` so both agree with the plan within 2%. If they disagree by more, the plan image is not to scale; redraw it before continuing, because every later meter depends on it. Without a scale, the tracking orchestrator clears room polygons and transit zones.
+
+**Residual budget.** A camera's `homography_residual_m` should be at or below 0.15 m when its floor view is within 5 m, and at or below 0.30 m otherwise. A camera that cannot meet the budget stays uncalibrated and keeps tracking in its virtual room. A low camera with no tilt (for example a shelf-top camera at 0.7 m) has a shallow floor view; leave it as a face camera inside an overlap group.
+
+**What stays off on an uncalibrated camera.** Floor-distance dedup, walking speed (`floor_speed_m_s` is empty), room attribution by polygon (the camera's room assignment is used instead), and anything else that reasons in meters.
+
+**Changes apply without a restart.** The orchestrator re-reads cameras, homographies, rooms, the floor plan, and overlap groups from Cognitive Companion every sync interval (60 s by default). A homography that Cognitive Companion no longer holds (cleared, rejected by validation, or on a disabled camera) is removed at the next sync, and the camera returns to its virtual room. A calibration preview that is never saved therefore stays in effect for at most one sync interval.
+
+**Acceptance walk.** After calibrating, one person walks a marked path through each overlap area twice at normal speed with nobody else in view. The cross-camera agreement metric `cts_worldtracker_dedup_pair_distance_m` should have a median at or below 0.5 m and a 90th percentile at or below 1.0 m, the walker should have exactly one track at every instant, and walking speed should read between 0.8 and 1.6 m/s. Worse pair distances mean a biased homography: recalibrate the camera whose pairs are worst. A biased homography is worse than none, because it merges two people standing near each other or splits one.
+
+| Metric | Meaning |
+| --- | --- |
+| `cts_worldtracker_observations_by_calibration_total{camera_id, calibrated}` | Observations per camera from a homography (`true`) or the virtual room (`false`) |
+| `cts_worldtracker_dedup_pair_distance_m` | Floor distance of each calibrated cross-camera pair merged as one person |
+| `cts_worldtracker_group_appearance_dedup_total` | Uncalibrated pairs merged by appearance inside an overlap group |
+| `cts_overlap_groups_loaded` | Overlap groups the orchestrator currently applies |
+
 ## Homography calibration
 
 A homography is a planar projective transformation. Given at least four pixel-to-floor-meter point correspondences, the system fits a 3×3 matrix `H` such that `H · [px, py, 1]ᵀ ∝ [fx, fy, 1]ᵀ`.
@@ -164,7 +192,7 @@ In the calibration UI, when the operator selects two cameras that belong to the 
 
 ### Declared overlap groups (uncalibrated cross-camera)
 
-The IoU clustering above is a calibration-time hint and needs visibility polygons. For uncalibrated cameras that have no homography but still view the same space (a common home case: two shelf-top cameras seeing one room from opposite angles), an operator can declare an overlap group directly. Declared groups are stored in `cts_camera_overlap_groups` and served to the orchestrator at `GET /api/v1/cts/overlap_groups`. CTS uses a declared group two ways:
+The IoU clustering above is a calibration-time hint and needs visibility polygons. For uncalibrated cameras that have no homography but still view the same space (a common home case: two shelf-top cameras seeing one room from opposite angles), an operator declares an overlap group directly in the **Overlap Groups** card on **Admin → CTS → Adjacency**: name the group, pick two or more cameras, and add it. Every camera must exist and appear once. Declared groups are stored in `cts_camera_overlap_groups`, served to the orchestrator at `GET /api/v1/cts/overlap_groups`, and applied at the next sync without a restart; if a sync cannot read them, the orchestrator keeps the groups it already has. CTS uses a declared group two ways:
 
 - **Group-appearance dedup**: two same-perspective uncalibrated observations from different cameras in the group are merged by appearance similarity (`dedup_group_appearance_min_sim = 0.75`), with a face-conflict block, since synthetic-tile floor distance cannot be compared across cameras.
 - **Co-presence linking**: when two open PHs in the group resolve to the same committed identity at the same time (the opposite-perspective case, where direct appearance similarity is low), CTS writes a co-presence link instead of merging, so the system shows one person on two views, not two people.
@@ -209,7 +237,8 @@ Homography, where it exists, remains an accuracy boost (full geometric scoring a
 1. **Upload floor plan** (Admin → Floor Plan → Upload tab)
    - Select image, crop margins if needed
    - Set scale: click two points with a known real-world distance, or enter total width
-   - Save
+   - Check the scale against two taped wall lengths (see [Floor frame readiness](#floor-frame-readiness))
+   - Save, then draw a polygon for every room
 
 2. **Calibrate cameras** (Admin → CTS → Calibration)
    - Select a camera, load a snapshot
@@ -221,13 +250,17 @@ Homography, where it exists, remains an accuracy boost (full geometric scoring a
    - Check the Coverage Map: floor plan with camera polygon overlays
    - If polygons are missing, the calibration result will explain why
 
-4. **Configure adjacency** (Admin → CTS → Adjacency)
+4. **Declare overlap groups** (Admin → CTS → Adjacency → Overlap Groups)
+   - One group per set of cameras that see the same floor area
+   - Compare duplicate tracks for a day before and after
+
+5. **Configure adjacency** (Admin → CTS → Adjacency)
    - Click "Infer from coverage" for a starting set of edges
    - Review and adjust transit times
    - Add manual edges with the symmetric checkbox for bidirectional paths
    - Save All
 
-5. **Verify association** (check orchestrator logs)
+6. **Verify association** (acceptance walk, then orchestrator logs)
    ```bash
    docker compose logs cts-orchestrator --tail=200 | grep "cross_cam\|reachable\|link_score"
    ```
