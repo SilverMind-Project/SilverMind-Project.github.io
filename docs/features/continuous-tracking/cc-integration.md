@@ -51,7 +51,7 @@ For multi-camera dwell and absence signals, calibration is required:
 
 - **Homography**: at `/admin/cts/calibration`, click pixel-to-floor correspondences on a snapshot to fit a 3×3 matrix per camera via OpenCV RANSAC.
 - **Privacy zones**: at `/admin/cts/privacy`, draw polygons over private regions. Frames are masked before they leave the LAN.
-- **Shared views**: at `/admin/cts/shared-views`, declare which cameras see the same floor area at the same time (overlap groups), with suggestions from calibrated coverage and the walk times CTS learned between cameras (read-only). The old `/admin/cts/adjacency` path redirects there.
+- **Shared views**: at `/admin/cts/shared-views`, declare which cameras see the same floor area at the same time (overlap groups), with suggestions from calibrated coverage and the handoffs CTS learned between cameras (read-only). The old `/admin/cts/adjacency` path redirects there.
 - **Overlap groups**: at `/admin/cts/overlap-groups`, group cameras that share a physical field of view. These pairs skip transit-time budgets in cross-camera association and use a relaxed matching threshold.
 
 ## CC subscribers

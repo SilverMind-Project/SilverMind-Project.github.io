@@ -1,6 +1,6 @@
 # Camera calibration
 
-How camera calibration, shared views, and learned transitions work together so one person seen by several cameras stays one person on the floor plan.
+How camera calibration and shared views work together so one person seen by several cameras stays one person on the floor plan, and what the learned camera handoffs show.
 
 ## Overview
 
@@ -10,9 +10,9 @@ Three different relationships tie cameras to the floor plan and to each other. E
 | --- | --- | --- | --- |
 | **Calibration** (homography) | Where on the floor is this pixel? | Operator, one camera at a time | Admin → CTS → Calibration |
 | **Shared view** (overlap group) | Do these cameras see the same floor area at the same moment? | Operator, per set of cameras | Admin → CTS → Shared Views |
-| **Learned transition** | How long does a walk from one camera's view to another's take? | Learned automatically from tracking | Admin → CTS → Shared Views (read-only) |
+| **Learned handoffs** | How often, and how soon after a track closes, does tracking hand a person from one camera to another? | Learned automatically from tracking | Admin → CTS → Shared Views (read-only) |
 
-Overlap is not adjacency. Overlapping cameras see one person at the same instant; cameras along a walking route see them one after the other. Only the first needs operator input. Walk times between cameras are learned from accepted handoffs, so there is no transit graph to draw.
+Overlap is not adjacency. Overlapping cameras see one person at the same instant; cameras along a walking route see them one after the other. Only the first needs operator input; cameras along a route need no configuration, and there is no transit graph to draw.
 
 Two calibrated cameras already agree through the floor plan: their observations of one person land within a metre and merge. A shared view matters whenever at least one camera in the pair is not calibrated, because an uncalibrated camera tracks in its own virtual room and has no floor position to compare.
 
@@ -159,15 +159,11 @@ Inside a group, tracking:
 
 **Suggestions.** The page suggests groups for calibrated cameras whose floor coverage overlaps (visibility-polygon intersection over union of at least 0.05). A suggestion already covered by a declared group is hidden. Use a suggestion to pre-fill the form, then add any uncalibrated camera that sees the same area.
 
-## Learned transitions
+## Learned handoffs
 
-Every accepted cross-camera handoff updates a running mean and spread of the walk time for that ordered camera pair (`camera_topology_edges`). Cross-camera revival uses it as a gate:
+Every accepted cross-camera handoff (a closed track picked up again on another camera, or a continuation) adds one sample for that ordered camera pair (`camera_topology_edges`): a count, and the mean and spread of the delay between the earlier track's close and the new sighting. A track closes only after it has gone unseen for `ph_close_grace_s` (15 s), so the delay is time after closure, not walk time, and it is spread across the revival window.
 
-- a camera pair with fewer than three learned walks never blocks, so the first handoffs are allowed and the topology can be learned;
-- a crossing at or slower than the usual walk always passes, because people stop on the way (the revival age limit bounds how slow);
-- a crossing much faster than the usual walk scores low and is rejected when it falls below `cross_camera_min_plausibility` (0.05), so a stranger appearing on a far camera a second after the resident left is not given the resident's track.
-
-The Shared Views page lists the learned transitions read-only. A pair marked "learning" does not gate yet.
+The cross-camera revival check reads these statistics, but its score is floored at the same value as `cross_camera_min_plausibility` (0.05), so it rejects nothing: revival is decided by the age limit, appearance, and face conflicts. The Shared Views page lists the handoffs read-only as a picture of how people move between cameras.
 
 ## End-to-end setup workflow
 
@@ -190,7 +186,7 @@ The Shared Views page lists the learned transitions read-only. A pair marked "le
 
 4. **Verify** (acceptance walk, then the metrics in [Floor frame readiness](#floor-frame-readiness))
    - One track per walker at every instant
-   - Learned transitions appear on the Shared Views page after people walk between cameras
+   - Camera handoffs appear on the Shared Views page after people move between cameras
 
 ## Next steps
 

@@ -224,7 +224,7 @@ Representative paths include:
 | --- | --- |
 | `/cts/cameras` | CTS camera registration and health |
 | `/cts/calibration/*` | Homography (save, remove), visibility, privacy zones, calibration health |
-| `/cts/overlap_groups*`, `/cts/topology/transitions` | Shared views (create, delete, suggestions) and learned walk times (read-only) |
+| `/cts/overlap_groups*`, `/cts/topology/transitions` | Shared views (create, delete, suggestions) and learned camera handoffs (read-only) |
 | `/cts/ph/*` | Person hypothesis lists, details, corrections, merges, splits, and deletes |
 | `/cts/identity/correction-targets` | Active household members an operator may assign, with optional gallery decoration |
 | `/cts/identity/corrections/*` | Shared correction workflow: propose, apply, compensate, and job status |
