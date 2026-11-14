@@ -75,11 +75,11 @@ Place cameras to capture people as they cross room boundaries, not as they sit i
 
 Avoid pointing cameras directly at windows unless the camera has wide dynamic range (WDR) enabled. A window in the background compresses the foreground histogram and produces silhouettes with no usable texture. Enable WDR if available, or angle the camera 45 degrees away from the window axis.
 
-### Camera overlap and adjacency
+### Cameras that share a view
 
-When two cameras share a physical zone (e.g. two angles of the same doorway), declare them as an overlap group in Admin UI (Admin > CTS > Adjacency). The system uses overlap groups to merge simultaneous detections from different angles into one PersonHypothesis instead of spawning two.
+When two cameras see the same floor area (e.g. two angles of the same doorway), declare them as a shared view in Admin UI (Admin > CTS > Shared Views). The system uses shared views to merge simultaneous detections from different angles into one PersonHypothesis instead of spawning two, which matters most when at least one of the cameras is not calibrated.
 
-Cameras that are adjacent but do not share a view (e.g. hallway camera and bedroom camera) need an adjacency edge, not an overlap group. See [Camera Calibration](/features/continuous-tracking/camera-calibration) for how overlap inference and manual adjacency configuration work, and for what makes homography calibration accurate: floor texture, six or more reference points spread across the camera frame, and a clean shot without people in frame.
+Cameras along a walking route that do not share a view (e.g. hallway camera and bedroom camera) need no configuration: the system learns how long the walk between them takes. See [Camera Calibration](/features/continuous-tracking/camera-calibration) for shared views and learned transitions, and for what makes homography calibration accurate: floor texture, six or more reference points spread across the camera frame, and a clean shot without people in frame.
 
 ## Frame cadence and motion gate
 
@@ -151,6 +151,6 @@ In the Admin UI metrics or logs, check `frames_filtered_total` for the new camer
 
 ## Next steps
 
-- [Camera Calibration](/features/continuous-tracking/camera-calibration): homography, visibility polygons, overlap groups, and adjacency edges
+- [Camera Calibration](/features/continuous-tracking/camera-calibration): homography, visibility polygons, shared views, and learned transitions
 - [Jetson CTS Deployment](/hardware/jetson-cts): ingress settings table, model throughput targets, and TensorRT build instructions
 - [Frame Processing Pipeline](/features/continuous-tracking/frame-pipeline): how ingested frames move through detection, ReID, pose, and tracking

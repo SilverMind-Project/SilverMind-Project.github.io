@@ -1,16 +1,20 @@
 # Camera calibration
 
-How homography calibration, visibility polygons, overlap groups, and adjacency edges work together to enable cross-camera person tracking on a floor plan.
+How camera calibration, shared views, and learned transitions work together so one person seen by several cameras stays one person on the floor plan.
 
 ## Overview
 
-CTS tracking within a single camera uses pixel coordinates. For cross-camera association, the system needs to know where each camera is looking on the floor plan. This requires three things:
+Three different relationships tie cameras to the floor plan and to each other. Each answers a different question and has one owner:
 
-1. **Homography**: a 3x3 matrix that maps camera pixel coordinates to floor-plan meter coordinates
-2. **Visibility polygon**: the area on the floor plan that a camera can see, computed from the homography
-3. **Adjacency edges**: directed transit-time constraints that gate which cameras a person could physically move between
+| Concept | Question it answers | Who sets it | Where |
+| --- | --- | --- | --- |
+| **Calibration** (homography) | Where on the floor is this pixel? | Operator, one camera at a time | Admin → CTS → Calibration |
+| **Shared view** (overlap group) | Do these cameras see the same floor area at the same moment? | Operator, per set of cameras | Admin → CTS → Shared Views |
+| **Learned transition** | How long does a walk from one camera's view to another's take? | Learned automatically from tracking | Admin → CTS → Shared Views (read-only) |
 
-With all three configured, the cross-camera associator can compute geometric scores: "these two detections are 1.2 meters apart on the floor plan." Without them, it falls back to appearance-only matching, which produces both false merges (different people linked because they look similar) and missed merges (the same person not linked because ReID similarity is below threshold).
+Overlap is not adjacency. Overlapping cameras see one person at the same instant; cameras along a walking route see them one after the other. Only the first needs operator input. Walk times between cameras are learned from accepted handoffs, so there is no transit graph to draw.
+
+Two calibrated cameras already agree through the floor plan: their observations of one person land within a metre and merge. A shared view matters whenever at least one camera in the pair is not calibrated, because an uncalibrated camera tracks in its own virtual room and has no floor position to compare.
 
 ## Floor frame readiness
 
@@ -143,94 +147,27 @@ For example: if a doorway known to be 1.0 m wide spans 68 pixels on the floor pl
 
 If the uploaded floor plan has margins (borders, legends, whitespace), use the **Trim margins** crop tool before setting the scale. Draw a crop rectangle around the actual floor plan area and apply it: the cropped dimensions are used for all downstream calculations.
 
-## Camera adjacency
+## Shared views (overlap groups)
 
-The adjacency graph is a **directed transit-time graph** stored in the `cognitive_companion` database. An edge `A → B` with transit bounds `[min_s, max_s]` means: a person can walk from camera A's view into camera B's view in somewhere between `min_s` and `max_s` seconds.
+A shared view is a set of cameras that see the same floor area at the same time, declared on **Admin → CTS → Shared Views**: name it, pick two or more cameras, and add it. Every camera must exist and appear once. Tracking reads the groups at its next sync, within a minute, without a restart; if a sync cannot read them, it keeps the groups it already has. Declare only what you have checked on site, and keep one group per area: a group never spans storeys.
 
-### Why directed
+Inside a group, tracking:
 
-`reachable(from_id=A, to_id=B, within_s=T)` checks only the path from A to B. A one-way edge `A → B` gates:
-- Person walking A → B: checked (edge exists)
-- Person walking B → A: not gated (falls back to appearance-only)
+- **Merges by appearance.** Two same-perspective observations from uncalibrated cameras of the group are merged when their appearance similarity reaches `dedup_group_appearance_min_sim` (0.75) and no recognized faces conflict, since a virtual room has no floor distance to compare.
+- **Links co-present tracks.** When two open tracks in the group resolve to the same committed identity at the same time (opposite viewpoints, where appearance similarity is low), tracking records a co-presence link instead of merging, so the system shows one person on two views.
+- **Keeps appearance embeddings on.** The adaptive ReID cadence always embeds on a grouped camera, because the appearance merge needs an embedding from both cameras.
 
-For bidirectional traffic (hallways, common areas), add both `A → B` and `B → A`. The Admin UI provides a symmetric checkbox: check "Also add reverse direction" to stage both edges with identical transit times in one operation.
+**Suggestions.** The page suggests groups for calibrated cameras whose floor coverage overlaps (visibility-polygon intersection over union of at least 0.05). A suggestion already covered by a declared group is hidden. Use a suggestion to pre-fill the form, then add any uncalibrated camera that sees the same area.
 
-### Overlap vs adjacency
+## Learned transitions
 
-These are distinct concepts:
+Every accepted cross-camera handoff updates a running mean and spread of the walk time for that ordered camera pair (`camera_topology_edges`). Cross-camera revival uses it as a gate:
 
-| Type | Meaning | Transit bounds | Edge color |
-|------|---------|---------------|------------|
-| **Overlap** | Cameras share a physical viewing zone (e.g., two angles of the same doorway). Detections may be simultaneous. | 0 to 2 s | Green |
-| **Adjacent** | Cameras are physically next to each other but do not overlap. Person moves sequentially between views. | 2 to 15 s | Purple |
+- a camera pair with fewer than three learned walks never blocks, so the first handoffs are allowed and the topology can be learned;
+- a crossing at or slower than the usual walk always passes, because people stop on the way (the revival age limit bounds how slow);
+- a crossing much faster than the usual walk scores low and is rejected when it falls below `cross_camera_min_plausibility` (0.05), so a stranger appearing on a far camera a second after the resident left is not given the resident's track.
 
-Both must be configured for correct cross-camera association.
-
-### Inference from coverage
-
-The "Infer from coverage" button on the Adjacency page analyzes visibility polygons with Shapely geometry:
-
-1. Computes IoU (intersection over union) for every camera pair
-2. **IoU ≥ 0.05**: marks as overlap, suggests 0 to 2 s transit, creates bidirectional edges
-3. **IoU < 0.05 but centroids within 35% of floor-plan width**: marks as adjacent, suggests 2 to 15 s transit, creates bidirectional edges
-4. Cameras without visibility polygons are skipped and reported
-
-Inference produces bidirectional edges for all detected pairs. Review the staged edges (transit times in particular) and adjust before saving.
-
-## Overlap groups
-
-Overlap groups are clusters of cameras whose visibility polygons have IoU above the overlap threshold. They are computed via union-find on the overlap pairs:
-
-```mermaid
-flowchart TB
-    Pairs["Overlap pairs\nIoU ≥ 0.05"] --> UF["Union-find clustering"]
-    UF --> Groups["Overlap groups\n(cameras sharing a zone)"]
-    Groups --> Hint["UI hint: 'These cameras\nshare overlap group X'"]
-```
-
-In the calibration UI, when the operator selects two cameras that belong to the same overlap group, a hint appears: "These cameras share overlap group X. Apply overlap defaults (0 to 2 s)." This helps configure adjacency for cameras that cover the same physical area.
-
-### Declared overlap groups (uncalibrated cross-camera)
-
-The IoU clustering above is a calibration-time hint and needs visibility polygons. For uncalibrated cameras that have no homography but still view the same space (a common home case: two shelf-top cameras seeing one room from opposite angles), an operator declares an overlap group directly in the **Overlap Groups** card on **Admin → CTS → Adjacency**: name the group, pick two or more cameras, and add it. Every camera must exist and appear once. Declared groups are stored in `cts_camera_overlap_groups`, served to the orchestrator at `GET /api/v1/cts/overlap_groups`, and applied at the next sync without a restart; if a sync cannot read them, the orchestrator keeps the groups it already has. CTS uses a declared group two ways:
-
-- **Group-appearance dedup**: two same-perspective uncalibrated observations from different cameras in the group are merged by appearance similarity (`dedup_group_appearance_min_sim = 0.75`), with a face-conflict block, since synthetic-tile floor distance cannot be compared across cameras.
-- **Co-presence linking**: when two open PHs in the group resolve to the same committed identity at the same time (the opposite-perspective case, where direct appearance similarity is low), CTS writes a co-presence link instead of merging, so the system shows one person on two views, not two people.
-
-Operator declaration takes precedence; CTS can also mark a group as learned when two uncalibrated cameras consistently show co-present, identity-consistent PHs.
-
-## Cross-camera association
-
-When a person leaves camera A and appears in camera B, the cross-camera associator computes:
-
-```text
-geo_score = exp(−(dist_m / floor_sigma_m)²)
-```
-
-where `dist_m` is the Euclidean distance between the two detections' floor positions (computed via homography). This is combined with appearance similarity:
-
-```text
-combined = α × appearance_sim + (1 − α) × geo_score
-```
-
-| Condition | Behavior |
-|---|---|
-| Both cameras calibrated, same floor plan | Full geometric scoring |
-| One camera uncalibrated | Neutral `geo_score = 0.5` |
-| Different floor plan IDs | Pair pruned (cannot compare) |
-| `geo_score` exceeds `max_floor_distance_m` | Pair pruned (too far apart) |
-| Adjacency edge missing for this direction | Neutral `geo_score = 0.5` |
-
-Without homography and adjacency, every cross-camera pair uses neutral geo scoring and relies solely on appearance similarity to decide merges.
-
-### Zero-calibration cross-camera (learned topology)
-
-The default design point is zero-calibration: cross-camera linking does not require homography. When a person crosses between cameras, CTS reuses the recently closed PersonHypothesis on the new camera (cross-camera revival) instead of spawning a fresh UNKNOWN track. Two signals gate the link and keep it safe without geometry:
-
-- **Learned camera topology.** Each accepted handoff records a directed edge with a running transit-time distribution (`camera_topology_edges`). A candidate link must clear `plausible_transit >= cross_camera_min_plausibility = 0.05`. Unseen edges return the floor, so the first legitimate handoff is never blocked, and topology tightens as it learns.
-- **Multi-view appearance.** The best cosine across the closed PH's view-binned prototypes and the new observation must clear `cross_camera_revive_appearance_min_sim = 0.60`. A recognized different-identity face blocks the link.
-
-Homography, where it exists, remains an accuracy boost (full geometric scoring above), but it is optional. For opposite-perspective overlap, appearance similarity is intrinsically low, so identity travels through the shared multi-view gallery and the two views are joined by a co-presence link, not a merge.
+The Shared Views page lists the learned transitions read-only. A pair marked "learning" does not gate yet.
 
 ## End-to-end setup workflow
 
@@ -243,27 +180,17 @@ Homography, where it exists, remains an accuracy boost (full geometric scoring a
 2. **Calibrate cameras** (Admin → CTS → Calibration)
    - Select a camera, load a snapshot
    - Click-to-pick at least 4 point correspondences, or use Auto-calibrate
-   - Verify residuals and visibility polygon status in the result card
-   - Repeat for all cameras
+   - Verify residuals and visibility polygon status in the result card; the Calibration Health row marks each camera calibrated, not calibrated, or in error
+   - Repeat for every camera that can meet the residual budget; **Remove calibration** returns a camera to its virtual room
 
-3. **Verify coverage** (Admin → CTS → Adjacency)
-   - Check the Coverage Map: floor plan with camera polygon overlays
-   - If polygons are missing, the calibration result will explain why
-
-4. **Declare overlap groups** (Admin → CTS → Adjacency → Overlap Groups)
-   - One group per set of cameras that see the same floor area
+3. **Declare shared views** (Admin → CTS → Shared Views)
+   - Check the calibrated coverage map and the suggestions
+   - One group per set of cameras that see the same floor area; include uncalibrated cameras that see it too
    - Compare duplicate tracks for a day before and after
 
-5. **Configure adjacency** (Admin → CTS → Adjacency)
-   - Click "Infer from coverage" for a starting set of edges
-   - Review and adjust transit times
-   - Add manual edges with the symmetric checkbox for bidirectional paths
-   - Save All
-
-6. **Verify association** (acceptance walk, then orchestrator logs)
-   ```bash
-   docker compose logs cts-orchestrator --tail=200 | grep "cross_cam\|reachable\|link_score"
-   ```
+4. **Verify** (acceptance walk, then the metrics in [Floor frame readiness](#floor-frame-readiness))
+   - One track per walker at every instant
+   - Learned transitions appear on the Shared Views page after people walk between cameras
 
 ## Next steps
 

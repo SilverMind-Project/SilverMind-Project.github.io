@@ -2,7 +2,7 @@
 
 The floor-region work fixes the one place where wall pixels did affect geometry: Cognitive Companion's camera visibility polygon.
 
-This polygon is not used by the CTS runtime tracker. It is used by CC for camera adjacency inference and operator UI. Bad visibility polygons can make two cameras look adjacent when the shared area is actually a wall projection.
+This polygon is not used by the CTS runtime tracker. It is used by CC to suggest shared views (overlap groups) and to draw coverage in the operator UI. Bad visibility polygons can make two cameras look adjacent when the shared area is actually a wall projection.
 
 ## The bug
 
@@ -51,13 +51,13 @@ Cognitive Companion stores the polygon on `cts_cameras`:
 
 The auto-derived region is a starting proposal. The calibration UI overlays it on the camera snapshot. An operator can accept it, move vertices, or hand-draw a replacement. Saving the region stores `source="manual"` when edited.
 
-If the camera already has a committed homography, saving a floor region recomputes the visibility polygon immediately. That keeps adjacency/UI behavior aligned with the latest operator-reviewed geometry.
+If the camera already has a committed homography, saving a floor region recomputes the visibility polygon immediately. That keeps shared-view suggestions and coverage aligned with the latest operator-reviewed geometry.
 
 ## What this does not change
 
 The floor region does not change person tracking. CTS still localizes people from footpoints and fuses floor positions as described in [Multi-Camera Fusion](./04-multi-camera-fusion.md).
 
-The floor region only improves camera coverage/adjacency surfaces that need to know "which part of the floor can this camera see?"
+The floor region only improves camera coverage and shared-view surfaces that need to know "which part of the floor can this camera see?"
 
 ## Code references
 
