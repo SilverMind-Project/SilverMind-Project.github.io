@@ -64,8 +64,8 @@ flowchart LR
     Predict --> Observe --> Update --> Predict
 ```
 
-- **Predict**: advances the position by `velocity * dt` and decays velocity toward zero over `velocity_decay_s` (default: 3.0 s). This is where the filter extrapolates a person's floor position when no observation arrives.
-- **Update**: blends the prediction with the observed floor point using the Kalman gain, weighted by `observation_noise_m` (default: 0.25 m, the calibration residual 95th percentile).
+- **Predict**: advances the position by `velocity * dt` and decays velocity toward zero over `velocity_decay_s` (default: 3.0 s), or integrates exponential velocity decay over `dt` when `damped_velocity_prediction` is enabled. Prediction is computed transiently from `last_seen_at` for association and coasting snapshots; only observations update the stored PH state, so prediction is independent of the round rate.
+- **Update**: predicts from the stored state at `last_seen_at` to the observation's `captured_at` and blends the prediction with the observed floor point using the Kalman gain, weighted by `observation_noise_m` (default: 0.25 m, the calibration residual 95th percentile).
 
 The result is a track that tolerates brief observation gaps and produces smooth floor positions even when the detector or homography is noisy.
 
@@ -152,9 +152,9 @@ Key PH fields:
 
 | Field | Meaning |
 |-------|---------|
-| `state_mean` | `(x, y, vx, vy)` floor-plane metres and m/s (Kalman mean) |
-| `state_cov` | 16 floats, 4x4 row-major covariance |
-| `born_at`, `last_seen_at`, `closed_at` | Lifecycle timestamps |
+| `state_mean` | `(x, y, vx, vy)` floor-plane metres and m/s (Kalman posterior at `last_seen_at`) |
+| `state_cov` | 16 floats, 4x4 row-major covariance (Kalman posterior at `last_seen_at`) |
+| `born_at`, `last_seen_at`, `closed_at` | Capture-time lifecycle timestamps |
 | `last_seen_camera`, `active_cameras` | Camera attribution; `active_cameras` accumulates every camera that has contributed |
 | `observation_count` | Total observations folded in; gates publication via `min_observations_to_publish` |
 | `current_identity_id`, `current_identity_committed_at` | The committed identity and when it was committed |
@@ -198,6 +198,7 @@ The persisted trajectory point uses `state_mean`, the Kalman posterior, not any 
 | --- | --- | --- | --- |
 | Quality-weighted dedup mean | Cross-camera, same frame | `dedup_max_distance_m` | 0.9 m |
 | Residual-widened dedup gate | Cross-camera, same frame | `dedup_residual_coeff_k`, `dedup_max_distance_ceiling_m` | 1.0, 1.5 m |
+| Capture-skew-widened dedup gate | Cross-camera, same batch | `dedup_time_skew_speed_m_s` | 0.0 m/s |
 | Kalman blend | Per camera and over time | `observation_noise_m`, `process_noise_accel_m_s2` | 0.25 m, 0.5 m/s² |
 | Velocity decay on coasting | Over time | `velocity_decay_s` | 3.0 s |
 | Mahalanobis outlier gate | Per frame | `gate_chi2` | 9.21 |
