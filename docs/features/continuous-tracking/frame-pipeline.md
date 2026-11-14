@@ -123,9 +123,9 @@ flowchart TD
 
 **Steps 1-3: predict and associate.** All open PHs are loaded and their Kalman states predicted forward to the current timestamp. `dedup_observations()` then collapses detections from different calibrated cameras that are within `dedup_max_distance_m` (default: 0.6 m) and not in identity conflict into single representative observations. The Hungarian algorithm solves the assignment over a cost matrix (geometric + appearance + height) with a Mahalanobis gate (`gate_chi2 = 9.21`, chi-squared 99%, 2 dof) and an identity-conflict hard gate.
 
-**Steps 4-5: update and spawn.** Matched PHs receive a Kalman update, gallery-mean EMA (`alpha = 1 / min(count+1, 100)`), height EMA (`alpha = 0.1`), mean-quality EMA (`0.1 * obs.quality + 0.9 * prev`), and accumulate all contributing camera IDs. Unmatched observations spawn new PHs (gated by room polygon when configured), seeded with face anchor identity if present.
+**Steps 4-5: update and spawn.** Matched PHs receive a Kalman update, gallery-mean EMA (`alpha = 1 / min(count+1, 100)`), height EMA (`alpha = 0.1`), mean-quality EMA (`0.1 * obs.quality + 0.9 * prev`), and accumulate all contributing camera IDs. Unmatched observations spawn new PHs (gated by room polygon when configured). A new PH is born Unknown: the identity resolver, which runs later in the same step with that round's faces, is the only writer of identity, so a first face is weighed like any other.
 
-**Steps 6-7: continuations and grace.** For each spawn, recently closed PHs within `inferred_handoff_max_s` (600 s) and `inferred_handoff_max_distance_m` (5.0 m) emit a `PHContinuationCandidate`. Unmatched PHs past `ph_close_grace_s` (5.0 s) are closed; those within the grace window keep their predicted state.
+**Steps 6-7: continuations and grace.** For each spawn, recently closed PHs within `inferred_handoff_max_s` (600 s) and `inferred_handoff_max_distance_m` (5.0 m) emit a `PHContinuationCandidate`. Unmatched PHs past `ph_close_grace_s` (15.0 s) are closed; those within the grace window coast: their stored state stays at their last observation and only the published snapshot carries the in-round prediction.
 
 **Steps 8-10: persist, resolve, snapshot.** All updated PHs are persisted. The Bayesian identity resolver runs on every PH that received an observation. Face templates that finished since the previous round are passed to the resolver only, never to association. After the step, world tracking feeds this round's faces into each person's template buffer and starts template requests in the background, on every execution path, so a slow person-ID service never delays a frame. `WorldFrameSnapshot` objects are built for PHs with `observation_count >= min_observations_to_publish` (3).
 
@@ -137,7 +137,7 @@ The dedup gate passes a pair of observations when all three conditions hold:
 
 1. The two detections are from **different** cameras.
 2. Both have `calibrated=True` floor points within `dedup_max_distance_m` (default: 0.6 m) of each other.
-3. When both carry committed face anchors, the face identities do not conflict (`dedup_require_no_face_conflict: true`).
+3. The faces do not conflict (`dedup_require_no_face_conflict: true`). Two faces conflict only when both are single-frame recognitions from this camera frame naming different people, each with raw similarity at or above `face_conflict_min_similarity` (0.70), the same threshold association and revival use. A weak recognition, a candidate, a face template, or an external assertion never splits one person into two tracks.
 
 Pairs that pass the gate are joined by a union-find algorithm; each resulting cluster elects one representative via `_select_representative()` (highest quality, ties broken deterministically). The cluster membership map propagates all source camera IDs back to the winning PH.
 

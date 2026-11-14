@@ -69,6 +69,12 @@ for the trigger, range, and rollout detail.
 The identity prior is measured from the last independent qualifying evidence. Resolver evaluation
 time, persistence time, and ordinary identity update time are separate timestamps.
 
+Evidence age is measured from the capture time of the newest contributing face. For a face seen in
+the current frame (or a ReID vote) that is the current round. A face template, which several faces
+of one track form and which the person-ID service matches in the background, is as old as its
+newest member face, even when it is applied a few seconds later, so a late template never extends
+the 30-second window. The clock never moves backwards for an identity the PH already holds.
+
 The clock gate is identity-matched, not presence-only: it advances only when a frame carries a
 direct recognized ArcFace anchor whose person matches the PH's committed identity, or a ReID vote
 whose top candidate matches that identity. Evidence for a different, unrelated identity appearing
