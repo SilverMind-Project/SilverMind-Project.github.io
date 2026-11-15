@@ -88,6 +88,9 @@ table, the server-computed eligibility, and the immutable review history.
 Camera frames are blurred by default. Unblurred access uses the same `BlurToggle` and media behavior
 as the rest of the tracking admin, gated by the gallery-review permission below.
 
+When the queue has never held a candidate and calibrated faces are not live yet, its empty state
+says no samples can be proposed and links to [Identity setup](/features/continuous-tracking/identity-integrity/identity-setup).
+
 The queue exposes only individual approve, individual relabel, individual demote, and reject
 (single or batch). There is no bulk approve control or endpoint: every candidate that becomes
 `operator_verified` passes through a single deliberate approve or relabel action.
@@ -209,6 +212,7 @@ current and future call site applies it identically.
 
 ## Related pages
 
+- [Identity setup](/features/continuous-tracking/identity-integrity/identity-setup): why the queue stays empty until calibrated faces are live
 - [Identity authority and Unknown](/features/continuous-tracking/identity-integrity/identity-authority)
 - [Identity revision projections](/features/continuous-tracking/identity-integrity/revision-projections)
 - [Cross-repository identity contracts](/features/continuous-tracking/identity-integrity/contracts)

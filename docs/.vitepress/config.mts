@@ -121,6 +121,7 @@ export default defineConfig({
                   collapsed: true,
                   items: [
                     { text: "Architecture and baseline", link: "/features/continuous-tracking/identity-integrity" },
+                    { text: "Identity setup", link: "/features/continuous-tracking/identity-integrity/identity-setup" },
                     { text: "Identity authority", link: "/features/continuous-tracking/identity-integrity/identity-authority" },
                     { text: "ReID gallery governance", link: "/features/continuous-tracking/identity-integrity/reid-gallery-governance" },
                     { text: "Revision projections", link: "/features/continuous-tracking/identity-integrity/revision-projections" },

@@ -40,6 +40,10 @@ The software is free and open-source. The cost is the hardware: a home computer 
 
 Yes, to set it up. It is not yet a plug-in product. A technical family member or a care organization can stand it up, and the family can then use it day to day.
 
+## Why does it not know who someone is yet?
+
+Recognizing people takes a few setup steps after installation: adding every person who lives in or visits the house, collecting and labeling a week or two of faces from your own cameras, and then switching on the calibrated result. Until then the system follows people as unnamed. The **Identity Setup** page in the admin console shows which step your home is on; the technical side is in [Identity setup](/features/continuous-tracking/identity-integrity/identity-setup).
+
 ## Words you will see
 
 | Term | What it means |

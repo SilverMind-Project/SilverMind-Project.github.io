@@ -8,6 +8,8 @@ A similarity of 0.80 does not mean "80% chance this is the same person." The val
 
 The runtime reads a versioned artifact and applies its mapping to every recognized face. If no valid artifact exists, the service runs in `degraded_missing` state and returns `calibrated_confidence: null`. The Continuous Tracking authority gate reads `calibrated_confidence` and denies authority on null, so an uncalibrated deployment still tracks people; it just never treats a single face as proof.
 
+Calibration is links 2 to 4 of the household's identity chain. The [Identity setup](/features/continuous-tracking/identity-integrity/identity-setup) page shows where your home is in that chain and what to do next.
+
 ## Calibration health states
 
 Any degraded state yields `calibrated_confidence: null`.
