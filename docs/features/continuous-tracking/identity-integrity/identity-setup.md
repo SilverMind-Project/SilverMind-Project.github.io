@@ -17,7 +17,7 @@ flowchart LR
 
 | Link | What happens | Where |
 | --- | --- | --- |
-| 1 Enroll everyone | Five to ten photos of every person who lives in or regularly visits the house, starting with the person you care for | People, Members & Enrollment |
+| 1 Enroll everyone | Five to ten photos of every person who lives in or regularly visits the house, starting with the person you care for; then review recurring faces on the Visitors page, where most groups are usually faces of someone enrolled | People, Members & Enrollment; People, Visitors |
 | 2 Capture | The person identification service keeps a sample of real faces from your cameras for 7 to 14 days | `calibration_capture.enabled` in the person identification settings |
 | 3 Label | An admin says who each captured face is, or that it is someone not enrolled | People, Face Calibration |
 | 4 Fit and deploy | The labeled faces produce a calibration artifact that turns a face score into a trustworthy probability | [Face confidence calibration](/development/face-confidence-calibration) |
@@ -28,6 +28,10 @@ flowchart LR
 Face Calibration and the ReID Review Queue are two different stages of this one chain. Face Calibration labels face crops and never changes who is enrolled. The ReID Review Queue never shows faces: it governs which body-appearance samples the system may learn from, and it stays empty until calibrated faces are live. Both pages link to Identity Setup.
 
 Two prerequisites sit beside the chain. **Cameras deliver frames**: a camera that has sent nothing for a minute contributes nothing. **Floor plan, rooms, and camera calibration**: without a floor plan at a measured scale, room outlines, and a calibration for each tracking camera, one person seen by two cameras can become two tracks (see [Camera calibration](/features/continuous-tracking/camera-calibration)). A camera with the `face_capable` role is an identification point and needs no floor calibration.
+
+## One way to say who someone is
+
+You decide who someone is in several places: labeling faces, reviewing recurring faces, reviewing body samples, and correcting a track. They work at different stages of the system, but every one picks from the same list of household members, in the same order, with the same names. Recurring-face review uses the words **Someone enrolled**, **Someone new**, and **Dismiss**, and says what each choice changes before you confirm it. Only naming someone new adds faces to a person's enrollment; every other decision leaves how the system recognizes people unchanged.
 
 ## Reading the page
 
