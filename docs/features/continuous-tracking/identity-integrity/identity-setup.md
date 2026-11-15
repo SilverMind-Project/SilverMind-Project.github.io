@@ -33,6 +33,8 @@ Two prerequisites sit beside the chain. **Cameras deliver frames**: a camera tha
 
 Each step shows one state and, when something is needed, one next action. The first blocked step is marked **Start here**.
 
+<img src="/screens/identity-setup.webp" width="1600" height="1623" loading="lazy" alt="The Identity Setup page: camera and floor prerequisites, then the numbered identity chain with a state and next action for each step, and the calibration artifact marked Start here" />
+
 | State | Meaning |
 | --- | --- |
 | Ready | This step is done |
