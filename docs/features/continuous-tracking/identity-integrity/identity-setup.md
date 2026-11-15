@@ -31,13 +31,15 @@ Two prerequisites sit beside the chain. **Cameras deliver frames**: a camera tha
 
 ## One way to say who someone is
 
-You decide who someone is in several places: labeling faces, reviewing recurring faces, reviewing body samples, and correcting a track. They work at different stages of the system, but every one picks from the same list of household members, in the same order, with the same names. Recurring-face review uses the words **Someone enrolled**, **Someone new**, and **Dismiss**, and says what each choice changes before you confirm it. Only naming someone new adds faces to a person's enrollment; every other decision leaves how the system recognizes people unchanged.
+You decide who someone is in several places: labeling faces, reviewing recurring faces, reviewing body samples, and correcting a track. They work at different stages of the system, but every one picks from the same list of household members, in the same order, with the same names. Face labeling, recurring-face review, and body-sample review also share their words and keys: a number picks a household member, **n** means someone not in the household, and **x** means not usable. Recurring faces add **Someone new** and offer one **Dismiss** for both negative choices, because a dismissed group closes the same way either way. Each page shows, before you confirm, what the choice will change, in words that come from the system itself, and says under its buttons which choices can change enrollment. Only naming someone new adds faces to a person's enrollment; every other decision leaves how the system recognizes people by face unchanged. Choosing a member on a body sample still asks you to confirm, because it lets that sample vote. To decide about many items at once, use **Select several** on Recurring faces and on the ReID Review Queue; a group decision is never an approval.
+
+The page also lists every review queue (Visitors, Face Calibration, the ReID Review Queue) with how many items are waiting and a link to each. A queue whose service did not answer says **Count unavailable**, never zero.
 
 ## Reading the page
 
 Each step shows one state and, when something is needed, one next action. The first blocked step is marked **Start here**.
 
-<img src="/screens/identity-setup.webp" width="1600" height="1623" loading="lazy" alt="The Identity Setup page: camera and floor prerequisites, then the numbered identity chain with a state and next action for each step, and the calibration artifact marked Start here" />
+<img src="/screens/identity-setup.webp" width="1600" height="1913" loading="lazy" alt="The Identity Setup page: camera and floor prerequisites, then the numbered identity chain with a state and next action for each step, and the calibration artifact marked Start here, then the review queues with how many items wait in each" />
 
 | State | Meaning |
 | --- | --- |

@@ -46,7 +46,7 @@ Unlabeled and rejected captures, with their crops, are deleted after `unlabeled_
 
 ### 2. Label
 
-An admin labels captures in Cognitive Companion at People, Face Calibration (`/admin/face-calibration`, permission `face_calibration.review`). Each capture is one keystroke: a number for a resident, `n` for someone who is not enrolled, `x` for not a face. Rejecting marks a capture unusable; deleting removes it and its crop. The labeler recorded is the signed-in admin.
+An admin labels captures in Cognitive Companion at People, Face Calibration (`/admin/face-calibration`, permission `face_calibration.review`). Each capture is one keystroke with the keys every review page shares: a number for a resident, `n` for someone not in the household, `x` for not usable (stored as `not_a_face`, which the fit skips). No member is highlighted, so the closest match never steers a ground-truth label. **Reject capture** sets a capture aside; deleting removes it and its crop. Each choice's effect comes from the server, and the page states that labels never change enrollment. The labeler recorded is the signed-in admin.
 
 A label never changes enrollment. Calibration data and the enrollment gallery stay separate; only an explicit enrollment or visitor naming adds faces to the gallery.
 

@@ -91,15 +91,23 @@ as the rest of the tracking admin, gated by the gallery-review permission below.
 When the queue has never held a candidate and calibrated faces are not live yet, its empty state
 says no samples can be proposed and links to [Identity setup](/features/continuous-tracking/identity-integrity/identity-setup).
 
+The drawer uses the decision bar every identity review page shares. Household members are
+numbered (keys 1 to 9) and the proposed one is highlighted: choosing it approves, choosing anyone
+else relabels, and either way a confirm states the effect first, so no key approves on its own.
+**Not in the household** (`n`) rejects as `wrong_person`; **Not usable** (`x`) asks which kind
+(low quality, bad box, identity uncertain, duplicate, other) and rejects with that reason. Demote
+sits beside them for an `auto_verified` row.
+
 The queue exposes only individual approve, individual relabel, individual demote, and reject
-(single or batch). There is no bulk approve control or endpoint: every candidate that becomes
-`operator_verified` passes through a single deliberate approve or relabel action.
+(single or batch). **Select several** offers only the two rejections for many samples at once.
+There is no bulk approve control or endpoint: every candidate that becomes `operator_verified`
+passes through a single deliberate approve or relabel action.
 
 ### Approval is gated on live server eligibility
 
 The server computes eligibility for each candidate from its current state, crop truncation and
-occlusion, and model and preprocessing compatibility. The detail drawer disables Approve when
-eligibility is false and lists the reasons. The server re-checks eligibility and the optimistic
+occlusion, and model and preprocessing compatibility. The detail drawer disables every member choice
+when eligibility is false and lists the reasons. The server re-checks eligibility and the optimistic
 `audit_version` on every approve and relabel, so a stale or now-ineligible candidate returns `409`
 (`reid_review.stale` or `reid_review.ineligible`) and the browser refreshes instead of forcing the change through. The browser cannot fabricate eligibility or override a failed quality gate.
 
