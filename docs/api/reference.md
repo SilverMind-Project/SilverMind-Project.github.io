@@ -173,6 +173,9 @@ The validator rejects unknown step IDs, unknown ports, invalid graph structure, 
 | `DELETE` | `/persons/{person_id}/enrollment` | Delete enrollment |
 | `GET` | `/persons/locations` | Current location envelopes for all tracked members |
 | `GET` | `/persons/{person_id}/location` | Current location envelope for one member |
+| `GET` | `/identity/targets` | The household members every identity decision picks from, with `face_enrolled`; works without CTS |
+| `GET` | `/identity/review-vocabulary` | What each identity review decision changes, per review page |
+| `GET` | `/identity/readiness` | Identity setup readiness: each step's state and next action, and every review queue's waiting count |
 | `GET` | `/persons/{person_id}/presence-history` | Presence history |
 | `GET` | `/rooms/{room_id}/occupants` | Current room occupants |
 | `GET` | `/persons/{person_id}/dwell` | Dwell summary |
@@ -226,9 +229,8 @@ Representative paths include:
 | `/cts/calibration/*` | Homography (save, remove), visibility, privacy zones, calibration health |
 | `/cts/overlap_groups*`, `/cts/topology/transitions` | Shared views (create, delete, suggestions) and learned camera handoffs (read-only) |
 | `/cts/ph/*` | Person hypothesis lists, details, corrections, merges, splits, and deletes |
-| `/cts/identity/correction-targets` | Active household members an operator may assign, with optional gallery decoration |
 | `/cts/identity/corrections/*` | Shared correction workflow: propose, apply, compensate, and job status |
-| `/cts/identity/reid-review/*` | Governed ReID gallery review queue: list, detail, approve, relabel, reject, batch reject, compensate, counts |
+| `/cts/identity/reid-review/*` | Governed ReID gallery review queue: list, detail, approve, relabel, reject, batch review (rejections only), compensate, counts |
 | `/cts/keyframes` | Grouped physical-frame keyframe cards with effective identity per bbox |
 | `/cts/presence/*` | Presence configuration and snapshots |
 | `/cts/signals/*` | Dementia and routine-change signals |
@@ -321,7 +323,7 @@ for the lifecycle and trust rules.
 | `POST` | `/api/v1/cts/identity/reid-review/candidates/{id}/approve` | Approve one candidate (individual only) |
 | `POST` | `/api/v1/cts/identity/reid-review/candidates/{id}/relabel` | Relabel one candidate to a household target, then verify |
 | `POST` | `/api/v1/cts/identity/reid-review/candidates/{id}/reject` | Reject one candidate with a structured reason |
-| `POST` | `/api/v1/cts/identity/reid-review/reject-batch` | Reject several candidates, with per-item results |
+| `POST` | `/api/v1/cts/identity/reid-review/review` | Reject several candidates as `not_enrolled` (wrong person) or `not_usable` (with its reason); one `{id, ok, error_code}` per candidate (`conflict` when it changed since loading) and the effect sentence. There is no batch approval |
 | `POST` | `/api/v1/cts/identity/reid-review/candidates/{id}/compensate` | Un-verify an approved candidate |
 
 Every route requires the `cts.identity.gallery_review` permission. This is a strict token check: the

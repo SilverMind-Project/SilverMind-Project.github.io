@@ -115,8 +115,8 @@ reason, time range, authority, decision source, conflict, and pending review. Fi
 grouped-frame pagination; a frame that matches an identity filter still returns all of its boxes so
 the caregiver keeps the full context of who else was present.
 
-The identity filter options come from the authoritative correction-target endpoint
-(`GET /api/v1/cts/identity/correction-targets`, the active household roster), not from whatever
+The identity filter options come from the authoritative target list
+(`GET /api/v1/identity/targets`, the active household roster), not from whatever
 identities happen to appear on the current page, plus an explicit Unknown option. The list scans a
 bounded recent window; when that window is full the response sets `truncated` so a caregiver knows
 the count covers recent activity, not all retained history.
@@ -137,8 +137,8 @@ correction workflow. One Vue component (`IdentityCorrectionWorkflow`), one compo
 drift apart. On a keyframe card the caregiver opens the detail overlay and clicks a labeled box; in
 the PH inspector they open the Correct identity action on the selected track.
 
-The workflow loads the identity list from `GET /api/v1/cts/identity/correction-targets`, the active
-household roster. This list never depends on the ReID gallery, so a caregiver can still reassign a
+The workflow loads the identity list from `GET /api/v1/identity/targets`, the active household
+roster that every identity review page shares. This list never depends on the ReID gallery, so a caregiver can still reassign a
 person when the gallery is empty or stale. Clearing the selector does not submit anything. Setting a
 person to Unknown is its own explicit action, not an empty selection.
 

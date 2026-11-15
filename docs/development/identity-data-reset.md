@@ -36,8 +36,8 @@ The compose default `postgres` only resolves on the internal Docker network. `MI
 matches the `minio.secure` setting the orchestrator uses; the script also accepts the older
 `MINIO_USE_SSL` name.
 
-`CC_API_KEY` is optional. Set it to a key with `cts.identity.view` access to include the
-correction-targets endpoint in the post-apply smoke check. Without it, that probe is skipped and the
+`CC_API_KEY` is optional. Set it to a key with `identity_targets:read` access (a caregiver key) to
+include the identity-targets endpoint in the post-apply smoke check. Without it, that probe is skipped and the
 auth-free identities-count check remains the authoritative proof that both household members survive.
 
 ### Migration head
@@ -108,7 +108,7 @@ After applying, the script runs a smoke check automatically and prints the resul
 To verify manually:
 
 1. **Gallery empty**: open the ReID gallery tab in the dashboard. No candidates appear.
-2. **Identities intact**: the correction-targets panel lists both household members.
+2. **Identities intact**: any person picker (for example Correct identity) lists both household members.
 3. **No active hypotheses**: the live view shows no tracked persons until new frames arrive.
 4. **Raw frames survive**: open any keyframe from before the reset. The underlying
    `frames/...` object is still present in MinIO.
