@@ -30,7 +30,7 @@ Only people you grant access to, on your own system. Access is controlled by key
 
 ## Can the senior turn it off or push back?
 
-The senior is meant to stay in control of their day. Reminders are prompts they can ignore, the wall display and speaker are ordinary household devices, and the companion only talks when spoken to or when it has a gentle check-in. Cameras should cover shared spaces, never bedrooms or bathrooms.
+The senior is meant to stay in control of their day. Reminders are prompts they can ignore, the wall display and speaker are ordinary household devices, and the companion only talks when spoken to or when it has a gentle check-in. Cameras should cover shared spaces, never bedrooms or bathrooms. If the household adds an eye-level identification-point camera to improve recognition in a hallway or doorway, it belongs only in a shared space and uses the same system-side privacy zones as every other camera.
 
 ## How much does it cost?
 

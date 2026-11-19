@@ -35,6 +35,7 @@ Access runs on keys with specific permissions, so a caregiver, an admin, and a c
 - This is software that supports a family. It does not diagnose any condition and is not a medical device.
 - It will not call emergency services on its own. It can notify the people you choose, and it can hand off to other systems you connect, but dispatching help is a decision for a person.
 - Cameras do not cover every room, and bedrooms and bathrooms should stay uncovered.
+- Optional eye-level identification-point cameras are placed only in shared spaces such as hallways or kitchen entrances, never in bedrooms or bathrooms, and obey the same system-side privacy zones (blur, mask, or drop) enforced before any face or body model sees the frame.
 
 ## Next steps
 

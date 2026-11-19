@@ -6,7 +6,7 @@ Configure your RTSP cameras for reliable tracking before the system sees its fir
 
 - go2rtc and rtsp-ingress running and reachable by the tracking orchestrator
 - Admin UI accessible (typically `http://<host>:8080/admin/cts/cameras`)
-- Camera added to the Admin UI with its RTSP substream URL already set
+- Camera added to the Admin UI with its RTSP URL set (main stream for face-producing cameras; substream acceptable only when `face_id_enabled` is off)
 
 ## Exposure and shutter
 
@@ -42,16 +42,38 @@ rtsp-ingress registers the RTSP URL you set in Admin UI with go2rtc, then polls 
 
 This means resolution is controlled entirely by which URL you configure in Admin. If you store the main-stream URL (e.g. 2560x1440), every poll decodes a 4K frame. If you store the substream URL (e.g. 1280x720), every poll decodes that.
 
-### Recommended substream: 1280x720
+### Main stream vs. substream
 
-Configure the substream URL in Admin. The person detector letterboxes every frame to a 640x640 canvas before inference, regardless of input size:
+Person detection and face recognition have different resolution requirements:
 
-```python
-# triton-shared/triton_shared/inference/detection.py
-DETECTOR_INPUT_SIZE = 640
-```
+- **Person detection** letterboxes every frame to a 640x640 canvas (`DETECTOR_INPUT_SIZE = 640` in `triton-shared/triton_shared/inference/detection.py`). A 1280x720 substream is enough for body bounding boxes, posture, and room occupancy.
+- **Face recognition** crops each detected person from the full-resolution ingested frame before sending it to `person-identification-service`. Switching a camera from a 2560x1440 main stream to a 1280x720 substream cuts interocular pixels in half, shrinking usable face recognition range from roughly 2.7 m to 1.3 m on a 103 degree lens.
 
-A 4K input does not improve detection accuracy: it letterboxes to the same 640x640 canvas as a 720p input. What it does add is JPEG decode latency on the go2rtc proxy, MinIO upload size, and Redis stream payload size. A 1280x720 frame gives the detector enough pixel density for full-body crops while keeping the pipeline light.
+Use the **main stream** (2560x1440 or higher) on every camera with `face_id_enabled: true`. Reserve the 1280x720 substream for cameras where `face_id_enabled` is turned off (for example, top-down cameras where faces are never visible).
+
+### Camera profile and placement calculator
+
+Every CTS camera carries a hardware-neutral profile in Admin UI (`Admin > CTS > Cameras`), synced live to the tracking orchestrator:
+
+| Field | Meaning |
+| --- | --- |
+| `role` | `face_capable` (identification point: uses `face_id.identification_point_cooldown_s`, default `1.0 s`), `mixed` (standard `face_id.cooldown_s`, default `5.0 s`), or `surveillance` (tracking-first, standard cooldown). Role never disables face ID; `face_id_enabled` is the single per-camera switch. |
+| `horizontal_fov_deg` | Lens horizontal field of view in degrees (from the spec sheet; multiply diagonal FOV by roughly 0.8 on 16:9 sensors). |
+| `mounting_height_m` | Lens height above the floor in meters. |
+| `tilt_deg` | Downward tilt angle in degrees (`0` horizontal, `-90` straight down). |
+| `ir_capable` | Whether the camera uses infrared illumination at night (grayscale IR degrades face and clothing-color matching). |
+| `frame_natural_width`, `frame_natural_height` | Read-only native stream resolution reported back from the orchestrator's first observed frame. |
+
+Open the **Geometry** tab in the camera editor to view the placement calculator (`GET /api/v1/cts/cameras/{camera_id}/optics` and `POST /api/v1/cts/cameras/optics-preview`). Under the pinhole approximation (`focal_px = (width_px / 2) / tan(hfov_deg / 2)` and `iod_px = focal_px * 0.063 / distance_m`), interocular pixel bands are poor (`< 16 px`), marginal (`16 to 24 px`), good (`24 to 40 px`), and excellent (`>= 40 px`):
+
+| Stream width and lens HFOV | Focal length | 1 m | 2 m | 3 m | 4 m | 5 m | Good range (>= 24 px) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 2560 px, 55 deg (6 mm on 1/2.8" sensor) | 2459 px | 154.9 px | 77.5 px | 51.6 px | 38.7 px | 31.0 px | 6.45 m |
+| 2560 px, 70 deg (4 mm on 1/2.8" sensor) | 1828 px | 115.2 px | 57.6 px | 38.4 px | 28.8 px | 23.0 px | 4.80 m |
+| 2560 px, 90 deg (standard wide) | 1280 px | 80.6 px | 40.3 px | 26.9 px | 20.2 px | 16.1 px | 3.36 m |
+| 2560 px, 103 deg (room corner wide) | 1018 px | 64.1 px | 32.1 px | 21.4 px | 16.0 px | 12.8 px | 2.67 m |
+| 2560 px, 110 deg (ultra-wide) | 896 px | 56.5 px | 28.2 px | 18.8 px | 14.1 px | 11.3 px | 2.35 m |
+| 1280 px, 103 deg (720p substream) | 509 px | 32.1 px | 16.0 px | 10.7 px | 8.0 px | 6.4 px | 1.34 m |
 
 ### Codec preference: H.264 over H.265
 
@@ -66,6 +88,15 @@ Mount cameras at 2.2 to 2.6 meters above the floor, angled 15 to 30 degrees down
 - The full torso of an adult at 1 to 4 meters from the camera occupies enough pixels for a reliable ReID crop.
 - The top of the head is visible, which matters for the floor-plane homography (you need the contact point, not the head centroid, for the floor projection).
 - Extreme downward angles (more than 40 degrees) foreshorten the body and degrade keypoint localization.
+
+### Identification-point placement
+
+Wide-angle ceiling cameras cover a whole room, so faces beyond 2 m often fall under 20 interocular pixels. Adding one or two dedicated identification-point cameras (`role: face_capable`, `face_id_enabled: true`) at chokepoints produces 40 to 80 interocular pixels on passing faces:
+
+- **Location:** aim along a daily walking path toward the lens, such as the end of a hallway, a kitchen entrance, or facing a favorite chair.
+- **Mount height and pitch:** mount at 1.5 to 1.8 m above the floor with near-level tilt (`0` to `-10` degrees) so faces arrive frontal and low-pitch.
+- **Lens and stream:** pick any RTSP H.264 camera with a 4 to 6 mm lens on a 1/2.8 inch sensor (roughly 55 to 75 degrees horizontal FOV) or an 8 MP sensor configured on its main stream at 2560x1440 or higher. Cap auto-exposure shutter at 1/60 s or faster so walking faces stay sharp.
+- **Floor calibration and shared views:** calibrate the camera's floor homography and register it in an overlap group with any room camera that shares its view. Without a homography, CTS logs `identification_camera_uncalibrated` and faces land on isolated camera-local tracks.
 
 ### Cover doorways and transit lines
 

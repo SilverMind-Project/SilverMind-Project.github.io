@@ -14,8 +14,13 @@ moving detector, pose, body ReID, and face inference to a separate accelerator.
   explains calibration, PTQ, QAT, sparse INT8, Triton internals, and paths for
   Intel or AMD discrete GPUs.
 - [Camera setup and tuning guide](/hardware/camera-setup) covers exposure,
-  resolution, mount angle, privacy zones, and a validation checklist for each
-  newly mounted camera.
+  main-stream vs. substream resolution, identification-point cameras, mount
+  angle, privacy zones, and a validation checklist for each newly mounted
+  camera.
+
+### Recommended add-on: identification-point camera
+
+Wide ceiling-corner cameras cover whole rooms, so faces beyond 2 m often drop below 20 pixels between the eyes. Adding one or two eye-level RTSP cameras (1.5 to 1.8 m height, 4 to 6 mm lens or 8 MP main stream at 2560x1440 or higher, H.264, `role: face_capable`) at a hallway or kitchen entrance supplies large, frontal faces without locking into any camera vendor. Configure the lens horizontal FOV and mounting height in Admin UI (`Admin > CTS > Cameras`) to check expected face pixels in the built-in placement calculator, then calibrate its floor homography and shared view. See the [Camera setup and tuning guide](/hardware/camera-setup#identification-point-placement).
 
 ## Supported devices
 

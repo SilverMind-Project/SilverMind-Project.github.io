@@ -16,6 +16,15 @@ Overlap is not adjacency. Overlapping cameras see one person at the same instant
 
 Two calibrated cameras already agree through the floor plan: their observations of one person land within a metre and merge. A shared view matters whenever at least one camera in the pair is not calibrated, because an uncalibrated camera tracks in its own virtual room and has no floor position to compare.
 
+### Identification-point cameras need calibration and shared views
+
+An identification-point camera (`role: face_capable`, mounted at 1.5 to 1.8 m with a tighter 4 to 6 mm lens) exists to attach high-resolution face evidence to the person tracks maintained by room cameras. Both steps are required when adding one:
+
+1. **Calibrate its floor homography** on **Admin -> CTS -> Calibration** so its detections project into the same floor frame as neighboring cameras. Without a homography, CTS logs `identification_camera_uncalibrated` once and Admin UI flags the camera with a calibration warning; its detections stay in a synthetic virtual cell and its faces mostly land on isolated camera-local tracks.
+2. **Register a shared view (overlap group)** on **Admin -> CTS -> Shared Views** whenever the identification-point camera shares a field of view with a room camera (for example, a hallway entrance camera overlapping an open-plan living room camera). This ensures simultaneous sightings merge or link instead of spawning competing PersonHypotheses.
+
+Keep `horizontal_fov_deg`, `mounting_height_m`, and `tilt_deg` filled in on **Admin -> CTS -> Cameras**: the placement calculator reads `horizontal_fov_deg` and the CTS-observed stream resolution (`frame_natural_width`, `frame_natural_height`), and downstream single-view geometry uses `mounting_height_m` and `tilt_deg`.
+
 ## Floor frame readiness
 
 Cameras, rooms, transit zones, and (later) wearable anchors share one floor frame: the floor-plan image scaled to meters, with its origin at the image's top-left corner, x to the right, y down, and height measured above the floor. Until that frame exists, each camera tracks in its own 4 m virtual room, so one person seen by two cameras becomes two tracks and no speed or distance is real.
