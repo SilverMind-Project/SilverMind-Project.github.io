@@ -171,6 +171,12 @@ The validator rejects unknown step IDs, unknown ports, invalid graph structure, 
 | `POST` | `/persons/{person_id}/enroll` | Upload face enrollment photos |
 | `GET` | `/persons/{person_id}/enrollment` | Get enrollment status |
 | `DELETE` | `/persons/{person_id}/enrollment` | Delete enrollment |
+| `GET` | `/persons/{person_id}/prototypes` | List enrolled face prototypes by angle slot (`frontal`, `left_profile`, `right_profile`, `pitched`, `eyeglasses`, `other`) with pose angles, quality score, and pinned state |
+| `POST` | `/persons/{person_id}/prototypes` | Add a face prototype photo with slot assignment and pinning (automatic eviction of lowest-quality unpinned prototype when the 12-prototype cap is exceeded) |
+| `DELETE` | `/persons/{person_id}/prototypes/{prototype_id}` | Delete an individual face prototype and recompute the identity centroid |
+| `PATCH` | `/persons/{person_id}/prototypes/{prototype_id}/pin` | Toggle the pinned protection state of a face prototype |
+| `GET` | `/persons/roster-health` | Per-member prototype counts, covered angle slots, missing recommended slots (`frontal`, `left_profile`, `right_profile`), and oldest prototype age |
+| `POST` | `/face-calibration/candidates/{candidate_id}/promote` | Promote a verified `same_person` calibration capture into the member's permanent prototype gallery (`source="promoted_from_capture"`) |
 | `GET` | `/persons/locations` | Current location envelopes for all tracked members |
 | `GET` | `/persons/{person_id}/location` | Current location envelope for one member |
 | `GET` | `/identity/targets` | The household members every identity decision picks from, with `face_enrolled`; works without CTS |
@@ -226,6 +232,7 @@ Representative paths include:
 | Path | Purpose |
 | --- | --- |
 | `/cts/cameras` | CTS camera registration and health |
+| `/cts/cameras/{camera_id}/optics`, `/cts/cameras/optics-preview` | Derived camera optics profile (`CameraProfile`: FOV, mounting height/pitch, role, face pixels/meter, recognition distance bands) and stateless live preview |
 | `/cts/calibration/*` | Homography (save, remove), visibility, privacy zones, calibration health |
 | `/cts/overlap_groups*`, `/cts/topology/transitions` | Shared views (create, delete, suggestions) and learned camera handoffs (read-only) |
 | `/cts/ph/*` | Person hypothesis lists, details, corrections, merges, splits, and deletes |

@@ -173,7 +173,7 @@ engine.
 
 | Triton model | Input contract | Quantized region | Q/DQ pairs | Q/DQ ONNX size |
 | --- | --- | --- | ---: | ---: |
-| `person-detector` | Fixed `[8,3,640,640]` | YOLO backbone convolutions after QAT | 166 | 99.8 MB |
+| `person-detector` | Fixed `[1,3,640,640]` (Jetson INT8; DGX FP32 uses `[8,3,640,640]`) | YOLO backbone convolutions after QAT | 166 | 99.8 MB |
 | `pose-rtmpose` | Dynamic batch 1 to 8, `[3,256,192]` | Three stem convolutions | 6 | 54.4 MB |
 | `reid-solider` | Dynamic batch 1 to 8, `[3,384,128]` | Supported Conv and MatMul regions | 152 | 113.8 MB |
 | `face-detector-scrfd` | Fixed batch 1, `[1,3,640,640]` | Convolutions except sensitive prediction heads | 92 | 17.0 MB |

@@ -39,12 +39,12 @@ docs/
 │   ├── person-tracking.md    # Face recognition, location tracking, activities
 │   ├── continuous-tracking.md           # CTS overview: architecture, Redis streams, DB schema
 │   ├── continuous-tracking/
-│   │   ├── frame-pipeline.md            # 15-stage frame processing pipeline
-│   │   ├── tracking-concepts.md         # Kalman filter, BoT-SORT, PH, cross-camera dedup
+│   │   ├── frame-pipeline.md            # 17-stage frame processing pipeline
+│   │   ├── tracking-concepts.md         # Kalman filter, Hungarian association, PH, cross-camera dedup
 │   │   ├── camera-calibration.md        # Homography calibration, privacy zones, adjacency
 │   │   ├── dementia-signals.md          # Signal kinds, hysteresis, baseline computation
 │   │   └── cc-integration.md           # Enabling CTS, subscribers, rule examples
-│   ├── mcp-integration.md    # 39-tool MCP server for AI agent integration
+│   ├── mcp-integration.md    # MCP server for AI agent integration
 │   ├── voice-companion.md    # Gemini Live voice integration
 │   ├── eink-display.md       # E-ink template system and rendering
 │   ├── notifications.md      # Multi-channel alert routing and escalation
@@ -71,6 +71,18 @@ All documentation content is derived from the main Cognitive Companion and Conti
 - **Config files**: `../cognitive-companion/config/`
 
 When updating documentation, verify technical details against the actual codebase. Do not assume documentation is more current than code. For API endpoints, read `backend/routers/`; for step types, read `backend/steps/builtin/`; for default values, read the source.
+
+### Three-tier documentation delineation standard
+
+Across the workspace, documentation is partitioned into three distinct tiers so content is never duplicated between code repositories and this public site:
+
+| Tier | Location | Purpose |
+| --- | --- | --- |
+| **1. Normative agent instructions** | `<code-repo>/CLAUDE.md`, `AGENTS.md`, `.claude/skills/`, `.claude/rules/` | Actionable coding rules, domain invariants, and verification commands loaded into agent context; path-checked by `make docs-check` |
+| **2. Repo-scoped engineering & ops docs** | `<code-repo>/docs/` (indexed by `<code-repo>/docs/README.md`) | Internal `systems-architecture.md`, operational runbooks (`runbook.md`, `jetson-int8-deployment.md`), wire-format specs (`wire-format.md`), repo-local BFF reference (`api/reference.md`), and engineering decision records (`rf-hardware-decision.md`, dated audits) |
+| **3. Public documentation site** | `silvermind-project.github.io/docs/` | Operator, caregiver, and integrator guides, progressive educational series (`01` to `07` spatial tracking, `identity-integrity/*`), hardware guides, and cross-system reference pages |
+
+Never copy a progressive tutorial or public guide page into `<code-repo>/docs/`, and never leave stale pre-implementation drafts in `<code-repo>/docs/` once the canonical public page and `.claude/skills/` reference have shipped.
 
 ## Product screenshots
 

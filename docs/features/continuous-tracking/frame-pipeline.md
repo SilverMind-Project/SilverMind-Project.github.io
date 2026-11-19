@@ -88,7 +88,8 @@ Face identification sends one crop per person to `POST /api/v1/identify` on the 
 
 | Setting (`face_id.*`) | Default | Description |
 |-----------|---------|-------------|
-| `cooldown_s` | 5.0 | Minimum seconds between queries for the same tracked person on a camera |
+| `cooldown_s` | 5.0 | Minimum seconds between queries for the same tracked person on a `mixed` or `surveillance` camera |
+| `identification_point_cooldown_s` | 1.0 | Minimum seconds between queries on a `face_capable` camera (resolved via `CameraProfileMap`) |
 | `timeout_s` | 2.0 | HTTP request timeout |
 | `min_raw_similarity` | 0.6 | Under the `legacy` evidence policy, recognized faces below this raw similarity are dropped |
 | `evidence_policy` | `shadow` | `legacy`, `shadow`, or `calibrated`: which recognized faces become evidence and how they are weighed ([Identity authority](/features/continuous-tracking/identity-integrity/identity-authority#how-faces-are-weighed)) |
@@ -147,7 +148,7 @@ Pairs that pass the gate are joined by a union-find algorithm; each resulting cl
 | `dedup_max_distance_m` | `0.6` | Floor-plane distance gate in metres |
 | `dedup_require_no_face_conflict` | `true` | Do not collapse observations with conflicting face identities |
 
-Uncalibrated cameras: `dedup_observations()` skips observations with `calibrated=False`. For uncalibrated home cameras, identity crosses cameras only through the shared ReID gallery, cross-GT face propagation, and PH continuation.
+Uncalibrated cameras: floor-distance `dedup_observations()` skips observations with `calibrated=False`. For uncalibrated home cameras, identity crosses cameras through the shared ReID gallery, cross-GT face propagation, PH continuation, group-appearance dedup within a declared overlap group (`enable_group_appearance_dedup`), and cross-camera revival.
 
 The integration proof lives in `tests/integration/test_world_tracker_e2e.py::test_hallway_bathroom_one_person`.
 
@@ -183,7 +184,7 @@ commit if: top_prob >= commit_prob (0.65)
 
 A calibrated direct face match at or above `arcface_authority_calibrated_confidence` (0.80) grants direct-face authority; without a deployed calibration artifact this path stays closed.
 
-**Identity feedback loop.** When a face anchor identifies a person on one camera, the resolved identity is stamped onto all gallery entries for that PH's detections, creating a self-reinforcing cycle that allows cross-camera identity carry even when a face is not visible on the second camera.
+**Governed ReID seeding.** Only face-confirmed detections whose direct recognized face matches the PH's committed identity with calibrated confidence at or above `arcface_authority_calibrated_confidence` (0.80) can mint governed `reid_gallery` entries in stage 16 (`ReIDCandidateStage`). ReID-only commits and operator PH corrections never write to the ReID gallery, preventing body-appearance feedback loops.
 
 ## 8. Detection backfill
 
@@ -241,15 +242,19 @@ that carried it was rate-limited for live-view publishing. The stage is a no-op 
 `ReIDCandidateStage` is the only pipeline path that writes to the ReID gallery. For each
 committed, face-matched detection it evaluates a governed eligibility gate
 (`evaluate_candidate`, `app/tracking/identity/candidate_eligibility.py`) and, when it passes,
-creates a `pending_review` candidate with crop and frame provenance, `origin_tracklet_id`, `ph_id`,
+creates a gallery candidate with crop and frame provenance, `origin_tracklet_id`, `ph_id`,
 and model/preprocessing versions. A face-derived candidate requires the direct recognized ArcFace
 identity to equal the committed identity with calibrated confidence at or above the authority
-threshold; without a deployed calibration artifact the stage produces no candidates and does not fall back to raw similarity. Like provenance persistence, this runs ahead of the publish
+threshold (`0.80`); candidates with `calibrated_confidence >= auto_verify_min_confidence` (`0.90`)
+mint directly into `auto_verified`, while candidates in `[0.80, 0.90)` enter `pending_review`.
+Without a deployed calibration artifact the stage produces no candidates and does not fall back to
+raw similarity. Like provenance persistence, this runs ahead of the publish
 throttle because candidate creation is audit-visible governance data. The per-(identity,
-orientation) cap on gallery growth counts `pending_review` and `operator_verified` rows together.
+orientation) cap on gallery growth counts `pending_review`, `auto_verified`, and
+`operator_verified` rows together.
 
 ## 17. Event publishing
 
 `PublishStage` assembles and publishes the final `TrackingEvent` proto to `tracking.events`. It carries per-frame detections enriched with `ph_id`, the posterior's top identity per PH (published even before formal commit, so the live view sees the current best guess immediately), pose keypoints, per-PH foot-point trails, and posterior evidence (top probability, top-2 probability, face anchor flag).
 
-On the CC side, the `TrackingEventSubscriber` decodes this proto, builds a `ph_id -> identity_id` mapping from the `IdentityRevision` sub-messages, and assigns `identity_id`, `display_name`, and `identity_confidence` to each detection in the WebSocket broadcast.
+On the CC side, the `TrackingEventSubscriber` decodes this proto, builds a `ph_id -> identity_id` mapping from the `IdentitySnapshot` sub-messages, and assigns `identity_id`, `display_name`, and `identity_confidence` to each detection in the WebSocket broadcast.

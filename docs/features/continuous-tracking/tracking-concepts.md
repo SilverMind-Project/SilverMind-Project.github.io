@@ -184,11 +184,11 @@ The cadence is per frame, but the value is filtered, not raw.
 
 ### Floor position
 
-Position fusion happens in three layers before a value is written.
+Position fusion happens in three layers before a value is written (see [Multi-Camera Fusion](./04-multi-camera-fusion.md) and [Measurement Uncertainty](./03-measurement-uncertainty.md) for the full derivation):
 
-1. **Per-camera measurement.** `SpatialProjectionStage` projects each detection's foot point (the bottom-centre of the bounding box) through that camera's homography to a calibrated `FloorPoint`. Uncalibrated cameras yield a synthetic per-camera tile point instead.
-2. **Cross-camera collapse, same window.** Before association, `dedup_observations()` merges observations from different cameras that fall within a residual-aware distance gate into one representative. The representative's floor point is the quality-weighted mean of the cluster's calibrated points, so two cameras seeing one person contribute one averaged position instead of two competing tracks. See [Cross-camera dedup](#cross-camera-dedup).
-3. **Temporal fusion.** The representative drives one Kalman update for the PH. The filter blends the measurement with the motion model, weighted by `observation_noise_m`. See [Kalman filter](#kalman-filter).
+1. **Per-camera measurement and covariance.** `SpatialProjectionStage` projects each detection's foot point (with ankle-keypoint blending and pitch-aware trunk inset) through that camera's homography to a calibrated `FloorPoint`, propagating pixel covariance through the local homography Jacobian `J` into a 2x2 floor-plane random covariance `R_random = J * Sigma_px * J^T` plus a non-shrinking camera calibration bias `R_bias_floor`. Uncalibrated cameras yield a synthetic per-camera tile point instead.
+2. **Cross-camera collapse, same window.** Before association, `dedup_observations()` merges observations from different cameras that fall within a residual-aware distance gate (`dedup_max_distance_m = 0.6 m`) into one representative. When 2x2 covariances are present (`enable_covariance_fusion: true`), `observation_model.fuse_information_form` fuses the cluster in information form over `R_random` only and adds the average `R_bias_floor` once afterward so static homography bias does not artificially shrink with `1/N`. See [Cross-camera dedup](#cross-camera-dedup).
+3. **Temporal fusion, ZUPT, and camera hysteresis.** The representative drives a matrix-R Kalman update (`kalman.update_cov`) for the PH. When an observation is stationary (zero-velocity update, ZUPT), velocity is damped and process noise is scaled down so a standing resident's floor dot does not drift. A stabilized `primary_camera_id` is chosen with hysteresis (`camera_switch_hysteresis_ratio = 0.80`, `camera_switch_hold_frames = 3`) so overlapping cameras do not ping-pong room attribution.
 
 Two more mechanisms suppress outliers and premature output. The Mahalanobis gate (`gate_chi2 = 9.21`) prevents a wild measurement from matching a PH at all, and `min_observations_to_publish` (default: 3) withholds a PH from downstream output until it has accumulated enough evidence to be more than a single-frame spike.
 
@@ -196,44 +196,46 @@ The persisted trajectory point uses `state_mean`, the Kalman posterior, not any 
 
 | Mechanism | Scope | Parameter | Default |
 | --- | --- | --- | --- |
-| Quality-weighted dedup mean | Cross-camera, same frame | `dedup_max_distance_m` | 0.9 m |
+| Information-form covariance fusion | Cross-camera, same frame | `enable_covariance_fusion`, `dedup_max_distance_m` | `true`, 0.6 m |
 | Residual-widened dedup gate | Cross-camera, same frame | `dedup_residual_coeff_k`, `dedup_max_distance_ceiling_m` | 1.0, 1.5 m |
 | Capture-skew-widened dedup gate | Cross-camera, same batch | `dedup_time_skew_speed_m_s` | 0.0 m/s |
-| Kalman blend | Per camera and over time | `observation_noise_m`, `process_noise_accel_m_s2` | 0.25 m, 0.5 m/s² |
+| Matrix-R Kalman blend & ZUPT | Per camera and over time | `observation_noise_m`, `process_noise_accel_m_s2`, `enable_zupt` | 0.25 m, 0.5 m/s², `true` |
+| Primary camera hysteresis | Cross-camera room stability | `camera_switch_hysteresis_ratio`, `camera_switch_hold_frames` | 0.80, 3 |
 | Velocity decay on coasting | Over time | `velocity_decay_s` | 3.0 s |
 | Mahalanobis outlier gate | Per frame | `gate_chi2` | 9.21 |
 | Publication threshold | Per PH | `min_observations_to_publish` | 3 |
 
 ### Posture
 
-Posture follows the same shape: soft per-camera evidence, quality-weighted fusion across overlapping cameras, then temporal smoothing.
+Posture follows the same shape: soft per-camera evidence, geometry-aware quality-weighted fusion across overlapping cameras, then margin-gated temporal smoothing (see [Posture Fusion](./05-posture-fusion.md)).
 
 ```mermaid
 flowchart LR
-    Score["Per-detection soft score\nlying / sitting / standing-walking\n+ keypoint confidence"]
+    Score["Per-detection soft score\nlying / sitting / standing-walking\n+ keypoint confidence + geometry"]
     Ingest["Per-camera ingest\nrecord_snapshot keyed by camera"]
-    Fuse["Quality-weighted fusion\nweight = keypoint confidence\nstale cameras dropped"]
-    Resolve["Clinical-priority winner\nlying > sitting > standing/walking"]
+    Fuse["Geometry-weighted fusion\nmax(kp_conf, depth_weight) * view_weight\nstale cameras dropped"]
+    Resolve["Margin-gated clinical priority\nlying > sitting > standing/walking\n(0.10 margin)"]
     Smooth["Hysteresis\n2 consecutive frames to flip"]
     Write["Trajectory point posture"]
     Score --> Ingest --> Fuse --> Resolve --> Smooth --> Write
 ```
 
-**Soft scoring.** `PostureStage` scores every detection into a `PostureScores` record (`lying`, `sitting`, `standing_walking`, and `keypoint_confidence`) and does not commit to one label per camera. Additive soft evidence lets several weak geometric cues accumulate instead of firing on a single threshold, which is the first layer of jitter reduction. In a bedroom, a small lying prior is added when the body is occluded.
+**Soft scoring.** `PostureStage` scores every detection into a `PostureScores` record (`lying`, `sitting`, `standing_walking`, `keypoint_confidence`, and view geometry) and does not commit to one label per camera. Additive soft evidence lets several weak geometric cues accumulate instead of firing on a single threshold, which is the first layer of jitter reduction. In a bedroom, a small lying prior is added when the body is occluded.
 
-**Multi-camera fusion.** `GlobalPostureTracker` keeps the latest score snapshot per camera per person. Every camera that sees a person in a frame contributes its own snapshot, keyed by that camera. Fusion is a quality-weighted average across the person's active cameras, where the weight is each camera's keypoint confidence, so a clear full-body view outweighs a partial or occluded one. Depth-only cameras keep a small floor weight. A camera that has lost sight of the person stops contributing after `camera_stale_after_s` (default: 10 s).
+**Multi-camera fusion.** `GlobalPostureTracker` keeps the latest score snapshot per camera per person. Every camera that sees a person in a frame contributes its own snapshot, keyed by that camera. Fusion weights each camera by `max(keypoint_confidence, depth_weight) * posture_view_weight(geometry)`, where `posture_view_weight` down-weights severe foreshortening, edge clipping, small bbox height, and uncalibrated far-field views so a clear side-on view outweighs a steep or clipped one. A camera that has lost sight of the person stops contributing after `camera_stale_after_s` (default: 10 s).
 
 The resolve-and-smooth step runs once per person per frame on the dedup-representative frame. Non-representative cameras ingest their evidence without advancing the smoother, so adding cameras never distorts the temporal hysteresis.
 
-**Temporal smoothing.** The fused soft scores resolve to a label by clinical priority, then a hysteresis gate requires the new label to persist for `required_consecutive` frames (default: 2) before the committed posture flips. This prevents a single ambiguous frame from toggling posture.
+**Temporal smoothing.** The fused soft scores resolve to a label using a `0.10` margin before applying clinical priority (`lying > sitting > standing_walking`), then a hysteresis gate requires the new label to persist for `required_consecutive` frames (default: 2) before the committed posture flips. This prevents a single ambiguous frame from toggling posture.
 
 The persisted posture on each trajectory point is the fused, smoothed value. `room_dwells` records the dominant posture across the interval.
 
 | Mechanism | Scope | Parameter | Default |
 | --- | --- | --- | --- |
 | Soft additive scoring | Per detection | `_MIN_EVIDENCE` | 0.5 |
-| Quality-weighted fusion | Cross-camera | weight = keypoint confidence | n/a |
+| Geometry-weighted fusion | Cross-camera | `max(kp_conf, depth_weight) * posture_view_weight` | `enable_posture_geometry_weight: true` |
 | Depth-only floor weight | Cross-camera | `depth_weight` | 0.15 |
+| Clinical-priority tie-break margin | Cross-camera | `_RESOLVE_MARGIN` | 0.10 |
 | Stale-camera expiry | Cross-camera | `camera_stale_after_s` | 10.0 s |
 | Hysteresis flip threshold | Over time | `required_consecutive` | 2 frames |
 
@@ -250,16 +252,16 @@ For each PH that received an observation this frame, `IdentityResolver.resolve` 
 ```mermaid
 flowchart TD
   prior["Temporal prior\nprior_weight=0.6 on current identity\n+ uniform on others + unknown_mass=0.05"] --> comb
-  face["Face likelihood\nstrongest anchor; p_face = sigmoid(0.7*conf+0.3*quality)\npropagated anchors x0.5"] --> comb
-  reid["ReID likelihood\nmean recent gallery emb -> search_similar\nlogistic(sim); identified-entry + coherence boosts"] --> comb
-  height["Height likelihood\nGaussian on enrolled height profile"] --> comb
-  comb["_combine: posterior proportional to prior x face^(x3 if face supports id)\nx reid x height^(x1.5)\n(empty source = uniform)"] --> commit
+  face["Face likelihood\nstrongest anchor; calibrated_confidence (or _p_face\nunder legacy/shadow); uncalibrated capped at 0.55\nin calibrated policy; propagated anchors x0.5"] --> comb
+  reid["ReID likelihood\nVOTING_STATES gallery search (<12h)\nlogistic(sim); identified-entry + coherence boosts"] --> comb
+  height["Height likelihood\nCurrently uniform (1.0)\npending single-view height metrology"] --> comb
+  comb["_combine: posterior proportional to prior x face^(x3 if face supports id)\nx reid x height\n(empty source = uniform)"] --> commit
   commit["_commit\ncommit if top_prob >= commit_prob AND margin >= commit_margin\nAND (sensory evidence present OR within maintenance window)"]
   commit -->|commit| set["ph_repo.update_identity(ph_id, identity_id, committed_at)"]
   commit -->|no commit| unknown["stay UNKNOWN / retain prior id within window"]
 ```
 
-Commit thresholds: `commit_prob = 0.65`, `commit_margin = 0.15`; in dense scenes (2 or more identities with posterior > 0.3) `commit_prob_dense = 0.80`, `commit_margin_dense = 0.20`. The temporal prior alone cannot commit an identity: at least one sensory source (face or ReID) must support the top identity unless the PH is inside its maintenance window.
+Commit thresholds: `commit_prob = 0.65`, `commit_margin = 0.15`; in dense scenes (2 or more identities with posterior > 0.3) `commit_prob_dense = 0.80`, `commit_margin_dense = 0.20`. The temporal prior alone cannot commit an identity: at least one sensory source (face or ReID) must support the top identity unless the PH is inside its maintenance window. Under `face_id.evidence_policy: calibrated`, direct face anchors use `calibrated_confidence` directly and uncalibrated anchors are capped at `uncalibrated_face_max_likelihood = 0.55` so an uncalibrated cosine score cannot commit an identity on its own.
 
 **Maintenance window.** A committed identity is held by the temporal prior for `prior_maintenance_max_age_s = 30 s`, measured from the last independent evidence that named that identity (a direct recognized face or a ReID vote for it). The prior alone never refreshes that clock, so after the window expires with no sensory evidence the identity decays to Unknown.
 
@@ -282,11 +284,7 @@ A frontality factor down-weights off-axis matches: full weight at or below `fron
 
 A single averaged body embedding cannot retrieve a person who turned around, because front and back are far apart in SOLIDER-REID space. The resolver estimates body orientation per observation from pose keypoints (front, back, left, right, unknown) and represents appearance as a small set of view-binned prototypes per PH and per identity. The gallery query runs once per orientation bin and takes the maximum logistic similarity across views, so a back-facing query that matches an identity's back entries scores high even when the front entries do not. A weak match leaves residual probability mass on UNKNOWN, so a non-matching body cannot be normalized onto the only enrolled identity.
 
-Non-frontal gallery coverage currently grows online after a PH has a recognized-face committed
-identity. The existing path checks recognition state, crop quality, and orientation confidence,
-but it does not verify that the recognized face identity equals the gallery seed label. The
-accepted [gallery governance design](./identity-integrity/reid-gallery-governance) adds that equality
-check and keeps new entries pending until operator review.
+Online gallery writes are governed by `ReIDCandidateStage` (see [ReID Gallery Governance](./identity-integrity/reid-gallery-governance)): a candidate is minted only when a detection has a direct recognized face whose `person_id` equals the PH's `committed_identity_id` with `calibrated_confidence >= arcface_authority_calibrated_confidence` (`0.80`). Candidates with `calibrated_confidence >= auto_verify_min_confidence` (`0.90`) enter `auto_verified` directly; those in `[0.80, 0.90)` enter `pending_review` for operator verification. Only entries in `VOTING_STATES` (`auto_verified`, `operator_verified`) younger than `gallery_vote_max_age_s` (12 hours) vote in `IdentityResolver`.
 
 ## How a face signal updates a PH
 
@@ -339,5 +337,5 @@ Path 1 requires calibration. For uncalibrated home cameras, identity crosses thr
 
 ## Next steps
 
-- [Frame Processing Pipeline](./frame-pipeline.md): how all of these concepts fit into the full 15-stage pipeline
+- [Frame Processing Pipeline](./frame-pipeline.md): how all of these concepts fit into the full 17-stage pipeline
 - [CC Integration](./cc-integration.md): how identity assignments and quality propagate to the WebSocket live view

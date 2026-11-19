@@ -41,18 +41,17 @@ docker compose up -d postgres redis minio    # infra
 docker compose up -d                          # services
 ```
 
-The services are: `go2rtc` (RTSP proxy, port 1984), `rtsp-ingress` (Go, port 8090), `tracking-orchestrator` (Python, port 8000), Triton (gRPC 8701), Redis (6379), PostgreSQL (5432), MinIO (9000).
+The services are: `go2rtc` (RTSP proxy, port 1984), `rtsp-ingress` (Go, port 8090), `tracking-orchestrator` (Python, container port 8000 mapped to host port 8500 in `docker-compose.yml`), Triton (gRPC 8701), Redis (6379), PostgreSQL (5432 in container, 5435 on host), MinIO (9000).
 
 ## Add cameras and calibrate
 
-Add cameras through the admin UI at `/admin/cts/cameras` with an ID slug, display name, `rtsp_url`, and location. `rtsp-ingress` polls `GET /api/v1/cts/cameras` every 60 s and reconciles the running set with `go2rtc` automatically.
+Add cameras through the admin UI at `/admin/cts/cameras` with an ID slug, display name, `rtsp_url`, and location. `rtsp-ingress` polls `GET /api/v1/cts/cameras` every 30 s (`CC_POLL_INTERVAL`) and reconciles the running set with `go2rtc` automatically.
 
 For multi-camera dwell and absence signals, calibration is required:
 
-- **Homography**: at `/admin/cts/calibration`, click pixel-to-floor correspondences on a snapshot to fit a 3×3 matrix per camera via OpenCV RANSAC.
+- **Homography**: at `/admin/cts/calibration`, click pixel-to-floor correspondences on a snapshot to fit a 3×3 matrix per camera via OpenCV RANSAC (or run Depth Anything V2 auto-calibration with floor-region polygon harvesting).
 - **Privacy zones**: at `/admin/cts/privacy`, draw polygons over private regions. Frames are masked before they leave the LAN.
-- **Shared views**: at `/admin/cts/shared-views`, declare which cameras see the same floor area at the same time (overlap groups), with suggestions from calibrated coverage and the handoffs CTS learned between cameras (read-only). The old `/admin/cts/adjacency` path redirects there.
-- **Overlap groups**: at `/admin/cts/overlap-groups`, group cameras that share a physical field of view. These pairs skip transit-time budgets in cross-camera association and use a relaxed matching threshold.
+- **Shared views (overlap groups)**: at `/admin/cts/shared-views`, declare which cameras see the same floor area at the same time (overlap groups), with suggestions from calibrated coverage and the handoffs CTS learned between cameras (read-only). These pairs skip transit-time budgets in cross-camera association and enable group-appearance dedup. The old `/admin/cts/adjacency` path redirects there.
 
 ## CC subscribers
 
@@ -66,7 +65,7 @@ When `cts.enabled` is true, the CC backend starts four Redis Streams subscribers
 | `SceneSampleSubscriber` | `scene.samples` | Decodes tagged keyframe `SceneSample` protos, pulls the JPEG from MinIO, runs scene analysis (YOLO + Florence-2 + CLIP + hazards), and persists observations to semantic memory. |
 
 ::: info
-CTS also publishes low-rate semantic state-change streams `tracking.presence` (appeared / disappeared) and `tracking.dwell` (started / ended). These let CC rules trigger on state changes instead of per frame, so rule load no longer scales with camera frame rate. The CTS-side emission and the per-camera throttle on `tracking.events` (`live_publish_max_hz`) are in place; migrating the CC rule triggers from per-frame `tracking.events` to these Tier-2 streams is a planned CC-side change, specified in the `CTS_ROBUSTNESS_M6` documents.
+`tracking.events` is throttled per camera by `pipeline.live_publish_max_hz` (default 3 Hz) while inference still runs on every motion-gated frame. On the CC side, `PersonLocationService` arbitrates room presence segments from `world_tracker`, `face_sighting`, `sensor`, and `manual` observations, and `CtsEventBucketizer` + `PerCameraRateLimiter` cap VLM-eligible frames. The legacy `PresenceEvent` (`tracking.presence`) and `DwellEvent` (`tracking.dwell`) proto messages are retired (`deprecated = true` in `tracking.proto` with no active producer).
 :::
 
 ```mermaid
@@ -160,8 +159,8 @@ applying or compensating a correction requires `cts.identity.correct`.
 
 The browser shows raw ArcFace similarity only as a labeled detail value, never as a confidence
 percentage. Operator corrections read `Verified` instead of a fabricated number. The "Verify ReID
-crop" action appears only when the server marks a crop eligible; the ReID review queue that produces
-that eligibility signal lands with a later milestone, so the action stays hidden until then. Identity
+crop" action appears when the server marks a crop eligible; caregivers can also review, verify, or
+reject governed body-appearance candidates in the ReID Review Queue at `/admin/cts/reid-review`. Identity
 correction and bounding-box geometry editing stay separate revision types: the keyframe annotation
 editor still handles box geometry, while identity reassignment flows through this workflow.
 
@@ -177,7 +176,7 @@ the `propose_identity_correction` and `get_identity_correction_job` MCP tools.
 providers:
   - name: night_anchor      # priority 90: bed-occupancy + light state
   - name: ha_bed_sensor     # priority 70: HA binary_sensor for bed
-  - name: cts_location      # priority 50: CTS PersonLocationState
+  - name: location_service  # priority 50: PersonLocationService (world_tracker, face_sighting, sensor, manual)
   - name: ha_device_tracker # priority 30: phone or watch tracker
   # plus stale_fallback and unknown_sentinel
 ```

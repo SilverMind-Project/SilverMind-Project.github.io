@@ -77,33 +77,35 @@ explicit-Q/DQ graphs. Both profiles use the same service code path.
 
 ## Redis Streams
 
-CTS streams use raw protobuf bytes: no JSON and no base64. The current `cc.identity_assertions`
-inbound stream is a known exception that still uses separate text fields. Its publisher and
-consumer require a coordinated protobuf cutover. The Python protobuf codec lives at
-`app/transport/codec.py`.
+Protobuf-backed CTS streams carry raw protobuf bytes in a single field: no JSON and no base64.
+The Python protobuf codec lives at `app/transport/codec.py`. Two auxiliary handoff streams
+(`tracking.continuations` and `tracking.room_transitions`) carry flat string field maps via
+`RedisStreamsTransport.publish()`.
 
-| Stream | Direction | Field | Proto message |
-|--------|-----------|-------|---------------|
-| `frames.ready` | consume (CTS reads) | `"frame"` | `FrameReady` |
-| `tracking.events` | publish (CTS writes) | `"event"` | `TrackingEvent` |
-| `tracking.revisions` | publish | `"revision"` | `IdentityRevision` |
-| `tracking.signals` | publish | `"signal"` | `DementiaSignal` |
-| `tracking.presence` | publish | `"presence"` | `PresenceEvent` (appeared / disappeared) |
-| `tracking.dwell` | publish | `"dwell"` | `DwellEvent` (started / ended with duration) |
-| `scene.samples` | publish | `"sample"` | `SceneSample` |
-| `cc.identity_assertions` | consume | separate text fields, current exception | Legacy assertion payload |
+| Stream | Direction | Field | Wire payload |
+|--------|-----------|-------|--------------|
+| `frames.ready` | consume (CTS reads) | `"frame"` | `continuoustracking.v1.FrameReady` |
+| `tracking.events` | publish (CTS writes) | `"event"` | `continuoustracking.v1.TrackingEvent` (`identity_snapshots`) |
+| `tracking.revisions` | publish | `"revision"` | `continuoustracking.v1.IdentityRevision` |
+| `tracking.signals` | publish | `"signal"` | `continuoustracking.v1.DementiaSignal` |
+| `scene.samples` | publish | `"sample"` | `continuoustracking.v1.SceneSample` |
+| `cc.identity_assertions` | consume (CTS reads) | `"assertion"` | `continuoustracking.v1.CCIdentityAssertion` |
+| `tracking.continuations` | publish | string field map | `PHContinuationCandidate` (`closed_ph_id`, `new_ph_id`, `from_room_id`, `to_room_id`, `gap_seconds`, `match_cost`, `occurred_at`) |
+| `tracking.room_transitions` | publish | string field map | `RoomTransitionEvent` (`ph_id`, `identity_id`, `from_room_id`, `to_room_id`, `from_camera_id`, `to_camera_id`, `occurred_at`, `confidence`) |
+| ~~`tracking.presence`~~ | retired in M37 | `"presence"` | `PresenceEvent` (`deprecated = true` in `tracking.proto`; no active producer) |
+| ~~`tracking.dwell`~~ | retired in M37 | `"dwell"` | `DwellEvent` (`deprecated = true` in `tracking.proto`; no active producer) |
 
-`tracking.events` is a high-rate live feed for the UI, throttled per camera by `live_publish_max_hz` (default 3 Hz; inference still runs every frame). `tracking.presence` and `tracking.dwell` are low-rate semantic state-change streams, so downstream rule load follows human activity, not camera frame rate.
+`tracking.events` is a live feed for the UI and `PersonLocationService`, throttled per camera by `live_publish_max_hz` (default 3 Hz; inference still runs every frame). Room presence segments and transitions are arbitrated in Cognitive Companion by `PersonLocationService`.
 
 ::: warning
-Redis clients must set `decode_responses=False` so binary payloads round-trip unchanged.
+Redis clients on protobuf streams must set `decode_responses=False` so binary payloads round-trip unchanged.
 :::
 
 ## PostgreSQL schema
 
-All CTS tables, indexes, triggers, and functions live in the `continuous_tracking` schema on the shared PostgreSQL instance. The single baseline migration (`0001_init` in `tracking-orchestrator/migrations/`) is managed by `MigrationRunner` with `pg_try_advisory_lock` for multi-replica safety.
+All CTS tables, indexes, triggers, and functions live in the `continuous_tracking` schema on the shared PostgreSQL instance. The baseline migration (`0001_init`) and incremental numbered `.up.sql` / `.down.sql` pairs in `tracking-orchestrator/migrations/` are managed by `MigrationRunner` with `pg_try_advisory_lock` for multi-replica safety.
 
-Key hypertables:
+Key tables and hypertables:
 
 | Table | Type | Content |
 |-------|------|---------|
@@ -113,10 +115,13 @@ Key hypertables:
 | `dementia_signals` | Regular | Behavioral signal detections with severity and z-scores |
 | `dementia_signals_daily` | Continuous aggregate | Daily rollup of signal counts by kind and severity |
 | `tagged_keyframes` | Regular | Sampled JPEG keyframes with annotations |
-| `person_hypotheses` | Regular | Physical-track entities (PHs) with identity assignments and per-orientation view prototypes; `ph_id` is the single cross-camera identifier. |
-| `reid_gallery` | Regular | Body-appearance embeddings per identity, orientation-tagged; seeded online from recognized-face frames. |
-| `camera_topology_edges` | Regular | Learned directed handoff edges with transit-time distributions, used to gate cross-camera revival. |
-| `co_presence_links` | Regular | Same-identity links between open PHs in an overlap group (opposite-perspective cameras). |
+| `person_hypotheses` | Regular | Physical-track entities (PHs) with identity assignments and per-orientation view prototypes; `ph_id` is the single cross-camera identifier |
+| `reid_gallery` | Regular | Governed 4-state body-appearance gallery (`pending_review`, `auto_verified`, `operator_verified`, `rejected`) written only by `ReIDCandidateStage` |
+| `identity_decisions` | Regular | Durable identity decision provenance rows and `gallery_review_events` audit trail |
+| `ph_revisions` | Regular | Operator and automatic PH identity revision history |
+| `face_observation_stats` | Regular | Per-camera face detection and match telemetry for readiness and calibration gates |
+| `camera_topology_edges` | Regular | Learned directed handoff edges with transit-time distributions, used to gate cross-camera revival |
+| `co_presence_links` | Regular | Same-identity links between open PHs in an overlap group (opposite-perspective cameras) |
 
 ## Boundaries
 

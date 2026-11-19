@@ -103,10 +103,11 @@ steps/, channels/, filters/   Auto-discovered plugin systems
 routers/                 FastAPI BFF endpoints
 mcp/                     MCP tools backed by shared service logic
 websocket/               Companion and pipeline event WebSockets
-main.py                  Service construction and lifespan wiring
+bootstrap/               Lifespan phase modules and service construction (orchestrated by bootstrap/lifespan.py)
+main.py                  FastAPI app construction and router mounting
 ```
 
-Services are created during FastAPI startup and stored on `app.state`. Routers stay thin: they validate input, require permissions, call a service, and return typed schemas.
+Services are created in `backend/bootstrap/` phase modules during FastAPI startup and stored on `app.state`. Routers stay thin: they validate input, require permissions, call a service, and return typed schemas.
 
 ## Plugin systems
 
@@ -114,9 +115,9 @@ Cognitive Companion uses three auto-discovered plugin registries.
 
 | Registry | Current built-ins | Purpose |
 | --- | --- | --- |
-| Step handlers | 24 | Pipeline nodes for perception, reasoning, state, knowledge, flow control, and actions |
-| Notification channels | 7 | Resident and caregiver delivery paths |
-| Context filters | 13 | Rule-level constraints such as room, time, presence, activity, scene state, and dementia signal |
+| Step handlers | <!-- count:step_types -->28 | Pipeline nodes for perception, reasoning, state, knowledge, flow control, and actions |
+| Notification channels | <!-- count:channel_types -->7 | Resident and caregiver delivery paths |
+| Context filters | <!-- count:filter_types -->13 | Rule-level constraints such as room, time, presence, activity, scene state, and dementia signal |
 
 Step metadata includes JSON Schema configuration, default values, UI hints, output schemas, tags, and output ports. The frontend loads this metadata from `/api/v1/pipeline/step-types`, so new step plugins appear in the rule canvas without hardcoded UI lists.
 
