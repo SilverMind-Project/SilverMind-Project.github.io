@@ -1,6 +1,6 @@
 # MCP integration
 
-A built-in [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, exposes <!-- count:mcp_tools -->63 tools for AI agent integration: agents can discover system state, query sensor data, inspect enrollment, face calibration progress, and e-ink status, check person locations, review activity timelines and daily reports, explore semantic memory, read the unified signals feed, acknowledge behavioral signals with feedback, drive and analyze guided routine sessions, propose identity corrections, trigger rule executions, author new rules, and inspect plugin metadata. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
+A built-in [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, exposes <!-- count:mcp_tools -->65 tools for AI agent integration: agents can discover system state, query sensor data, inspect enrollment, face calibration progress, wearable assignments, and e-ink status, check person locations, review activity timelines and daily reports, explore semantic memory, read the unified signals feed, acknowledge behavioral signals with feedback, drive and analyze guided routine sessions, propose identity corrections, trigger rule executions, author new rules, and inspect plugin metadata. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
 
 Every agent, whether Claude Desktop, a custom orchestrator, or the internal voice companion, uses this one authenticated tool surface, so there is one integration to audit. Tools and the UI read the same service layer and stay in step.
 
@@ -59,6 +59,8 @@ A `GeminiToolAdapter` reads the same tool definitions and converts them to Gemin
 | `get_roster_health`        | Members with too few enrolled face photos, plus recurring visitors awaiting review | None                         |
 | `get_face_calibration_summary` | Face calibration labeling progress per resident, walks, and visitor labels (read-only) | None |
 | `get_identity_readiness` | Which step of identity setup is broken and the next action for each, counts only (read-only) | None |
+| `get_wearable_assignments` | Household members grouped with all their currently bound wearable devices, plus unbound devices (read-only) | None |
+| `get_wearable_device_status` | Registered wearable devices with last-heard time, battery level, and active binding state (read-only) | `active_only` (optional, default false) |
 | `get_person_sightings`     | Camera sighting history for a person                         | `person_id`, `limit`                          |
 | `get_person_activities`    | Recent detected activities (eating, sleeping, etc.)          | `person_id`, `activity_type`, `minutes`       |
 | `get_workflow_executions`  | Recent pipeline workflow executions                          | `rule_name`, `status`, `limit` (optional)     |

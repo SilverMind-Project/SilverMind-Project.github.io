@@ -279,6 +279,14 @@ MCP tools that change state each require their own token (`rules:execute`,
 `mcp_readonly` can read through MCP but cannot change anything. See
 [MCP integration](/features/mcp-integration#authentication).
 
+Wearable registry and RF node routes use three strict permission tokens:
+
+| Token | Granted to | Purpose |
+| --- | --- | --- |
+| `wearables:read` | `caregiver`, `operator`, `admin` | Read devices, binding history, assignments, RF nodes, and run tape-distance survey checks |
+| `wearables:manage` | `operator`, `admin` | Register/update devices, bind/unbind tags with consent, and place/move/delete RF nodes |
+| `wearables:site_config` | `cts_ingress`, `admin` | Read `GET /api/v1/wearables/site-config` for CTS config sync and RF ingress adapters (denied to `caregiver`) |
+
 ### Key resolution
 
 Browser and agent requests send the key in the `X-API-Key` header (the MCP endpoint also
@@ -514,3 +522,23 @@ signal:
 ::: tip Choosing thresholds
 Start with the defaults, which are grounded in clinical dementia care guidelines (NICE NG97, Alzheimer's Association). Adjust only after observing false-positive patterns in your specific environment. Changes take effect on the next orchestrator restart.
 :::
+
+## CTS wearable streams {#cts-wearable-streams}
+
+The tracking orchestrator declares Redis stream keys for optional RF adapters under `redis:` in `continuous-tracking/tracking-orchestrator/config/settings.yaml`:
+
+```yaml
+# tracking-orchestrator/config/settings.yaml
+redis:
+  wearable_fixes_stream: "${REDIS_WEARABLE_FIXES_STREAM:-wearable.fixes}"
+  wearable_capabilities_stream: "${REDIS_WEARABLE_CAPABILITIES_STREAM:-wearable.capabilities}"
+  position_tracks_stream: "${REDIS_POSITION_TRACKS_STREAM:-position.tracks}"
+```
+
+| Setting | Env var | Default | Description |
+| --- | --- | --- | --- |
+| `redis.wearable_fixes_stream` | `REDIS_WEARABLE_FIXES_STREAM` | `wearable.fixes` | Inbound `TagFix` protobuf stream published by RF ingress adapters |
+| `redis.wearable_capabilities_stream` | `REDIS_WEARABLE_CAPABILITIES_STREAM` | `wearable.capabilities` | Inbound `AdapterCapability` protobuf stream carrying adapter heartbeats and online RF nodes |
+| `redis.position_tracks_stream` | `REDIS_POSITION_TRACKS_STREAM` | `position.tracks` | Reserved stream for future anonymous floor-plane sensors (`AnonymousPositionTrack`) |
+
+The tracking orchestrator syncs registered wearable devices, open bindings, and RF node coordinates from Cognitive Companion's `GET /api/v1/wearables/site-config` endpoint on its normal CC config sync poll. See [Optional wearables and RF receivers](/hardware/wearables).

@@ -17,6 +17,10 @@ moving detector, pose, body ReID, and face inference to a separate accelerator.
   main-stream vs. substream resolution, identification-point cameras, mount
   angle, privacy zones, and a validation checklist for each newly mounted
   camera.
+- [Optional wearables and RF receivers](/hardware/wearables) covers the
+  hardware-neutral `TagFix` contract, BLE beacon wristbands with ESP32 room
+  receivers, dual-mode smartwatches, optional FiRa UWB anchors, and floor-plan
+  RF node placement with tape-distance survey checks.
 
 ### Recommended add-on: identification-point camera
 

@@ -185,6 +185,7 @@ export default defineConfig({
               link: "/hardware/model-quantization",
             },
             { text: "Camera setup", link: "/hardware/camera-setup" },
+            { text: "Optional wearables", link: "/hardware/wearables" },
           ],
         },
       ],
