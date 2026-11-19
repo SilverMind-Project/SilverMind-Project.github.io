@@ -15,9 +15,11 @@ flowchart TB
 
     subgraph CTS["Continuous Tracking System"]
         Ingress["rtsp-ingress"]
+        RfIngress["rf-ingress (optional)"]
         Orchestrator["tracking-orchestrator"]
         Streams["Redis Streams"]
         Ingress --> Orchestrator --> Streams
+        RfIngress --> Streams
     end
 
     subgraph CC["Cognitive Companion"]
@@ -128,6 +130,7 @@ The optional Continuous Tracking System provides multi-camera person hypotheses,
 CTS data ownership stays isolated:
 
 - CTS subscribers live under `backend/services/cts/`.
+- Optional wearable RF ingestion runs in a separate `rf-ingress` service (`continuous-tracking/rf-ingress/`, port `8095`) that polls Cognitive Companion `GET /api/v1/wearables/site-config` and publishes raw protobuf `TagFix` and `AdapterCapability` messages on `wearable.fixes` and `wearable.capabilities`.
 - CTS enablement uses the shared `cts_enabled` dependency.
 - Time conversion and injected service protocols are shared utilities.
 - Identity corrections go through CTS identity endpoints.

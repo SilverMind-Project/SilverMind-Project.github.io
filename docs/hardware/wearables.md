@@ -8,12 +8,21 @@ Every RF adapter normalises its hardware packets into two protobuf messages defi
 
 | Message | Redis stream | Purpose |
 | --- | --- | --- |
-| `TagFix` | `wearable.fixes` | One location or proximity fix for a registered `tag_id` on the active household floor plan, carrying 2x2 floor covariance (`cov_xx`, `cov_xy`, `cov_yy`) or room/zone weights plus optional wear-state, motion-state, and battery metadata |
-| `AdapterCapability` | `wearable.capabilities` | Adapter heartbeat advertising supported `FixKind` values, nominal position accuracy, update cadence, wear/motion reporting, and online RF node IDs |
+| `TagFix` | `wearable.fixes` | One location, room, or proximity fix for a registered `tag_id` on the active household floor plan, carrying 2x2 floor covariance (`cov_xx_m2`, `cov_xy_m2`, `cov_yy_m2`) or room probability plus optional wear-state, motion-state, and battery metadata |
+| `AdapterCapability` | `wearable.capabilities` | Adapter heartbeat advertising supported `FixKind` values, nominal update rate, and covariance, elevation, wear-state, and motion-state reporting |
 
 A third stream, `position.tracks`, is reserved for future anonymous floor-plane sensors (`AnonymousPositionTrack` in `position_sensor.proto`, such as multi-target mmWave radars) that report anonymous person positions without carrying an identity.
 
-Because every fix reports its own 2x2 floor covariance (`sigma_x`, `sigma_y`, correlation) and `FixKind` (`point_2d`, `point_3d`, `room_distribution`, `zone_presence`), downstream fusion weighs a 15 cm UWB fix and a room-level BLE fix through the same geometric model without branching on vendor names.
+Because every fix reports its own 2x2 floor covariance (`cov_xx_m2`, `cov_xy_m2`, `cov_yy_m2`) and `FixKind` (`position`, `room`, `proximity`), downstream fusion weighs a 15 cm UWB fix and a multi-metre BLE fix through the same geometric model without branching on vendor names.
+
+## The `rf-ingress` service
+
+`continuous-tracking/rf-ingress/` (port `8095`, opt-in Docker Compose profile `wearables`) converts RF adapter reports into validated `TagFix` messages on `wearable.fixes` and 60-second `AdapterCapability` heartbeats on `wearable.capabilities`.
+
+- **Adapter boundary and conformance kit:** every hardware source implements `RangeAdapter`, `PositionAdapter`, or `RoomAdapter` behind `AdapterRegistry`. The core ships with a deterministic seeded `simulator` adapter (covering UWB, BLE Channel Sounding, BLE RSSI with body-shadow steps, burst-batched delivery, native-frame positions, room reports, and JSONL replay) and an adapter conformance suite under `rf-ingress/tests/conformance/` that every hardware adapter must pass unchanged.
+- **Per-epoch multilateration with covariance:** `EpochBuilder` groups ranges per tag over a 0.25 s window or adapter `epoch_seq` and drops open epochs whenever Cognitive Companion's site-config `version` changes. `MultilaterationSolver` weights each range by its reported `variance_m2`, solves 3D when four or more anchors have vertical spread (otherwise 2D at an assumed 1.0 m wrist height with height uncertainty propagated into the covariance), rejects single-anchor NLOS outliers on four or more nodes, and ignores wrist-local azimuth so solves remain invariant to wrist rotation. Epochs with fewer than three nodes emit a `room` fix from the nearest RF node's configured room.
+- **Burst clock alignment and registration gating:** `BurstClockOffsetTracker` estimates per-tag clock offset from minimum transport delay (`arrival - sent_at`) so micro-batched wireless bursts do not look like multi-second clock skew. Fixes are published only for registered, active devices with a binding covering `measured_at`, and `wearable.fixes` trims raw fixes to 72 hours with `XADD ... MINID`.
+- **Health, metrics, and replay:** `GET /health` reports adapter status, site-config version and age, publisher state, and per-node last-seen ages; `GET /metrics` exposes Prometheus counters, solve duration, fix sigma, and clock offset gauges. `python -m rf_ingress.replay` records raw adapter reports (capped at 60 minutes) and replays them through the simulator.
 
 ## Recommended hardware path
 

@@ -46,6 +46,19 @@ The backend Dockerfile lives at `backend/Dockerfile` and uses the repository roo
 
 Requires the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) for GPU access.
 
+### Continuous Tracking System (`continuous-tracking/docker-compose.yml`)
+
+| Service | Container | Port | Notes |
+| --- | --- | --- | --- |
+| `redis` | `cts-redis` | 6379 | Redis Streams transport |
+| `go2rtc` | `cts-go2rtc` | 1984 | RTSP camera proxy sidecar |
+| `rtsp-ingress` | `cts-rtsp-ingress` | 8090 | Go camera ingest and motion gate |
+| `tracking-orchestrator` | `cts-orchestrator` | 8500 | Python tracking, identity, and signal pipeline |
+| `triton` | `cts-triton` | 8700-8702 | GPU model inference server |
+| `rf-ingress` | `cts-rf-ingress` | 8095 | Opt-in RF localization ingress (`--profile wearables`); polls CC site config and publishes `wearable.fixes` and `wearable.capabilities` |
+
+Start `rf-ingress` only when wearables or simulator playback are configured (`docker compose --profile wearables up -d`). It requires `REDIS_URL`, `CC_API_URL`, and `CC_INGRESS_API_KEY` (the shared ingress key with the `wearables:site_config` permission).
+
 ### Environment variables
 
 Each repository has its own `.env.example`. The Cognitive Companion `.env` configures all external service URLs:
