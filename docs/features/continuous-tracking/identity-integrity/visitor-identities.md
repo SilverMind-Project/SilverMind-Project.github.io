@@ -13,7 +13,10 @@ just without a name attached yet.
 
 Only faces clear enough for a person to judge are kept this way: a sharp, near-frontal face (a
 face quality score of at least 0.7 and a head turned no more than 30 degrees). Blurred, distant, or
-sideways faces are ignored, because nobody could say who they are.
+sideways faces are ignored, because nobody could say who they are. Each candidate sighting is also
+checked against every enrolled resident's gallery (using the same centroid or pose-binned prototype
+representation and margin policy as live identification) so a resident's face is not split into a
+visitor cluster when another angle already matches them.
 
 If the same face shows up on three different days within a month, the system notices the pattern
 and puts it in front of a caregiver for review. A single one-off visit, a delivery driver who never
@@ -44,7 +47,7 @@ household, the screen says so and offers to mark the faces as theirs instead, be
 create a second identity for the same person. Naming does two things at once:
 
 - it turns the pattern into a real household member, the same kind of entry a spouse or adult
-  child has;
+  child has, and builds their pose-binned face prototypes in the same step;
 - it lets the system recognize that person on future visits and track their presence like anyone
   else in the house.
 

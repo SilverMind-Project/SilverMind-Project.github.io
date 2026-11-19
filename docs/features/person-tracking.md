@@ -20,10 +20,11 @@ Upload 5-10 reference photos per person through the admin UI (**Members & Enroll
 **Best practices for reference photos:**
 
 - Use photos with varied lighting conditions
-- Include different angles (frontal, 3/4 profile)
+- Include different angles: straight ahead, turned slightly left and right, and looking slightly down (matching ceiling-mounted cameras)
 - Ensure the face is clearly visible and unobstructed
 - Avoid group photos; use one person per reference image
 - Photos from deployment cameras give the best domain match
+- After calibration capture runs, you can explicitly promote clear labeled captures from ceiling or side angles on **Face calibration** (**Labeled** view, **Use for recognition**) to fill missing pose bins; each member's pose-binned prototypes are visible and removable on their **Person profile** (**Identity** tab)
 
 **Enroll everyone who comes regularly.** Every face is matched to the closest enrolled person, so a relative, aide, or nurse who visits often but was never enrolled can be mistaken for an enrolled family member who looks similar. Enroll every resident and every person who visits on three or more days a month, and name or dismiss recurring visitors on the **Visitors** page.
 
@@ -269,6 +270,9 @@ MCP tools that return person locations use the same envelope via `envelope_to_mc
 | `POST` | `/persons/{id}/enroll` | Upload reference photos to enroll a face (multipart) |
 | `GET` | `/persons/{id}/enrollment` | Get enrollment details (embedding count, created date) |
 | `DELETE` | `/persons/{id}/enrollment` | Remove face enrollment data |
+| `GET` | `/persons/{id}/prototypes` | List pose-binned face prototypes for a member |
+| `POST` | `/persons/{id}/prototypes/rebuild` | Rebuild pose-binned face prototypes for a member |
+| `DELETE` | `/persons/{id}/prototypes/{prototype_id}` | Remove a face prototype and its underlying embedding |
 | `GET` | `/persons/roster-health` | Members needing more enrollment photos and recurring visitors awaiting review |
 
 ### Location tracking

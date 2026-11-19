@@ -18,12 +18,12 @@ Any degraded state yields `calibrated_confidence: null`.
 | --- | --- |
 | `ready` | Artifact loaded, validated, and version-compatible |
 | `degraded_missing` | No `calibration.artifact_path` configured, or the file is absent |
-| `degraded_incompatible` | The artifact's `arcface_model_version`, `model_profile`, `preprocessing_version`, or (schema 2) face quality scorer version does not match the service |
+| `degraded_incompatible` | The artifact's `arcface_model_version`, `model_profile`, `preprocessing_version`, or (schema 2) face quality scorer version or `gallery_representation` does not match the service |
 | `degraded_invalid` | Artifact fails schema validation, finiteness, or monotonicity checks |
 
-`GET /health` reports the state under `calibration`, with the artifact version and, for schema 2, its profile, quality scorer version, and covered identities. The Prometheus gauge `pid_calibration_health_state` exports the same state.
+`GET /health` reports the state under `calibration`, with the artifact version and, for schema 2, its profile, quality scorer version, `gallery_representation`, and covered identities. The Prometheus gauge `pid_calibration_health_state` exports the same state.
 
-Even when the state is `ready`, a schema 2 artifact returns `null` for any identity that is not in its `covered_identities` list. A resident enrolled after the fit, or one with too few labeled faces at fit time, has no calibrated confidence until the household recalibrates.
+Even when the state is `ready`, a schema 2 artifact returns `null` for any identity that is not in its `covered_identities` list, or whose current `gallery_revision` does not match the revision recorded in `gallery_revisions` when the artifact was fitted. A resident enrolled after the fit, one with too few labeled faces at fit time, or one whose gallery changed through re-enrollment, promotion, or prototype removal has no calibrated confidence until the household recalibrates.
 
 ## Calibrating on your own cameras
 
@@ -46,23 +46,25 @@ Unlabeled and rejected captures, with their crops, are deleted after `unlabeled_
 
 ### 2. Label
 
-An admin labels captures in Cognitive Companion at People, Face Calibration (`/admin/face-calibration`, permission `face_calibration.review`). Each capture is one keystroke with the keys every review page shares: a number for a resident, `n` for someone not in the household, `x` for not usable (stored as `not_a_face`, which the fit skips). No member is highlighted, so the closest match never steers a ground-truth label. **Reject capture** sets a capture aside; deleting removes it and its crop. Each choice's effect comes from the server, and the page states that labels never change enrollment. **Select several** shows the queue as a grid for labeling many faces **Not in the household** or **Not usable** at once (one call to person-id's `POST /api/v1/calibration/candidates/label-batch`); member labels are never given in bulk, because each becomes a genuine pair in the fit. The labeler recorded is the signed-in admin.
+An admin labels captures in Cognitive Companion at People, Face Calibration (`/admin/face-calibration`, permission `face_calibration.review`). Each capture is one keystroke with the keys every review page shares: a number for a resident, `n` for someone not in the household, `x` for not usable (stored as `not_a_face`, which the fit skips). No member is highlighted, so the closest match never steers a ground-truth label. **Reject capture** sets a capture aside; deleting removes it and its crop. Each choice's effect comes from the server, and the page states that labels never change enrollment on their own. **Select several** shows the queue as a grid for labeling many faces **Not in the household** or **Not usable** at once (one call to person-id's `POST /api/v1/calibration/candidates/label-batch`); member labels are never given in bulk, because each becomes a genuine pair in the fit. The labeler recorded is the signed-in admin.
 
-A label never changes enrollment. Calibration data and the enrollment gallery stay separate; only an explicit enrollment or visitor naming adds faces to the gallery.
+A label never changes the gallery; only explicit promotion, an operator action, does. On the **Labeled** view in `/admin/face-calibration`, an admin can explicitly promote an eligible labeled resident capture into that resident's pose-binned prototypes (**Use for recognition**, behind a confirmation). Promotion requires a clear capture (quality at least 0.5, eye distance at least 24 px, active quality scorer version) and advances the member's `gallery_revision`, pausing calibrated recognition authority for that person until the next calibration fit.
 
 Label `not_enrolled` faces (visitors, carers, relatives) as carefully as residents. They are what the open-set false-match gate is measured on, and a relative who looks like a resident is exactly the case calibration must not get wrong.
 
-The progress panel (`GET /api/v1/calibration/summary`, and the read-only MCP tool `get_face_calibration_summary`) shows labeled faces and distinct walks per resident against the target of 150 labeled faces, which yields the 30 holdout faces the coverage gate needs.
+The progress panel (`GET /api/v1/calibration/summary`, and the read-only MCP tool `get_face_calibration_summary`) shows labeled faces and distinct walks per resident against the target of 150 labeled faces (which yields the 30 holdout faces the coverage gate needs), as well as promotable capture counts by resident and pose bin.
 
 ### 3. Build the manifest
 
 ```bash
 cd person-identification-service
 DATABASE_URL=postgresql://... uv run --extra calibration-tools \
-  python -m app.calibration.cli build-manifest --output manifest.jsonl
+  python -m app.calibration.cli build-manifest --output manifest.jsonl --gallery centroid
 ```
 
-The command opens a read-only database connection. It groups labeled captures into walks (episodes): a run of captures with one label on one camera with gaps under 300 seconds. It then scores every labeled probe against every enrolled resident's centroid, producing genuine records, closed-set impostor records (a resident against another resident), and open-set impostor records (a not-enrolled person against every resident). The manifest and its `.meta.json` sidecar (row count, SHA-256, versions) hold household biometric scores: keep them outside the repository.
+Pass `--gallery prototypes-v1` to score probes against pose-binned prototypes (the mode used once `recognition.gallery_representation` moves from `shadow` to `prototypes`).
+
+The command opens a read-only database connection. It groups labeled captures into walks (episodes): a run of captures with one label on one camera with gaps under 300 seconds. It then scores every labeled probe against every enrolled resident (either centroids or pose-binned prototypes), producing genuine records, closed-set impostor records (a resident against another resident), and open-set impostor records (a not-enrolled person against every resident), together with the best-vs-second-best `margin`. Under `--gallery prototypes-v1`, any promoted capture from the same walk is excluded when scoring that walk so leave-episode-out holdout scores are never optimistic. The manifest and its `.meta.json` sidecar (row count, SHA-256, versions, `gallery_representation`, and per-member `gallery_revisions`) hold household biometric scores: keep them outside the repository.
 
 To pool a research face set, add `--external set.jsonl`. The listing is one `{"image": ..., "identity_id": ...}` object per line, and it must sit next to `set.jsonl.licence.json` naming the dataset, its version, and its licence; a set without one is refused. External images run through the service's own face engine (this needs Triton). They are aligned and quality-scored exactly like household captures. External identities are prefixed `external:` and never reach the household holdout.
 
@@ -75,7 +77,7 @@ uv run --extra calibration-tools python -m app.calibration.cli fit-v2 \
 
 Omit `--allow-household-only` when the manifest includes an external set; without either, the fit refuses to run. Household walks split 60/20/20 into fit, validation, and holdout partitions by walk, stratified per label, so frames from one walk never land on both sides. External identities split into fit and validation only.
 
-The fit is a logistic regression on two features (`similarity` and `quality_score`, or `similarity`, `resolution`, and `sharpness`, whichever has the lower validation log loss), stored as raw-space coefficients so the runtime needs only NumPy. The command prints the gates, a reliability table, and the coverage list, and writes the artifact only when every gate passes. Without `--output` it is a dry run.
+The fit is a logistic regression evaluated over candidate feature sets (`similarity` and `quality_score`; `similarity`, `resolution`, and `sharpness`; plus variants adding `margin` when multiple identities are present), picking the candidate with the lowest validation log loss and storing raw-space coefficients so the runtime needs only NumPy. The command prints the gates, a reliability table, and the coverage list, and writes the artifact only when every gate passes. Without `--output` it is a dry run.
 
 | Gate (household holdout) | Default |
 | --- | --- |
@@ -121,8 +123,10 @@ Recalibrate when a resident is enrolled, a camera is moved or replaced, or the f
 | `method` | `logistic_v2` |
 | `profile` | `single_frame`; the tracking orchestrator trusts calibrated confidence only for this profile |
 | `quality_version` | Face quality scorer the features came from, e.g. `heuristic-v1` |
-| `features`, `coefficients`, `intercept` | `P(match) = sigmoid(intercept + sum(coefficient * feature))` in raw feature units |
+| `features`, `coefficients`, `intercept` | `P(match) = sigmoid(intercept + sum(coefficient * feature))` in raw feature units (may include `margin` when multiple identities are enrolled) |
 | `covered_identities` | Residents the artifact may score; everyone else gets `null` |
+| `gallery_representation` | Gallery mode the artifact was fitted on (`centroid` or `prototypes-v1`); must match the service's active mode |
+| `gallery_revisions` | Per-member gallery revision at fit time; a member whose revision changed gets `null` until refit |
 | `fit_basis` | `household_only` or `pooled` |
 | `capture_profile` | Crop padding and JPEG quality the captures were taken with |
 | `household_holdout_metrics` | ECE, Brier score, log loss, FMR, and FNMR on the household holdout |
@@ -151,6 +155,10 @@ Each pair is `{"similarity": 0.87, "label": 1, "identity_id": "person-001"}`. `-
 | Field | Type | Description |
 | --- | --- | --- |
 | `raw_similarity` | float | Normalized-embedding cosine similarity. Alias of `similarity`. |
+| `second_best_candidate_id` | string or null | Second-closest enrolled identity when at least two identities are enrolled; null otherwise. |
+| `second_best_similarity` | float or null | Cosine similarity to the second-closest enrolled identity; null when fewer than two identities are enrolled. |
+| `margin` | float or null | `raw_similarity - second_best_similarity`; null when fewer than two identities are enrolled. |
+| `gallery_representation` | string | Gallery mode that scored this face (`centroid` or `prototypes-v1`). |
 | `calibrated_confidence` | float or null | Calibrated ArcFace probability in `[0, 1]`. Null when the evaluator is in any degraded state, or for non-recognized faces. |
 | `calibration_status` | string | One of the four health states. |
 | `calibration_artifact_version` | string or null | UUID of the loaded artifact. Null when degraded. |
@@ -211,7 +219,7 @@ Two live metrics complement the table:
 - Do not download research data automatically in tests or CI. Pool only a set whose licence permits the use, and record it in the sidecar.
 - The artifact carries fitted coefficients, metrics, identity ids, and provenance hashes, never embeddings or images.
 - With face templates on, the tracking orchestrator receives face embeddings from the person-ID service on the home network and holds a few per person in memory for about 15 seconds; it never logs or stores them. Only the person-ID service stores embeddings.
-- Calibration labels never change enrollment.
+- Calibration labels never change enrollment on their own; enrollment changes only when an admin explicitly promotes a labeled capture (and recalibration is required before recognition authority resumes for that person).
 
 ## Related pages
 
