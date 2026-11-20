@@ -44,6 +44,13 @@ Yes, to set it up. It is not yet a plug-in product. A technical family member or
 
 Recognizing people takes a few setup steps after installation: adding every person who lives in or visits the house, collecting and labeling a week or two of faces from your own cameras, and then switching on the calibrated result. Until then the system follows people as unnamed. The **Identity Setup** page in the admin console shows which step your home is on; the technical side is in [Identity setup](/features/continuous-tracking/identity-integrity/identity-setup).
 
+## What do the optional wristband and smartwatch app do?
+
+Wearables are optional helpers that let the system recognize who is in a room even when a camera only sees someone from behind. They do not record audio or video and never send data to the cloud.
+
+- **For the senior (zero-charging BLE wristband):** a lightweight coin-cell wristband broadcasts a fixed, anonymous local code (no name or personal information) to wall-plugged room receivers on the home network. Its battery lasts one to two years so the senior never has to remember to charge it. If the wristband is taken off and left on a table, the system ignores it as a parked tag.
+- **For family members or caregivers (Wear OS companion app):** a household member who already wears a compatible smartwatch (such as a Pixel Watch 5) can run the standalone companion app in `bleOnly` mode (which acts like the same anonymous room beacon and has zero network permissions) or opt-in `dualMode` (which adds short 12-second UWB ranging bursts only when the wearer is walking, capped to preserve daily battery life, and stops immediately when the watch is taken off the wrist).
+
 ## Words you will see
 
 | Term | What it means |
