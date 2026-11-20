@@ -221,6 +221,34 @@ The setting ships `off`. In `shadow`, templates are matched and the decision wit
 in `cts_face_template_shadow_outcomes_total` without changing any live decision. Embeddings stay in
 the tracker's memory and are never logged or stored.
 
+## How evidence is combined
+
+The identity resolver evaluates an ordered sequence of evidence channels (`FaceChannel`,
+`GalleryChannel`, and `HeightChannel`) and combines them with the temporal prior through
+`combine_channels`. Each channel emits a likelihood distribution, a support multiplier, and the
+newest capture time (`evidence_at`) for any identity it is allowed to refresh on the evidence
+clock.
+
+| Channel | Source | Support multiplier | Refreshes evidence clock |
+| --- | --- | --- | --- |
+| `face` | Direct, template, propagated, and spatially matched external face anchors | `resolver.face_weight_multiplier` (3.0) | Yes, only for grades that allow clock refresh |
+| `gallery` | Verified ReID gallery entries (`operator_verified`, `auto_verified`) within 12 hours | 1.0 | Yes, when top match clears 0.3 |
+| `height` | Enrolled height profiles (currently uniform when no height estimates exist) | `resolver.height_weight_multiplier` (1.5) | No |
+| `wearable` | Accepted wearable-to-PH localization associations when `wearable.mode == "enabled"` | `1.0` (power-weighted `p ** 2.0` over full support) | Yes, using physical `newest_fix_at` |
+
+Governance for every evidence grade lives in one registry (`EvidenceGrade`):
+
+| Grade | Authority | Clock refresh | Duplicate guard | Association and dedup | Attachment precedence |
+| --- | --- | --- | --- | --- | --- |
+| `native_frame` | Yes (when calibrated) | Yes | Yes (ranks and bypasses) | Yes | 2 |
+| `native_template` | Yes (calibrated, agreeing members) | Yes (uses newest member time) | No | No | 2 |
+| `cc_assertion` | No | No | No | No | 1 |
+| `wearable` | No | Yes (uses `newest_fix_at`) | Ranks only (no incumbent bypass) | No | N/A (separate channel) |
+
+When a native face anchor and an external assertion anchor land on the same detection, the higher
+attachment precedence wins and the overlap is counted in `cts_face_anchor_grade_overlap_total`;
+`cts_face_anchor_duplicate_detection_total` counts only same-grade collisions.
+
 ## Authority vocabulary
 
 Every identity decision carries an `authority` field naming which rung of the authority order
@@ -260,6 +288,7 @@ interchangeable, and consumers must branch on `authority` for authority question
 
 ## Related pages
 
+- [Wearable identity evidence](/features/continuous-tracking/identity-integrity/wearable-evidence)
 - [ReID gallery governance](/features/continuous-tracking/identity-integrity/reid-gallery-governance)
 - [Identity revision projections](/features/continuous-tracking/identity-integrity/revision-projections)
 - [Cross-repository identity contracts](/features/continuous-tracking/identity-integrity/contracts)
