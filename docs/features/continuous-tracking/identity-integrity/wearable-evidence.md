@@ -127,15 +127,47 @@ recognize a person on days and in rooms where no wearable is present.
 | Unknown-history backfill | identity-NULL rows over the attested segment are relabeled (NULL-only) | never | `resolver.enable_wearable_backfill` |
 | Image-only evaluation | truth for scoring what images alone decide | truth, reported separately | `wearable.evaluation.sample_rate` |
 
-- **Seeding needs the live channel.** Startup refuses `reid_candidates.wearable_seeding_enabled`
-  unless `wearable.mode` is `enabled`, because an `auto_verified` sample votes at once.
+- **Seeding mode rules.** Startup refuses `reid_candidates.wearable_seeding_enabled` while
+  `wearable.mode` is `off`. In `shadow` mode, trajectory-grade seeds are skipped (because
+  `auto_verified` rows would vote immediately), while room-grade seeds may still propose
+  `pending_review` samples (`wearable_room_attested`) for caregiver inspection when no conflicting
+  identity is committed on the track.
 - **A face of someone else vetoes.** A seed or an offered face is dropped when any face on that
   detection, live or shadow-only, was recognized as another person, at any similarity.
 - **Spacing and caps.** At most one wearable seed per person and body orientation every 120 s,
-  none that is a near-duplicate (cosine above 0.92) of a same-day sample, and at most 10
-  room-grade seeds per person per day, so the review queue stays short.
+  none that is a near-duplicate (cosine above 0.92) of a same-day sample, at most 10
+  room-grade seeds per person per day, and at most 10 active working-set samples per person and
+  orientation within the vote window, so the review queue stays short and aged-out rows never block
+  fresh samples.
 - **Backfill waits on the owner.** Backfilling attested intervals is implemented and off; it stays
   off until the owner confirms that attested intervals may relabel history.
+
+## Revoking what a wearable taught
+
+If someone borrows another resident's wristband or watch, everything that wearable taught during
+that period can be undone by association segment -- automatically or by a caregiver-admin:
+
+1. **Body-appearance samples:** Every `auto_verified` ReID gallery row minted by that segment is
+   demoted back to `pending_review` (keeping its vector and recording a `wearable_revoked:*` audit
+   event). Rows a caregiver already approved (`operator_verified`) are never touched.
+2. **Attested face captures:** Matching captures in person-identification-service are marked
+   revoked, excluded from calibration manifests, audit sampling, and promotion, and purged on the
+   regular retention schedule even if previously audited as correct. Any face already promoted to
+   a member's prototypes is listed for manual review and never removed automatically.
+3. **Inferred history backfill:** Any live inferred backfill range sourced from that segment is
+   compensated back to `Unknown` through the standard identity-revision projection path.
+4. **Teaching hold:** A hold is placed on the tag (`wearable_teaching_holds`), pausing further
+   gallery seeding, face attestation, and wearable backfill for that tag until a caregiver-admin
+   confirms the tag is back on the right person and clicks **Resume teaching**.
+
+By default (`wearable.revocation.auto_on_swap: true`), when the swapped-wearable guard marks a
+segment `swap_suspected`, CTS automatically revokes that segment plus any other unrevoked segments
+for that tag overlapping the swap-conflict window (10 minutes) and places a teaching hold on the
+tag. Caregiver-admins can also inspect recent teaching periods, revoke any segment with one
+confirmed click, jump directly to its demoted samples in the ReID Review Queue, and resume
+teaching from the device dialog on the Wearables admin page. The Identity Setup page includes an
+optional **Wearable teaching** step showing active holds, learner configuration, and image-only
+evaluation progress.
 
 ### Measuring the benefit
 

@@ -7,9 +7,9 @@ tracking appearance, ArcFace enrollment, and labeled ReID data in separate store
 trust rules.
 
 ::: info Implementation status
-The four-state ReID gallery lifecycle is fully deployed. Operator-verified
+The five-state ReID gallery lifecycle is fully deployed. Operator-verified
 and machine-minted auto-verified entries both vote in identity resolution, at different trust
-levels; pending and rejected entries never vote. Legacy `face_confirmed` entries have been
+levels; pending, rejected, and expired entries never vote. Legacy `face_confirmed` entries have been
 backfilled to `pending_review` and no longer automatically vote.
 
 `ReIDCandidateStage` is the only pipeline path that writes to the gallery. It runs late in the
@@ -17,31 +17,47 @@ frame pipeline, after identity resolution and provenance persistence and ahead o
 publish throttle, so candidate creation is never silently dropped on a throttled frame. A
 face-derived candidate is created only when the direct recognized ArcFace identity equals the
 resolved PH identity and the face evidence carries a calibrated confidence; without a deployed
-calibration artifact, the stage produces no candidates at all (fail closed) and does not fall back to uncalibrated similarity. A candidate whose calibrated confidence is at or above
+calibration artifact, the stage produces no face-derived candidates at all (fail closed) and does not fall back to uncalibrated similarity. A candidate whose calibrated confidence is at or above
 `reid_candidates.auto_verify_min_confidence` (default `0.90`) mints directly into `auto_verified`
 instead of `pending_review`; every other eligible candidate still lands `pending_review`. The
-per-identity, per-orientation cap on gallery growth counts `pending_review`, `auto_verified`, and
-`operator_verified` rows together, so a backlog of unreviewed or machine-verified candidates cannot
-exceed the cap either.
+per-identity, per-orientation working-set cap (`reid_candidates.max_entries_per_orientation`,
+default `10`) counts `pending_review`, `auto_verified`, and `operator_verified` rows seen inside
+the active vote window together, so a backlog of unreviewed or machine-verified candidates cannot
+exceed the working set and aged-out rows from previous days never block today's fresh samples.
 :::
 
-## Use four states
+## Use five states
 
 Every `reid_gallery` entry has one state.
 
 | State | Resolver vote | Retention |
 | --- | --- | --- |
-| `pending_review` | Never | Keep vector, crop, and provenance for review |
-| `auto_verified` | Eligible, at a reduced trust multiplier | Keep vector, crop, provenance, and review event |
-| `operator_verified` | Eligible, at full trust | Keep vector, crop, provenance, and review event |
+| `pending_review` | Never | Keep vector, crop, and provenance for review (expires after 30 days by default) |
+| `auto_verified` | Eligible, at a reduced trust multiplier | Keep vector, crop, provenance, and review event (expires after 14 days by default) |
+| `operator_verified` | Eligible, at full trust | Keep vector, crop, provenance, and review event (expires after 90 days by default) |
 | `rejected` | Never | Delete vector and dedicated crop; keep audit metadata and fingerprint |
+| `expired` | Never | Delete vector and dedicated crop on schedule; keep audit metadata and fingerprint |
 
 `auto_verified` is minted at candidate-creation time, never by a review action: it exists precisely
 because the calibrated evidence at creation already cleared a strict bar (the ArcFace authority
 threshold plus a margin), so the row deserves machine trust with operator veto, not operator trust with machine suggestion. Operators can approve, relabel, reject, or **demote** an
 `auto_verified` row from the same review queue used for `pending_review`. Only `operator_verified`
-and `auto_verified` entries may reach resolver queries or caches; pending and rejected entries never
+and `auto_verified` entries may reach resolver queries or caches; pending, rejected, and expired entries never
 vote, including through caches, fallback queries, or compatibility code.
+
+### Retention and automatic expiry
+
+Because body-appearance embeddings reflect clothing that changes over time, keeping old vectors
+and crops indefinitely grows storage without helping recognition. `GalleryRetentionService` runs on
+a schedule (`reid_gallery.retention.interval_s`, default daily) with `reid_gallery.retention.mode`
+set to `enabled` by default (`shadow` counts without mutating; `off` disables sweeps):
+
+| State | Default retention window | Effect when `enabled` |
+| --- | --- | --- |
+| `auto_verified` | `14` days (`auto_verified_days`) | Move to `expired`, null embedding, delete dedicated crop, keep audit record |
+| `pending_review` | `30` days (`pending_review_days`) | Move to `expired`, null embedding, delete dedicated crop, keep audit record |
+| `operator_verified` | `90` days (`operator_verified_days`) | Move to `expired`, null embedding, delete dedicated crop, keep audit record |
+| `rejected` / `expired` | Kept as audit tombstones | Already vector-free and crop-free |
 
 ## Require crop provenance
 
@@ -111,11 +127,13 @@ when eligibility is false and lists the reasons. The server re-checks eligibilit
 `audit_version` on every approve and relabel, so a stale or now-ineligible candidate returns `409`
 (`reid_review.stale` or `reid_review.ineligible`) and the browser refreshes instead of forcing the change through. The browser cannot fabricate eligibility or override a failed quality gate.
 
-### Rejected candidates show a deleted-crop state
+### Rejected and expired candidates show a deleted-crop state
 
-Rejection nulls the embedding and removes the dedicated crop object, then keeps the crop key, hashes,
-and review history as a fingerprint. The queue never presigns a rejected candidate's crop, so its
-detail view renders an explicit deleted-crop state instead of a broken image.
+Rejection and retention expiry both null the embedding and remove the dedicated crop object, then
+keep the crop key, hashes, and review history as a fingerprint. The queue never presigns a rejected
+or expired candidate's crop or frame, so its detail view renders an explicit deleted-crop state
+instead of a broken image. The queue also accepts a `seed_association_id` filter (linked from the
+Wearables binding dialog) and badges rows demoted by wearable revocation as `Revoked`.
 
 ## Permission separation
 
@@ -144,16 +162,19 @@ from the original seven-day default):
 recency_factor = 2 ** (-(age_days / 2))
 ```
 
-A hard vote-age cutoff additionally excludes any gallery entry older than
-`resolver.gallery_vote_max_age_s` (default 12 hours) on every query path:
+A hard vote-age cutoff additionally excludes any gallery entry outside the capture-time vote
+window `(as_of - gallery_vote_max_age_s, as_of]` (default 12 hours) on every query path:
 the per-orientation multiview query, the single-query fallback, and the cross-camera-assist
-diagnostic query. SOLIDER-REID embeddings are dominated by clothing, and clothing validity is a
+diagnostic query. Measuring both the vote window and recency decay against the frame's capture
+time (never wall-clock time) means recorded replays and live tracking evaluate the exact same
+gallery rows, and entries for inactive identities are filtered identically in Postgres and
+in-memory peers (`active_only=True`). SOLIDER-REID embeddings are dominated by clothing, and clothing validity is a
 step function at wardrobe change, not a smooth decay -- the cutoff encodes the step; the two-day
 half-life handles staleness inside the window. The cutoff intentionally does not apply to the
 corpus-building read that seeds a PH's own query embedding from its recent gallery entries
 (`list_gallery_entries_for_tracklets`): that read describes the PH's own track, not a candidate
 vote. The tracker's verified-ReID disagreement probe applies the mirrored
-`world_tracker.reid_disagreement_max_age_s` cutoff so it disagree-costs against the same temporal
+`world_tracker.reid_disagreement_max_age_s` cutoff on the same capture time so it disagree-costs against the same temporal
 corpus the resolver votes with.
 
 The cutoff depends on `auto_verified` rows accumulating from same-day, calibrated face matches:

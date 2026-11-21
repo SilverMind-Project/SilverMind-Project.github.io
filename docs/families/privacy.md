@@ -10,6 +10,8 @@ The cameras and the wall display talk to that home computer directly over your o
 
 When you calibrate face recognition for your cameras, the system keeps a sample of face crops from the home's cameras for an admin to label. They are stored on the home computer like every other image, never sent anywhere, and any that are not labeled are deleted after 30 days. Calibration is off unless you turn it on.
 
+Body-appearance samples kept for camera tracking stay on the home computer too. Automatically verified body samples expire after 14 days, unreviewed body samples after 30 days, and caregiver-verified samples after 90 days, deleting their images and vectors while keeping only a non-image audit record.
+
 ## What does leave the home, and only if you turn it on
 
 Three features send data out, and each is off until you turn it on:
@@ -36,7 +38,7 @@ Wearable tags (such as a BLE wristband, clip, or smartwatch) are completely opti
 - **Retention:** raw radio fixes are kept only briefly on the local server (at most 72 hours) for troubleshooting and calibration. Derived identity decisions follow the same retention schedule as camera tracking.
 - **Stays on the home network:** room receivers, the local broker, and the tag registry run on your home network with no vendor cloud account required.
 - **Never drives emergency alerts alone:** a wearable tag supports camera identity recognition; it is never used by itself to trigger an emergency alert.
-- **Teaching the cameras is opt-in and reviewed:** when a caregiver turns it on, the system can learn what a tag wearer looks like from the cameras while the tag is worn. Body-appearance samples learned this way are marked as wearable-taught and can be reviewed, demoted, or rejected in the review queue. Face crops learned this way are stored only after the tag confirms who it was, stay on the home server, are deleted after 30 days unless a caregiver audits them as correct, and never change face recognition unless a caregiver adds one by hand.
+- **Teaching the cameras is opt-in, reviewed, and revocable:** when a caregiver turns it on, the system can learn what a tag wearer looks like from the cameras while the tag is worn. Body-appearance samples learned this way are marked as wearable-taught and can be reviewed, demoted, or rejected in the review queue. Face crops learned this way are stored only after the tag confirms who it was, stay on the home server, are deleted after 30 days unless a caregiver audits them as correct, and never change face recognition unless a caregiver adds one by hand. If a tag is worn by the wrong person, a caregiver-admin can undo what that period taught in one confirmed click (and the system automatically pauses teaching and undoes recent periods when a swap is detected).
 
 ## Who can see what
 
