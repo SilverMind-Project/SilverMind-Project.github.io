@@ -236,6 +236,7 @@ clock.
 | `height` | Enrolled height profiles (currently uniform when no height estimates exist) | `resolver.height_weight_multiplier` (1.5) | No |
 | `wearable` | Accepted wearable-to-PH localization associations when `wearable.mode == "enabled"` | `1.0` (power-weighted `p ** 2.0` over full support) | Yes, using physical `newest_fix_at` |
 | `closed_world` | Household presence and spatially separated incumbent elimination when `closed_world.mode == "enabled"` and `roster_complete` is true | `1.0` (prior shaping only; `counts_as_commit_evidence = False`) | No |
+| `household_classifier` | Offline-trained closed-set body-appearance classifier JSON artifact when `household_classifier.mode == "enabled"` | `1.0` (pre-softmax logit scale `weight_multiplier / temperature`, `UNKNOWN` floor `0.2`, commit evidence only at calibrated `p >= 0.8`) | No |
 
 Governance for every evidence grade lives in one registry (`EvidenceGrade`):
 
@@ -246,6 +247,7 @@ Governance for every evidence grade lives in one registry (`EvidenceGrade`):
 | `cc_assertion` | No | No | No | No | 1 |
 | `wearable` | No | Yes (uses `newest_fix_at`) | Ranks only (no incumbent bypass) | No | N/A (separate channel) |
 | `closed_world` | No | No (`counts_as_commit_evidence = False`) | No | No | N/A (separate channel) |
+| `household_classifier` | No | No (commit evidence gated at `p >= 0.8`) | No | No | N/A (separate channel) |
 
 When a native face anchor and an external assertion anchor land on the same detection, the higher
 attachment precedence wins and the overlap is counted in `cts_face_anchor_grade_overlap_total`;

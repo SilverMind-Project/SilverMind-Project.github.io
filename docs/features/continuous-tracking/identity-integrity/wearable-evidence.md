@@ -190,6 +190,47 @@ relies on per-view queries from the track's own appearance (`resolver.enable_mul
 on in the shipped settings); the replay runs with that setting. These are simulator numbers; the
 household measurement starts when wearables are installed.
 
+## Multi-day household appearance learning
+
+Same-day ReID gallery votes expire after 12 hours because body embeddings are dominated by that
+day's outfit. If 14 days of live wearable rollout still leave image-only treatment attribution
+below 85% for a regular resident, operators can optionally enable multi-day body-appearance
+learning (`household_classifier.capture_enabled: true`).
+
+- **Sample capture:** `AppearanceSampleRecorderStage` stores frozen, L2-normalized body embeddings
+  in `continuous_tracking.appearance_training_samples` (60-day retention, deletable per person)
+  only from calibrated `direct_face` authority decisions, `trajectory`-grade wearable-attested
+  intervals (excluding held tags and face conflicts), and verified open-set negatives (named
+  guests or uncommitted tracks with an unrecognized face, capped per day). Posterior-only labels
+  never enter training; `room`-grade wearable rows enter only after caregiver approval in the ReID
+  review queue. Revoking a wearable segment also revokes its training samples.
+- **Offline training and weekly retrain:** `scripts/train_household_classifier.py` (using the
+  optional `classifier-tools` group; `scikit-learn` is never imported at runtime) fits a balanced
+  multinomial logistic regression head with leave-one-day-out cross-validation and held-out
+  validation temperature scaling, then gates on the most recent 3 held-out days:
+  wearable spot-check audit Wilson 95% lower bound at least `0.99` (`>= 100` samples), at least
+  2 residents with `>= 3` training days and `>= 300` deduplicated samples each, macro top-1
+  accuracy at least `0.85` at `p >= 0.8`, every trained class recall at least `0.75` at `p >= 0.8`,
+  ECE at most `0.05`, and open-set false-match rate on negatives at most `0.02` at `p >= 0.8`.
+
+```bash
+DATABASE_URL=postgresql://... uv run --extra classifier-tools \
+  python scripts/train_household_classifier.py \
+  --feature-version reid-solider \
+  --association-audit /path/to/wearable-audit.json \
+  --output /path/to/household-classifier-v1.json
+```
+
+- **Shadow evaluation and deployment:** Runtime loads only the validated JSON artifact (no pickle)
+  and exposes readiness (`off`, `ready`, `degraded_missing`, `degraded_incompatible`,
+  `degraded_invalid`) on `GET /health` and `cts_household_classifier_health`. Both
+  `household_classifier.mode` and `household_classifier.capture_enabled` ship `off` / `false`.
+  Deploy an accepted artifact in `shadow` mode first so the image-only evaluator's `classifier`
+  arm can be compared against `treatment` over 14 days via
+  `scripts/image_only_evaluation_report.py`. To retrain weekly, run the command above to produce a
+  new versioned JSON artifact, point `household_classifier.artifact_path` at it, and restart the
+  orchestrator.
+
 ## Related pages
 
 - [Identity authority and Unknown](/features/continuous-tracking/identity-integrity/identity-authority)

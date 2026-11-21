@@ -136,6 +136,7 @@ To verify manually:
 | Identity decisions | `identity_decisions`, `identity_evidence_items`, `identity_decision_gallery_hits` |
 | Corrections and jobs | `identity_corrections`, `identity_revision_ranges`, `identity_revision_jobs`, `identity_projection_acks` |
 | ReID gallery | `reid_gallery`, `gallery_review_events` |
+| Wearable and appearance training | `wearable_associations`, `appearance_training_samples` |
 | ReID crop objects | `reid-candidates/...` and `reid-candidates-frames/...` in MinIO |
 | CC derived state | `person_location_history`, `person_location_state`, `location_observations`, `presence_segments`, `room_occupancy_state`, `person_sightings`, `person_activities`, `transit_zones`, `cts_dementia_signals`, `cts_identity_revision_log` |
 | Redis (optional) | `tracking.revisions`, `cc.identity_assertions` streams |

@@ -10,7 +10,7 @@ The cameras and the wall display talk to that home computer directly over your o
 
 When you calibrate face recognition for your cameras, the system keeps a sample of face crops from the home's cameras for an admin to label. They are stored on the home computer like every other image, never sent anywhere, and any that are not labeled are deleted after 30 days. Calibration is off unless you turn it on.
 
-Body-appearance samples kept for camera tracking stay on the home computer too. Automatically verified body samples expire after 14 days, unreviewed body samples after 30 days, and caregiver-verified samples after 90 days, deleting their images and vectors while keeping only a non-image audit record.
+Body-appearance samples kept for camera tracking stay on the home computer too. Automatically verified body samples expire after 14 days, unreviewed body samples after 30 days, and caregiver-verified samples after 90 days, deleting their images and vectors while keeping only a non-image audit record. If an admin optionally enables multi-day appearance classifier training, frozen body embeddings are retained locally for at most 60 days and are deleted immediately if a person is removed from the household.
 
 ## What does leave the home, and only if you turn it on
 
