@@ -50,7 +50,7 @@ Each step shows one state and, when something is needed, one next action. The fi
 
 A step whose source is down shows **Unknown** and never guesses: a stopped person identification service never reads as "everyone is enrolled". The other steps still show their real state. Face templates, wearables, and **Wearable teaching** appear as optional steps; they improve recognition after calibrated faces are live and never block the chain. When a wearable tag's teaching is paused after a suspected swap or revocation, the Wearable teaching step flags it and links to the Wearables page so an admin can resume teaching once the tag is back on the right person.
 
-Some next actions link to an admin page. Others are deliberate configuration changes that need a restart, such as turning on capture or switching the face evidence policy, so the page says which setting to change instead of offering a switch.
+Some next actions link to an admin page. Others are deliberate configuration changes that need a restart, such as turning on capture or switching the face evidence policy, so the page says which setting to change instead of offering a switch. Changing the active face recognizer profile invalidates existing calibration artifacts and prototypes, blocking the **Calibration artifact** step (and also blocking it if tracking and person identification disagree on the expected recognizer version) until new artifacts are fitted and deployed.
 
 ::: warning The page cannot see who is missing
 Roster checks cover the people listed under People. If the person you care for was never added there, nothing can notice. Add every resident first: until they are enrolled, the system can only match their face to whoever else is enrolled.

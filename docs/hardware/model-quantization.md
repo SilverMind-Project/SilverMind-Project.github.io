@@ -123,6 +123,24 @@ Do not infer precision from a directory name, modification time, or smaller
 metadata section. Inspect graph operators, initializer data types, and runtime
 outputs.
 
+### Model licensing
+
+InsightFace code is MIT-licensed, but the pretrained `buffalo_l` model weights
+(SCRFD, ArcFace R50, 2D and 3D landmarks, and gender/age) are distributed by
+InsightFace for **non-commercial research purposes only**. Deployers are
+responsible for model licensing compliance and must supply commercially licensed
+or self-trained weights for commercial deployments.
+
+The person-identification service loads recognizers through `RecognizerProfile`
+entries under `face_engine.profiles` in `config/settings.yaml` and exposes the
+active profile's `licence` field on `GET /health`. A candidate AdaFace IR-50
+profile (`adaface_ir50_webface4m`) and export script
+(`continuous-tracking/triton-models/scripts/export_adaface_onnx.py`) are
+included for evaluation; note that public AdaFace checkpoints trained on
+WebFace4M, WebFace12M, or MS1MV2 inherit the non-commercial academic research
+terms of their training datasets even though the AdaFace repository code is
+MIT-licensed. Binary candidate weights are never committed to Git.
+
 ## Build representative calibration data
 
 Random tensors exercise operator shapes but do not estimate useful activation

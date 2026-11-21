@@ -18,7 +18,7 @@ Any degraded state yields `calibrated_confidence: null`.
 | --- | --- |
 | `ready` | Artifact loaded, validated, and version-compatible |
 | `degraded_missing` | No `calibration.artifact_path` configured, or the file is absent |
-| `degraded_incompatible` | The artifact's `arcface_model_version`, `model_profile`, `preprocessing_version`, or (schema 2) face quality scorer version or `gallery_representation` does not match the service |
+| `degraded_incompatible` | The artifact's `recognizer_version` (legacy alias `arcface_model_version`), `model_profile`, `preprocessing_version`, or (schema 2) face quality scorer version or `gallery_representation` does not match the service |
 | `degraded_invalid` | Artifact fails schema validation, finiteness, or monotonicity checks |
 
 `GET /health` reports the state under `calibration`, with the artifact version and, for schema 2, its profile, quality scorer version, `gallery_representation`, and covered identities. The Prometheus gauge `pid_calibration_health_state` exports the same state.
@@ -115,7 +115,27 @@ uv run --extra calibration-tools python -m app.calibration.cli validate --artifa
 
 The template manifest draws templates of 2 to 8 faces from within one labeled walk (at most 20 per walk, because templates of one walk are near-duplicates), aggregates and quality-scores them exactly as the endpoint does, and scores them like single probes. The fit counts the coverage gate in distinct holdout walks instead of faces, and records the profile, the aggregator (`qwmean-v1`), and its gates in the artifact. Point `CALIBRATION_TEMPLATE_ARTIFACT_PATH` at it; `GET /health` reports it under `template_calibration`.
 
-Recalibrate when a resident is enrolled, a camera is moved or replaced, or the face quality scorer changes. The tracking orchestrator's `face_id.expected_quality_version` must match the scorer the artifact was fitted on; otherwise the orchestrator drops the calibrated confidence and the authority gate stays closed.
+Recalibrate when a resident is enrolled, a camera is moved or replaced, the face recognizer profile changes, or the face quality scorer changes. The tracking orchestrator's `face_id.expected_recognizer_version` and `face_id.expected_quality_version` must match the active recognizer and scorer the artifact was fitted on; otherwise the orchestrator drops the calibrated confidence and the authority gate stays closed.
+
+### Changing the face recognizer
+
+The person-identification service loads its face recognizer from `face_engine.active_profile` and `face_engine.profiles` in `config/settings.yaml` (default `buffalo_l`). Aligned 112x112 PNG crops of enrollment photos and promoted examples are retained locally in MinIO under `enrollment/<person_id>/<embedding_id>.png` so you can build a parallel gallery for another profile without re-photographing residents:
+
+```bash
+cd person-identification-service
+DATABASE_URL=postgresql://... TRITON_GRPC_URL=triton:8701 \
+  uv run python -m app.tools.reembed --profile adaface_ir50_webface4m
+```
+
+`reembed` writes profile-scoped embeddings, centroids, and prototypes without modifying the active `buffalo_l` gallery. To compare candidate recognizers on household holdout captures before switching, run:
+
+```bash
+uv run --extra calibration-tools python scripts/evaluate_recognizer_swap.py \
+  --baseline-scores baseline.json --candidate-scores candidate.json \
+  --candidate-profile adaface_ir50_webface4m --output report.json
+```
+
+Switching `face_engine.active_profile` changes both `recognizer_version` and the profile-scoped quality version (`heuristic-v1@<recognizer_version>` for non-default profiles). Any previously deployed single-frame or template calibration artifact automatically reports `degraded_incompatible`, and Cognitive Companion's **Identity Setup** page blocks the calibration artifact step until you refit and deploy new artifacts with `build-manifest --recognizer-version <name>` and update `face_id.expected_recognizer_version` and `face_id.expected_quality_version` in the tracking orchestrator.
 
 ## Schema 2 artifact
 
@@ -134,7 +154,7 @@ Recalibrate when a resident is enrolled, a camera is moved or replaced, or the f
 | `household_holdout_metrics` | ECE, Brier score, log loss, FMR, and FNMR on the household holdout |
 | `open_set_fmr_at_operating_point` | False-match rate for not-enrolled people alone |
 | `external_datasets` | Name, version, licence, and identity and image counts of each pooled research set |
-| `arcface_model_version`, `model_profile`, `preprocessing_version`, `fitted_at`, `random_seed`, dataset hashes | As in schema 1 |
+| `recognizer_version`, `arcface_model_version`, `model_profile`, `preprocessing_version`, `fitted_at`, `random_seed`, dataset hashes | As in schema 1 (`recognizer_version` is canonical; `arcface_model_version` is kept synchronized for one release) |
 
 The JSON schema is `schemas/calibration_artifact_v2.schema.json` in the `person-identification-service` repository, generated from the Pydantic model and checked by a test. The runtime evaluator uses only the standard library and NumPy.
 
@@ -145,7 +165,7 @@ The original toolchain fits a one-feature mapping from labeled same-person and d
 ```bash
 uv run --extra calibration-tools python -m app.calibration.cli fit \
   --pairs pairs.json --output artifact.json --method logistic \
-  --arcface-model-version buffalo_l --model-profile full --preprocessing-version v1
+  --recognizer-version buffalo_l --model-profile full --preprocessing-version v1
 ```
 
 Each pair is `{"similarity": 0.87, "label": 1, "identity_id": "person-001"}`. `--method isotonic` fits a monotone piecewise-linear map instead. Its gates run on the test split: Brier score below 0.10, log loss below 0.30, ECE below 0.05, FMR at 0.80 below 0.05, at least 200 fit pairs, 50 validation and 50 test pairs, and 5 fit identities. `evaluate --artifact ... --pairs ...` scores an artifact against held-out pairs, and `inspect --artifact ...` prints its manifest. The schema 1 JSON schema is `schemas/calibration_artifact.schema.json`. A schema 1 artifact has no quality version or coverage list, and the service still loads it.
@@ -165,7 +185,8 @@ Each pair is `{"similarity": 0.87, "label": 1, "identity_id": "person-001"}`. `-
 | `calibration_status` | string | One of the four health states. |
 | `calibration_artifact_version` | string or null | UUID of the loaded artifact. Null when degraded. |
 | `calibration_profile` | string | Profile of the calibration that produced `calibrated_confidence` (`single_frame`); empty when no artifact is loaded. |
-| `arcface_model_version` | string | Active model version from the service config. |
+| `recognizer_version` | string | Active recognizer version from the active profile (`face_engine.active_profile`). |
+| `arcface_model_version` | string | One-release compatibility alias mirroring `recognizer_version`. |
 | `model_profile` | string | Active model profile from the service config. |
 | `preprocessing_version` | string | Active preprocessing version from the service config. |
 

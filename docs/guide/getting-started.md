@@ -39,6 +39,10 @@ The system runs several models on the GPU at once. The two language models domin
 | Face recognition | Buffalo_L: SCRFD + ArcFace R50 + landmarks (Triton) | FP32 ONNX | ~0.35 GB |
 | | | **Weights subtotal** | **~25 GB** |
 
+::: warning Model licensing
+The default `buffalo_l` face recognition weights are distributed by InsightFace for non-commercial research purposes only. Deployers are responsible for model licensing compliance; commercial deployments must supply commercially licensed or self-trained weights and select them through `face_engine.active_profile` in `person-identification-service/config/settings.yaml`. See [Model licensing](/hardware/model-quantization#model-licensing) for details.
+:::
+
 A few things this table does not include, which you still need to budget for:
 
 - **vLLM KV cache.** Cosmos-Reason2 is served with `--max-model-len=16384` and `--max-num-seqs=4`, and the deployment uses `--quantization=fp8` with `--kv-cache-dtype=fp8` at `--gpu-memory-utilization=0.25`. KV cache grows with context length and the number of concurrent sequences.

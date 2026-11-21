@@ -10,6 +10,8 @@ The cameras and the wall display talk to that home computer directly over your o
 
 When you calibrate face recognition for your cameras, the system keeps a sample of face crops from the home's cameras for an admin to label. They are stored on the home computer like every other image, never sent anywhere, and any that are not labeled are deleted after 30 days. Calibration is off unless you turn it on.
 
+For enrolled household members, the system also keeps the small 112x112 aligned face crop of each enrollment photo and each caregiver-promoted face example on the home computer (stored locally in MinIO under `enrollment/`). Keeping these aligned crops locally lets the home upgrade or switch face recognition models in the future without asking a person with dementia to sit for new enrollment photos. Removing a household member immediately deletes all of their enrollment crops and embeddings.
+
 Body-appearance samples kept for camera tracking stay on the home computer too. Automatically verified body samples expire after 14 days, unreviewed body samples after 30 days, and caregiver-verified samples after 90 days, deleting their images and vectors while keeping only a non-image audit record. If an admin optionally enables multi-day appearance classifier training, frozen body embeddings are retained locally for at most 60 days and are deleted immediately if a person is removed from the household.
 
 ## What does leave the home, and only if you turn it on
