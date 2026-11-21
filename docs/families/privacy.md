@@ -36,6 +36,7 @@ Wearable tags (such as a BLE wristband, clip, or smartwatch) are completely opti
 - **Retention:** raw radio fixes are kept only briefly on the local server (at most 72 hours) for troubleshooting and calibration. Derived identity decisions follow the same retention schedule as camera tracking.
 - **Stays on the home network:** room receivers, the local broker, and the tag registry run on your home network with no vendor cloud account required.
 - **Never drives emergency alerts alone:** a wearable tag supports camera identity recognition; it is never used by itself to trigger an emergency alert.
+- **Teaching the cameras is opt-in and reviewed:** when a caregiver turns it on, the system can learn what a tag wearer looks like from the cameras while the tag is worn. Body-appearance samples learned this way are marked as wearable-taught and can be reviewed, demoted, or rejected in the review queue. Face crops learned this way are stored only after the tag confirms who it was, stay on the home server, are deleted after 30 days unless a caregiver audits them as correct, and never change face recognition unless a caregiver adds one by hand.
 
 ## Who can see what
 

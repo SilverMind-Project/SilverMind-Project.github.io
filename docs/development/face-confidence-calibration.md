@@ -66,6 +66,8 @@ Pass `--gallery prototypes-v1` to score probes against pose-binned prototypes (t
 
 The command opens a read-only database connection. It groups labeled captures into walks (episodes): a run of captures with one label on one camera with gaps under 300 seconds. It then scores every labeled probe against every enrolled resident (either centroids or pose-binned prototypes), producing genuine records, closed-set impostor records (a resident against another resident), and open-set impostor records (a not-enrolled person against every resident), together with the best-vs-second-best `margin`. Under `--gallery prototypes-v1`, any promoted capture from the same walk is excluded when scoring that walk so leave-episode-out holdout scores are never optimistic. The manifest and its `.meta.json` sidecar (row count, SHA-256, versions, `gallery_representation`, and per-member `gallery_revisions`) hold household biometric scores: keep them outside the repository.
 
+Faces a wearable labeled (state `attested`, label source `sensor_attested`) join the manifest only with `--include-attested`, and only when an audit of a uniform random sample shows at least 200 audited with a Wilson 95% lower bound of precision of 0.99 or better; below that the builder refuses and prints the audit summary. Captures audited wrong never enter. The bar is fixed in `app/calibration/attestation_audit.py`, not in settings.
+
 To pool a research face set, add `--external set.jsonl`. The listing is one `{"image": ..., "identity_id": ...}` object per line, and it must sit next to `set.jsonl.licence.json` naming the dataset, its version, and its licence; a set without one is refused. External images run through the service's own face engine (this needs Triton). They are aligned and quality-scored exactly like household captures. External identities are prefixed `external:` and never reach the household holdout.
 
 ### 4. Fit
@@ -219,6 +221,7 @@ Two live metrics complement the table:
 - Do not download research data automatically in tests or CI. Pool only a set whose licence permits the use, and record it in the sidecar.
 - The artifact carries fitted coefficients, metrics, identity ids, and provenance hashes, never embeddings or images.
 - With face templates on, the tracking orchestrator receives face embeddings from the person-ID service on the home network and holds a few per person in memory for about 15 seconds; it never logs or stores them. Only the person-ID service stores embeddings.
+- Wearable-attested faces are held only in the person-ID service's memory (at most 2,000, for 10 minutes) until the tracking orchestrator attests their detection; only then is the aligned crop stored, as an `attested` capture. Unaudited ones are deleted after 30 days like unlabeled captures, and so are ones an auditor marked wrong.
 - Calibration labels never change enrollment on their own; enrollment changes only when an admin explicitly promotes a labeled capture (and recalibration is required before recognition authority resumes for that person).
 
 ## Related pages

@@ -114,6 +114,50 @@ as a log-likelihood power (`p ** weight`) before normalization, and returns `sup
   `continuous_tracking.wearable_associations`, buffered fixes, and in-memory bindings. Unknown-PH
   maintenance cascades `wearable_associations` deletes via `ON DELETE CASCADE`.
 
+## How the wearable teaches the cameras
+
+An attested association is sensor evidence that a member was on a track for an interval. Four
+learners can use it, each behind its own setting and all off by default. They exist so the cameras
+recognize a person on days and in rooms where no wearable is present.
+
+| Learner | Trajectory grade | Room grade | Setting |
+| --- | --- | --- | --- |
+| Body-appearance samples | minted `auto_verified` with `seed_source = wearable_attested`, voting at trust 1.25 | minted `pending_review` with `seed_source = wearable_room_attested`; votes only after a caregiver approves it | `reid_candidates.wearable_seeding_enabled` |
+| Face exemplars | the PH's emitted faces go to the person-ID service as `attested` captures for audit and optional promotion | same, tagged with the grade | `wearable.supervision.face_attestation` |
+| Unknown-history backfill | identity-NULL rows over the attested segment are relabeled (NULL-only) | never | `resolver.enable_wearable_backfill` |
+| Image-only evaluation | truth for scoring what images alone decide | truth, reported separately | `wearable.evaluation.sample_rate` |
+
+- **Seeding needs the live channel.** Startup refuses `reid_candidates.wearable_seeding_enabled`
+  unless `wearable.mode` is `enabled`, because an `auto_verified` sample votes at once.
+- **A face of someone else vetoes.** A seed or an offered face is dropped when any face on that
+  detection, live or shadow-only, was recognized as another person, at any similarity.
+- **Spacing and caps.** At most one wearable seed per person and body orientation every 120 s,
+  none that is a near-duplicate (cosine above 0.92) of a same-day sample, and at most 10
+  room-grade seeds per person per day, so the review queue stays short.
+- **Backfill waits on the owner.** Backfilling attested intervals is implemented and off; it stays
+  off until the owner confirms that attested intervals may relabel history.
+
+### Measuring the benefit
+
+For a sampled share of attested resolutions the resolver decides the PH twice without the
+wearable channel and as if it held no identity: a control arm without any wearable-taught sample
+and a treatment arm with them. In both arms no sample seen in the last 10 minutes votes, so a
+sample cannot vote for the stretch that minted it and the two arms differ only in older
+wearable-taught samples. Seconds per arm, outcome (`correct`, `wrong`, `unknown`), and grade
+accumulate in `cts_image_only_eval_seconds_total` and, per person and UTC day, in
+`continuous_tracking.image_only_evaluation_daily`. `scripts/image_only_evaluation_report.py`
+reports the attribution and wrong rates per arm and the treatment-minus-control difference with a
+bootstrap 95% interval over days.
+
+On the simulator replay that ships with the tests, a resident wears a tag for 15 minutes and then
+returns without it. While the tag is worn, the treatment arm names the resident for 588 s and the
+control arm for 0 s (the first 300 s are Unknown in both, the exclusion window). After the tag comes
+off, the taught cameras name the resident in 148 of 150 rounds and untaught cameras in none. A
+returning person has no gallery samples of their own, so recognizing them after the tag comes off
+relies on per-view queries from the track's own appearance (`resolver.enable_multiview_gallery`,
+on in the shipped settings); the replay runs with that setting. These are simulator numbers; the
+household measurement starts when wearables are installed.
+
 ## Related pages
 
 - [Identity authority and Unknown](/features/continuous-tracking/identity-integrity/identity-authority)

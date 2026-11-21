@@ -132,7 +132,8 @@ The review queue is an operational biometric-admin surface, not caregiver-facing
 ## Weight verified evidence
 
 `operator_verified` hits receive a trust multiplier of `2.0` before identity aggregation;
-`auto_verified` hits receive `1.5`. Neither multiplier changes cosine similarity; both are applied
+`auto_verified` hits receive `1.5`, or `1.25` when a wearable seeded them
+(`seed_source = wearable_attested`, `resolver.gallery_wearable_trust_multiplier`). Neither multiplier changes cosine similarity; both are applied
 by the same shared scorer described below, so a query regression that leaks a pending or rejected
 row into scoring is loud (a backstop counter increments), never silently miscounted.
 
@@ -178,6 +179,23 @@ and recency half-life are configurable via `resolver.gallery_verified_trust_mult
 is enforced one level below the scorer, at the repository query itself
 (`GalleryRepository.search_similar`), via the resolver's `_gallery_search_kwargs()` helper so every
 current and future call site applies it identically.
+
+## Know where each sample came from
+
+Every gallery row records its `seed_source` (migration `0009`):
+
+| Seed source | Minted as | Votes at |
+| --- | --- | --- |
+| `face` | `pending_review`, or `auto_verified` at calibrated confidence 0.90 or more | 1.5 when auto-verified |
+| `wearable_attested` | `auto_verified`: a wearable's path matched this person's track | 1.25 |
+| `wearable_room_attested` | `pending_review`: the person was alone in the room with the wearable | only after approval |
+| `operator` | reserved for samples a caregiver adds directly | 2.0 |
+
+An approved row votes at `2.0` whatever its source. Wearable rows also record the association
+segment that seeded them (`seed_association_id`), so samples from a band worn by the wrong person
+can be demoted together. The review queue shows the source on each card, filters by it, and says
+on wearable cards that a band on someone else's wrist labels the wrong person, so the crop decides.
+The identity setup page counts wearable-taught samples by state on its body-sample step.
 
 ## Keep learning boundaries explicit
 
