@@ -75,7 +75,7 @@ The table below pairs the June 2026 characterization baseline with the deployed 
 | ReID gallery | `reid_gallery` had `face_confirmed` but no lifecycle state or crop provenance | Governed 4-state lifecycle (`pending_review`, `auto_verified`, `operator_verified`, `rejected`) with crop provenance; only `VOTING_STATES` (`auto_verified`, `operator_verified`) younger than `gallery_vote_max_age_s` (12 h) vote |
 | Gallery seeding | A recognized face was required, but the face identity was not compared with the seed label | `ReIDCandidateStage` requires the direct recognized face identity to equal `committed_identity_id` with `calibrated_confidence >= 0.80` (`>= 0.90` for `auto_verified`) |
 | Keyframes | Bbox rows contained each visible identity, while the list card exposed only the trigger PH identity | Grouped physical-frame cards (`GET /internal/keyframes/grouped`, `/api/v1/cts/keyframes`) aggregate every effective bbox identity |
-| Face confidence | Person identification reported raw ArcFace cosine similarity as `confidence` | Distinct `raw_similarity` and nullable `calibrated_confidence` fields deployed on `person-identification-service` |
+| Face confidence | Person identification reported raw ArcFace cosine similarity as `confidence` | Distinct `similarity` (raw cosine similarity) and nullable `calibrated_confidence` fields deployed on `person-identification-service` |
 | CC assertions | `cc.identity_assertions` used separate text fields | One raw `CCIdentityAssertion` protobuf payload consumed by `CCIdentityAssertionSubscriber` and matched in `WorldTrackingStage` |
 
 ## Data ownership

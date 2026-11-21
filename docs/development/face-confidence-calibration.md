@@ -176,10 +176,10 @@ Each pair is `{"similarity": 0.87, "label": 1, "identity_id": "person-001"}`. `-
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `raw_similarity` | float | Normalized-embedding cosine similarity. Alias of `similarity`. |
+| `similarity` | float | Raw normalized-embedding cosine similarity to the nearest enrolled identity; not a probability. |
 | `second_best_candidate_id` | string or null | Second-closest enrolled identity when at least two identities are enrolled; null otherwise. |
 | `second_best_similarity` | float or null | Cosine similarity to the second-closest enrolled identity; null when fewer than two identities are enrolled. |
-| `margin` | float or null | `raw_similarity - second_best_similarity`; null when fewer than two identities are enrolled. |
+| `margin` | float or null | `similarity - second_best_similarity`; null when fewer than two identities are enrolled. |
 | `gallery_representation` | string | Gallery mode that scored this face (`centroid` or `prototypes-v1`). |
 | `calibrated_confidence` | float or null | Calibrated ArcFace probability in `[0, 1]`. Null when the evaluator is in any degraded state, or for non-recognized faces. |
 | `calibration_status` | string | One of the four health states. |
@@ -190,7 +190,7 @@ Each pair is `{"similarity": 0.87, "label": 1, "identity_id": "person-001"}`. `-
 | `model_profile` | string | Active model profile from the service config. |
 | `preprocessing_version` | string | Active preprocessing version from the service config. |
 
-The raw-similarity `confidence` field was removed on 2026-10-20. `similarity` is the match score; `raw_similarity` remains as its alias for one release, so consumers read `raw_similarity` and fall back to `similarity`.
+The legacy raw-similarity `confidence` field was removed on 2026-10-20, and the one-release `raw_similarity` wire alias on `FaceDetection` was removed on 2026-11-21. `similarity` is the sole raw cosine score on `/identify` and `/identify-batch` (while `/match-template` uses `raw_similarity`).
 
 ## Face quality
 
