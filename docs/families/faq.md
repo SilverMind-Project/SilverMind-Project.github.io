@@ -44,6 +44,10 @@ Yes, to set it up. It is not yet a plug-in product. A technical family member or
 
 Recognizing people takes a few setup steps after installation: adding every person who lives in or visits the house, collecting and labeling a week or two of faces from your own cameras, and then switching on the calibrated result. Until then the system follows people as unnamed. The **Identity Setup** page in the admin console shows which step your home is on; the technical side is in [Identity setup](/features/continuous-tracking/identity-integrity/identity-setup).
 
+## Why is a visitor never guessed to be a family member?
+
+Even when every family member is accounted for in other rooms or away from home, the system never assigns a resident's name by elimination alone. Assigning a name always requires direct matching evidence for that person (a matched face, verified body appearance, or a worn tag). The system also keeps a reserved guest share (`UNKNOWN`) that grows automatically whenever a named guest is home or an unrecognized visitor was recently sighted, and it turns off household elimination completely whenever the family roster is incomplete. A visitor stays unnamed until a caregiver chooses to name them.
+
 ## What do the optional wristband and smartwatch app do?
 
 Wearables are optional helpers that let the system recognize who is in a room even when a camera only sees someone from behind. They do not record audio or video and never send data to the cloud.

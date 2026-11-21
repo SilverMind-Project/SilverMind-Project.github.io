@@ -235,6 +235,7 @@ clock.
 | `gallery` | Verified ReID gallery entries (`operator_verified`, `auto_verified`) within 12 hours | 1.0 | Yes, when top match clears 0.3 |
 | `height` | Enrolled height profiles (currently uniform when no height estimates exist) | `resolver.height_weight_multiplier` (1.5) | No |
 | `wearable` | Accepted wearable-to-PH localization associations when `wearable.mode == "enabled"` | `1.0` (power-weighted `p ** 2.0` over full support) | Yes, using physical `newest_fix_at` |
+| `closed_world` | Household presence and spatially separated incumbent elimination when `closed_world.mode == "enabled"` and `roster_complete` is true | `1.0` (prior shaping only; `counts_as_commit_evidence = False`) | No |
 
 Governance for every evidence grade lives in one registry (`EvidenceGrade`):
 
@@ -244,10 +245,45 @@ Governance for every evidence grade lives in one registry (`EvidenceGrade`):
 | `native_template` | Yes (calibrated, agreeing members) | Yes (uses newest member time) | No | No | 2 |
 | `cc_assertion` | No | No | No | No | 1 |
 | `wearable` | No | Yes (uses `newest_fix_at`) | Ranks only (no incumbent bypass) | No | N/A (separate channel) |
+| `closed_world` | No | No (`counts_as_commit_evidence = False`) | No | No | N/A (separate channel) |
 
 When a native face anchor and an external assertion anchor land on the same detection, the higher
 attachment precedence wins and the overlap is counted in `cts_face_anchor_grade_overlap_total`;
 `cts_face_anchor_duplicate_detection_total` counts only same-grade collisions.
+
+## Closed-world prior shaping
+
+In a small household, physical facts narrow who an unidentified person can be: someone reported away
+is less likely to be standing in the living room, and someone currently confirmed in the kitchen is
+less likely to be the adult seen at the same second in a separate bedroom. `ClosedWorldChannel`
+turns those two physical constraints into bounded prior-shaping factors (`away_factor = 0.3` for
+high-confidence `away` members without a fresh non-parked wearable fix in the last 10 minutes, and
+`occupied_factor = 0.2` for an identity held by another simultaneously observed, spatially distinct
+open PH with fresh non-room-wearable evidence).
+
+Three structural safeguards keep closed-world reasoning from inventing identities:
+
+- **Priors only, never commits alone.** The `CLOSED_WORLD` grade sets
+  `counts_as_commit_evidence = False` and `refreshes_evidence_clock = False`. Even if every other
+  household member is away or occupied, an Unknown PH with no sensory face, ReID, or wearable
+  evidence stays Unknown.
+- **Roster completeness gate.** Cognitive Companion publishes household presence and
+  `roster_complete` on `cc.household_presence` on any change and every 60 seconds, failing closed
+  (`roster_complete = false`) if the face service is unreachable. When `roster_complete` is false,
+  the channel returns an empty distribution and increments
+  `cts_closed_world_inactive_total{reason="roster_incomplete"}`. Presence snapshots older than
+  180 seconds treat every member as unknown.
+- **Explicit guest slot and spatial separation.** Normalized `UNKNOWN` probability never drops
+  below `closed_world.guest_floor` (`0.10`), rising to `closed_world.guest_floor_visitors`
+  (`0.30`) whenever Cognitive Companion reports visitors present (an active named guest or a
+  surfaced visitor cluster seen in the last hour). Joint elimination fires only when both PHs were
+  observed within `1.0 s` (never coasting) and are proven spatially distinct (calibrated floor
+  distance at least `2.0 m` with no active `CoPresenceLink`, or different rooms whose cameras share
+  no overlap group).
+
+`closed_world.mode` defaults to `shadow`, recording `cts_closed_world_shadow_outcomes_total`
+(`would_name_unknown`, `would_change`, `agrees`) and
+`cts_identity_shadow_mismatch_total{feature="closed_world"}` without altering live decisions.
 
 ## Authority vocabulary
 
