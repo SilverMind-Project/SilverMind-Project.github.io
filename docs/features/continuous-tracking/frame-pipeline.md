@@ -1,6 +1,6 @@
 # Frame processing pipeline
 
-The orchestrator's `FrameProcessingPipeline` (`app/pipeline/frame_pipeline.py`) processes each frame through 17 stages: from JPEG decode through person detection, privacy enforcement, spatial floor projection, ReID and pose inference, face identification, world tracking (which includes pre-association cross-camera dedup and Bayesian identity resolution), detection backfill, PH lifecycle management, posture classification, trajectory writing, keyframe sampling, identity revision, trail management, durable provenance persistence, governed ReID candidate creation, and event publishing. (A conditional fall-detection stage also runs between posture classification and trajectory writing when `fall_detection.enabled`; it is omitted from the count and diagram here because it is off by default.)
+The orchestrator's `FrameProcessingPipeline` (`app/pipeline/frame_pipeline.py`) processes each frame through 18 default stages: from JPEG decode through person detection, privacy enforcement, spatial floor projection, ReID and pose inference, single-view standing height estimation, face identification, world tracking (which includes pre-association cross-camera dedup and Bayesian identity resolution), detection backfill, PH lifecycle management, posture classification, trajectory writing, keyframe sampling, identity revision, trail management, durable provenance persistence, governed ReID candidate creation, and event publishing. (Conditional stages such as fall detection and wearable persistence/attestation run when their feature flags are enabled.)
 
 ```mermaid
 flowchart TB
@@ -10,25 +10,27 @@ flowchart TB
     Privacy["3. Privacy enforcement\nBlur zones, drop zones"]
     Spatial["4. Spatial projection\nFloor-point homography per detection"]
     Inference["5. ReID + Pose inference\nSOLIDER-REID + RTMPose (Triton)"]
-    FaceID["6. Face identification\nArcFace (person-id-service)"]
-    World["7. World tracking\nKalman predict, pre-association dedup,\nHungarian association, identity resolution"]
-    Backfill["8. Detection backfill\nEnrich detections with PH assignments"]
-    ClosePH["9. PH lifecycle\nClose terminated PersonHypotheses"]
-    Posture["10. Posture classification\nKeypoint geometry analysis"]
-    Trajectory["11. Trajectory writing\nFloor projection, dwells"]
-    Keyframe["12. Keyframe sampling\nPeriodic + identity change"]
-    Revisions["13. Identity revisions\nCross-table rewrite"]
-    Trails["14. Trail management\nPer-PH foot-point trail buffer"]
-    Provenance["15. Provenance persistence\nDurable identity-decision audit rows"]
-    ReIDCandidate["16. ReID candidate creation\nGoverned pending_review gallery writes"]
-    Publish["17. Event publishing\ntracking.events Redis Stream"]
+    Height["6. Standing height estimation\nSingle-view metrology on validated cameras"]
+    FaceID["7. Face identification\nArcFace (person-id-service)"]
+    World["8. World tracking\nKalman predict, pre-association dedup,\nHungarian association, identity resolution"]
+    Backfill["9. Detection backfill\nEnrich detections with PH assignments"]
+    ClosePH["10. PH lifecycle\nClose terminated PersonHypotheses"]
+    Posture["11. Posture classification\nKeypoint geometry analysis"]
+    Trajectory["12. Trajectory writing\nFloor projection, dwells"]
+    Keyframe["13. Keyframe sampling\nPeriodic + identity change"]
+    Revisions["14. Identity revisions\nCross-table rewrite"]
+    Trails["15. Trail management\nPer-PH foot-point trail buffer"]
+    Provenance["16. Provenance persistence\nDurable identity-decision audit rows"]
+    ReIDCandidate["17. ReID candidate creation\nGoverned gallery candidate writes"]
+    Publish["18. Event publishing\ntracking.events Redis Stream"]
 
     FrameReady --> Fetch
     Fetch --> Detect
     Detect --> Privacy
     Privacy --> Spatial
     Spatial --> Inference
-    Inference --> FaceID
+    Inference --> Height
+    Height --> FaceID
     FaceID --> World
     World --> Backfill
     Backfill --> ClosePH
@@ -78,7 +80,11 @@ Per-detection person crops are extracted at native resolution and sent in parall
 
 If the ReID embedder is unavailable, an empty embedding list is returned and the tracker falls back to geometry-only association.
 
-## 6. Face identification
+## 6. Standing height estimation
+
+`HeightEstimationStage` (`app/pipeline/stages/height_estimation.py`) runs immediately after pose inference on every calibrated camera whose recovered 3D pose passes mount-height (within 0.25 m) and tilt (within 10 degrees) validation against its configured camera profile. For each detection that passes the upright standing gate (non-truncated box inside the central image band, height-to-width ratio at least 1.3, visible shoulders above hips above ankles, torso tilt at most 25 degrees), it back-projects the head pixel onto the vertical line above the calibrated floor footpoint and propagates floor covariance plus pixel noise into `(height_estimate_m, height_sigma_m)`. Unvalidated cameras and seated or truncated detections are skipped silently without affecting tracking.
+
+## 7. Face identification
 
 Face identification sends one crop per person to `POST /api/v1/identify` on the person-identification-service, which returns the faces it finds with an identity, a recognition state, and a raw similarity score.
 
@@ -104,17 +110,17 @@ With `face_templates.mode` on, the stage also asks for each face's embedding and
 
 Face identification can be disabled per camera (for example, top-down views where faces are never visible). Each `FaceAnchor` carries `person_id`, `match_score` (raw cosine similarity for recognized and candidate faces, the face detection score for an unrecognized marker), `det_score`, `quality` (the evidence-path weight: 1.0 for a face seen in this frame, lower for propagated or external evidence), `face_quality` (the person-ID service's image-quality score, null from an older service), `calibrated_confidence` (null unless calibration is ready), `detection_id`, and `camera_id`. The identity resolver weights face evidence 3x over ReID. Every face result is also recorded for measurement; see [Measuring your cameras](/development/face-confidence-calibration#measuring-your-cameras).
 
-## 7. World tracking
+## 8. World tracking
 
-`WorldTrackingStage` builds `WorldObservation` objects for each detection (using a synthetic virtual-tile floor point when a camera is uncalibrated), then calls `WorldTracker.step`. The tracker runs 10 numbered steps:
+`WorldTrackingStage` builds `WorldObservation` objects for each detection (carrying standing height and uncertainty from stage 6 on validated cameras, or a synthetic virtual-tile floor point when a camera is uncalibrated), then calls `WorldTracker.step`. The tracker runs 10 numbered steps:
 
 ```mermaid
 flowchart TD
   s1["1. Load open PHs\nKalman predict each to now"] --> s2
   s2["2. dedup_observations()\ncollapse cross-camera duplicates\nrepresentatives + cluster_map"] --> s3
   s3["3. associate()\nHungarian over cost matrix with gating"] --> s4
-  s4["4. Update matched PHs\nKalman update, gallery-mean EMA, height EMA,\nmean_quality EMA, expand active_cameras"] --> s5
-  s5["5. Spawn PHs for unmatched obs\ngated by room polygon if configured\ninit Kalman; seed identity from face anchor"] --> s6
+  s4["4. Update matched PHs\nKalman update, gallery-mean EMA, inverse-variance height fusion,\nmean_quality EMA, expand active_cameras"] --> s5
+  s5["5. Spawn PHs for unmatched obs\ngated by room polygon if configured\ninit Kalman; born Unknown"] --> s6
   s6["6. Emit PHContinuationCandidate\nfor each spawn near a recently closed PH"] --> s7
   s7["7. Close unmatched PHs past ph_close_grace_s\nelse keep open with predicted state"] --> s8
   s8["8. Persist all updated PHs"] --> s9
@@ -124,7 +130,7 @@ flowchart TD
 
 **Steps 1-3: predict and associate.** All open PHs are loaded and their Kalman states predicted forward to the current timestamp. `dedup_observations()` then collapses detections from different calibrated cameras that are within `dedup_max_distance_m` (default: 0.6 m) and not in identity conflict into single representative observations. The Hungarian algorithm solves the assignment over a cost matrix (geometric + appearance + height) with a Mahalanobis gate (`gate_chi2 = 9.21`, chi-squared 99%, 2 dof) and an identity-conflict hard gate.
 
-**Steps 4-5: update and spawn.** Matched PHs receive a Kalman update, gallery-mean EMA (`alpha = 1 / min(count+1, 100)`), height EMA (`alpha = 0.1`), mean-quality EMA (`0.1 * obs.quality + 0.9 * prev`), and accumulate all contributing camera IDs. Unmatched observations spawn new PHs (gated by room polygon when configured). A new PH is born Unknown: the identity resolver, which runs later in the same step with that round's faces, is the only writer of identity, so a first face is weighed like any other.
+**Steps 4-5: update and spawn.** Matched PHs receive a Kalman update, gallery-mean EMA (`alpha = 1 / min(count+1, 100)`), inverse-variance standing height fusion with a 3-sigma innovation gate (rejecting sitting outliers and flooring `height_sigma_m` at 0.02 m), mean-quality EMA (`0.1 * obs.quality + 0.9 * prev`), and accumulate all contributing camera IDs. Accepted standing height samples are also appended to `ph_height_samples` (14-day retention) so `HeightProfileLearner` can learn per-resident standing height profiles across cameras and days. Unmatched observations spawn new PHs (gated by room polygon when configured). A new PH is born Unknown: the identity resolver, which runs later in the same step with that round's faces, is the only writer of identity, so a first face is weighed like any other.
 
 **Steps 6-7: continuations and grace.** For each spawn, recently closed PHs within `inferred_handoff_max_s` (600 s) and `inferred_handoff_max_distance_m` (5.0 m) emit a `PHContinuationCandidate`. Unmatched PHs past `ph_close_grace_s` (15.0 s) are closed; those within the grace window coast: their stored state stays at their last observation and only the published snapshot carries the in-round prediction.
 
@@ -186,21 +192,21 @@ A calibrated direct face match at or above `arcface_authority_calibrated_confide
 
 **Governed ReID seeding.** Only face-confirmed detections whose direct recognized face matches the PH's committed identity with calibrated confidence at or above `arcface_authority_calibrated_confidence` (0.80) can mint governed `reid_gallery` entries in stage 16 (`ReIDCandidateStage`). ReID-only commits and operator PH corrections never write to the ReID gallery, preventing body-appearance feedback loops.
 
-## 8. Detection backfill
+## 9. Detection backfill
 
 `DetectionBackfillStage` enriches each detection in `ctx.domain_detections` with the `ph_id` assigned by the world tracker. This ensures downstream stages (posture, trajectory, publish) all read the same identity from the detection object instead of maintaining separate maps.
 
-## 9. PH lifecycle (ClosePHStage)
+## 10. PH lifecycle (ClosePHStage)
 
 `ClosePHStage` closes any PersonHypothesis that was active in the previous frame but no longer has an active detection in this frame. It writes the final trajectory and dwell segments for closed PHs so that dwell intervals are closed promptly, without waiting for the next detection.
 
-## 10. Posture classification
+## 11. Posture classification
 
 `PostureStage` produces soft posture evidence for each detection instead of a single hard label. The 17 COCO keypoints drive geometric scorers (torso angle, knee bend, head-spine alignment, shin-drop geometry) into a `PostureScores` record with continuous evidence for `lying`, `sitting`, and `standing_walking`, plus a keypoint-confidence value. Soft scoring lets several weak cues accumulate instead of firing on one threshold. In a bedroom, a lying prior is added when the body is occluded.
 
-Fusion and the final label happen in stage 11. `GlobalPostureTracker` keeps each camera's latest scores, fuses them quality-weighted across the person's active cameras, and applies hysteresis before committing a posture. Crops without pose output (smaller than 16x32 px or from cameras with pose disabled) contribute `unknown`. See [Handling noisy readings](./tracking-concepts.md#handling-noisy-readings) for the full position and posture fusion model.
+Fusion and the final label happen in stage 12. `GlobalPostureTracker` keeps each camera's latest scores, fuses them quality-weighted across the person's active cameras, and applies hysteresis before committing a posture. Crops without pose output (smaller than 16x32 px or from cameras with pose disabled) contribute `unknown`. See [Handling noisy readings](./tracking-concepts.md#handling-noisy-readings) for the full position and posture fusion model.
 
-## 11. Trajectory writing
+## 12. Trajectory writing
 
 `TrajectoryStage` records two types of data in TimescaleDB hypertables:
 
@@ -209,7 +215,7 @@ Fusion and the final label happen in stage 11. `GlobalPostureTracker` keeps each
 
 When homography is unavailable, uncalibrated `(0, 0)` floor points are written.
 
-## 12. Keyframe sampling
+## 13. Keyframe sampling
 
 `KeyframeStage` saves tagged JPEG keyframes to the `tagged_keyframes` table and publishes `SceneSample` protos to the `scene.samples` Redis stream. Two triggers:
 
@@ -218,17 +224,17 @@ When homography is unavailable, uncalibrated `(0, 0)` floor points are written.
 
 Keyframes carry annotations (ph_id, camera_id, identity_id, bounding box) used by the CC-side `SceneSampleSubscriber` for downstream scene analysis.
 
-## 13. Identity revisions
+## 14. Identity revisions
 
 When the committed identity changes (new assignment, reassignment, or demotion to UNKNOWN), an `IdentityRevision` proto is published to `tracking.revisions`. The revision carries the full posterior distribution as `IdentityCandidate` entries, the previous and new identity IDs, and evidence metadata. A rate limiter caps revisions at 3 per PH per minute.
 
 When the identity committer is enabled, the `PostgresIdentityRewriter` performs retroactive cross-table rewriting: trajectory points, room dwells, and dementia signals for the affected PH are relabeled from the old identity to the new identity, covering the window from `applies_from` to `applies_to`.
 
-## 14. Trail management
+## 15. Trail management
 
 `TrailsStage` maintains an in-memory ring buffer of foot-point trail positions per PH (default: last 30 positions). These trails are published in the `TrackingEvent` proto and consumed by the CC live view to render person movement paths on the floor plan.
 
-## 15. Provenance persistence
+## 16. Provenance persistence
 
 `ProvenancePersistStage` durably persists every identity decision that revises a PH's previous
 identity (`revises_previous=True`), unconditionally. It runs immediately before the per-camera
@@ -237,7 +243,7 @@ caregiver-facing read model joins against. It must never be dropped just because
 that carried it was rate-limited for live-view publishing. The stage is a no-op when no
 `identity_provenance_repo` is configured.
 
-## 16. ReID candidate creation
+## 17. ReID candidate creation
 
 `ReIDCandidateStage` is the only pipeline path that writes to the ReID gallery. For each
 committed, face-matched detection it evaluates a governed eligibility gate
@@ -253,7 +259,7 @@ throttle because candidate creation is audit-visible governance data. The per-(i
 orientation) cap on gallery growth counts `pending_review`, `auto_verified`, and
 `operator_verified` rows together.
 
-## 17. Event publishing
+## 18. Event publishing
 
 `PublishStage` assembles and publishes the final `TrackingEvent` proto to `tracking.events`. It carries per-frame detections enriched with `ph_id`, the posterior's top identity per PH (published even before formal commit, so the live view sees the current best guess immediately), pose keypoints, per-PH foot-point trails, and posterior evidence (top probability, top-2 probability, face anchor flag).
 

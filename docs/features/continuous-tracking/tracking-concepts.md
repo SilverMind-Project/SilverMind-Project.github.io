@@ -159,7 +159,7 @@ Key PH fields:
 | `observation_count` | Total observations folded in; gates publication via `min_observations_to_publish` |
 | `current_identity_id`, `current_identity_committed_at` | The committed identity and when it was committed |
 | `gallery_mean` | Online L2-normalised EMA of SOLIDER embeddings; `alpha = 1 / min(count+1, 100)` |
-| `height_estimate_m` | EMA of height estimates (`alpha = 0.1`) |
+| `height_estimate_m`, `height_sigma_m` | Running standing height and 1-sigma uncertainty (metres) from single-view metrology, updated by inverse-variance fusion with a 3-sigma innovation gate |
 | `mean_quality` | EMA of per-observation `CropQuality` scores: `0.1 * obs.quality + 0.9 * prev`. Travels to CC as the `quality` field on `PersonLocationEnvelope`. |
 
 **Uncalibrated cameras.** When a camera has no homography, `SpatialProjectionStage` yields `FloorPoint(calibrated=False)`. `WorldTrackingStage._synthetic_floor_point` maps the bbox centre into a 4 m virtual room offset into a per-camera 200 m tile, still flagged `calibrated=False`. Because synthetic floor points jump as a person walks, the association gate is widened for uncalibrated observations (`uncalibrated_gate_chi2 = 21.0`) and appearance is weighted over geometry, so a turning or walking person is not dropped and respawned. Floor-distance dedup still skips uncalibrated observations, but appearance dedup within a declared overlap group does not. For uncalibrated home cameras, identity crosses cameras through the shared ReID gallery, recognized-face propagation, PH continuation, group-appearance dedup, and cross-camera revival.
@@ -174,7 +174,7 @@ When two cameras see the same person simultaneously (the canonical case: a hallw
 
 Before the Hungarian assignment runs, all detections with calibrated floor positions are grouped by floor proximity and identity compatibility. Each group elects one representative detection. Only representatives enter the `associate()` call, preserving the 1-to-1 contract of the Hungarian solver. After association, the cluster membership map propagates all source camera IDs back to the winning PH.
 
-See [Frame Pipeline stage 7](./frame-pipeline.md#7-world-tracking) for the configuration knobs and the integration proof.
+See [Frame Pipeline stage 8](./frame-pipeline.md#8-world-tracking) for the configuration knobs and the integration proof.
 
 ## Handling noisy readings
 
@@ -254,7 +254,7 @@ flowchart TD
   prior["Temporal prior\nprior_weight=0.6 on current identity\n+ uniform on others + unknown_mass=0.05"] --> comb
   face["Face likelihood\nstrongest anchor; calibrated_confidence (or _p_face\nunder legacy/shadow); uncalibrated capped at 0.55\nin calibrated policy; propagated anchors x0.5"] --> comb
   reid["ReID likelihood\nVOTING_STATES gallery search (<12h)\nlogistic(sim); identified-entry + coherence boosts"] --> comb
-  height["Height likelihood\nCurrently uniform (1.0)\npending single-view height metrology"] --> comb
+  height["Height likelihood (resolver.height_mode)\nshadow by default; when enabled, Gaussian power\n(weight=0.15) vs identity_height_profiles (corroborating only)"] --> comb
   comb["_combine: posterior proportional to prior x face^(x3 if face supports id)\nx reid x height\n(empty source = uniform)"] --> commit
   commit["_commit\ncommit if top_prob >= commit_prob AND margin >= commit_margin\nAND (sensory evidence present OR within maintenance window)"]
   commit -->|commit| set["ph_repo.update_identity(ph_id, identity_id, committed_at)"]
