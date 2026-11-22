@@ -701,8 +701,7 @@ Generate end-of-day activity reports for one or all household members. Aggregate
 
 - `person_ids`: list of person IDs to generate reports for. Empty list means all active household members.
 - `report_date_offset_days`: days offset from today for the report date (0 = today, -1 = yesterday).
-- `generate_summary_text`: when `true`, generates an LLM prose summary of the day.
-- `summary_model_id`: LLM model ID to use for summary generation (default `gemma4_26b`).
+- `generate_summary_text`: reserved for an LLM prose summary of the day; prose summaries are not generated yet, so `summary_text` stays empty.
 - `notify_on_complete`: when `true`, sends a notification when reports are ready.
 - `output_key`: `pipeline_data` key to write the report results under (default `daily_reports`).
 
