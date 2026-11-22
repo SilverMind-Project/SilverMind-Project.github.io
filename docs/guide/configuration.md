@@ -221,20 +221,21 @@ Authentication uses a role-based model with three key resolution methods.
 
 ```yaml
 api_keys:
-  - key: ${CC_ADMIN_API_KEY}
-    name: admin
-    permissions:
-      - admin
+  - key: "${CC_ADMIN_API_KEY}"
+    name: "Admin"
+    roles:
+      - "admin"
 
-  - key: ${CC_CAREGIVER_API_KEY}
-    name: caregiver
-    permissions:
-      - caregiver
+  - key: "${CC_CAREGIVER_API_KEY}"
+    name: "Caregiver"
+    roles:
+      - "caregiver"
 
-  - key: ${CC_MCP_API_KEY}
-    name: mcp_agent
-    permissions:
-      - mcp_readonly
+  - key: "${CC_MCP_API_KEY}"
+    name: "OpenClaw Agent"
+    roles:
+      - "mcp_readonly"
+      - "mcp_rules_import"
 ```
 
 ### Device keys
@@ -243,49 +244,57 @@ api_keys:
 
 ```yaml
 device_keys:
-  RCAM0001:
-    sensor_id: kitchen_camera
-    device_type: recamera
-  RTRM0001:
-    sensor_id: hallway_display
-    device_type: reterminal
+  - key: "RCAM0001"
+    name: "Kitchen reCamera"
+    device_type: "recamera"
+    sensor_id: "recamera_kitchen1"
+    roles:
+      - "device_recamera"
+  - key: "RTRM0001"
+    name: "Living Room reTerminal"
+    device_type: "reterminal"
+    sensor_id: "reterminal_living"
+    roles:
+      - "device_reterminal"
 ```
 
-### Permission map
+### Roles and D4 permission tokens
 
-Roles under `permission_map` list endpoint patterns (`fnmatch`) and named tokens. An excerpt of
-the shipped file:
+Authorization uses named D4 `<resource>:<action>` tokens enforced by pure role membership. Every
+HTTP route, WebSocket endpoint, and MCP tool declares exactly one D4 token; roles under `roles:`
+are token sets (URL-glob patterns are not used). An excerpt of the shipped file:
 
 ```yaml
-permission_map:
+roles:
   admin:
-    - "*"                                    # Full access, every token included
+    - "*"                                    # Full access plus explicit admin-only tokens
 
   caregiver:
-    - "GET /api/v1/*"                        # Read everything
-    - "POST /api/v1/persons/*/enroll"        # Enroll faces
+    - "activities:read"
+    - "rooms:read"
+    - "persons.enrollment:write"
 
   mcp_readonly:
-    - "mcp.tools:read"                       # Reach /mcp and call its read tools
-    - "GET /api/v1/rooms*"                   # ...plus selected REST reads
+    - "mcp.tools:read"                       # Reach /mcp and call non-twin read tools
+    - "rooms:read"                           # ...plus read-only router-twin tokens
 
-  rules:write_via_mcp:
-    - "POST /api/v1/rules/import"
-    - "rules:import"                         # The MCP import_rule_bundle tool
+  mcp_rules_import:
+    - "rules:import"                         # POST /api/v1/rules/import + MCP import_rule_bundle
 ```
 
-MCP tools that change state each require their own token (`rules:execute`,
-`cts.signals:acknowledge`, `cts.identity:propose`, `rules:import`), so a key holding only
-`mcp_readonly` can read through MCP but cannot change anything. See
-[MCP integration](/features/mcp-integration#authentication).
+MCP read tools share the exact D4 token of their HTTP router twin, while MCP tools that change
+state each require their own token (`rules:execute`, `cts.signals:acknowledge`,
+`cts.identity:propose`, `rules:import`), so a key holding only `mcp_readonly` can read through
+MCP but cannot change anything. See [MCP integration](/features/mcp-integration#authentication).
 
-Wearable registry and RF node routes use three strict permission tokens:
+Wearable registry and RF node routes use four named D4 permission tokens:
 
 | Token | Granted to | Purpose |
 | --- | --- | --- |
-| `wearables:read` | `caregiver`, `operator`, `admin` | Read devices, binding history, assignments, RF nodes, and run tape-distance survey checks |
-| `wearables:manage` | `operator`, `admin` | Register/update devices, bind/unbind tags with consent, and place/move/delete RF nodes |
-| `wearables:site_config` | `cts_ingress`, `admin` | Read `GET /api/v1/wearables/site-config` for CTS config sync and RF ingress adapters (denied to `caregiver`) |
+| `wearables:read` | `caregiver`, `caregiver_admin`, `mcp_readonly`, `operator`, `admin` | Read devices, binding history, assignments, RF nodes, and run tape-distance survey checks |
+| `wearables:write` | `operator`, `admin` | Register/update devices, bind/unbind tags with consent, and place/move/delete RF nodes |
+| `wearables.teaching:write` | `caregiver_admin`, `operator`, `admin` | Revoke wearable teaching associations and resume teaching holds |
+| `wearables.site_config:read` | `cts_ingress`, `operator`, `admin` | Read `GET /api/v1/wearables/site-config` for CTS config sync and RF ingress adapters (denied to `caregiver`) |
 
 ### Key resolution
 

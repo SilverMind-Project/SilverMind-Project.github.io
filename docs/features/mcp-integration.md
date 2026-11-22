@@ -118,26 +118,28 @@ MCP tools require authentication via the API key. The key is configured in `conf
 
 ```yaml
 api_keys:
-  - key: ${CC_MCP_API_KEY}
-    name: mcp_agent
-    permissions:
-      - mcp_readonly
+  - key: "${CC_MCP_API_KEY}"
+    name: "OpenClaw Agent"
+    roles:
+      - "mcp_readonly"
+      - "mcp_rules_import"
 ```
 
 Pass the key in the `X-API-Key` header or an `Authorization: Bearer <key>` header. A key in the query string is rejected.
 
-Every tool is listed to every authenticated agent, and each call is authorized against the token the tool requires:
+Reaching `/mcp` requires `mcp.tools:read`. Every tool is listed to every authenticated agent, and each call is authorized against the D4 `<resource>:<action>` token the tool requires:
 
 | Tools | Token | Granted to |
 | --- | --- | --- |
-| All read tools | `mcp.tools:read` | `mcp_readonly`, `admin` |
-| `import_rule_bundle` | `rules:import` | `rules:write_via_mcp` (the shipped agent key), `admin` |
+| Read tools with an HTTP router twin (e.g., `get_rooms`, `get_wearable_assignments`, `get_gait_trend`) | Router twin's D4 token (e.g., `rooms:read`, `wearables:read`, `cts.gait.trend:read`) | `mcp_readonly`, `admin` (and caregiver roles holding that token) |
+| Read tools with no HTTP twin (weather, local clock, semantic memory, calibration counts summary) | `mcp.tools:read` | `mcp_readonly`, `admin` |
+| `import_rule_bundle` | `rules:import` | `mcp_rules_import` (the shipped agent key), `admin` |
 | `trigger_rule` | `rules:execute` | `admin` |
 | `acknowledge_dementia_signal` | `cts.signals:acknowledge` | `admin` |
 | `propose_identity_correction` | `cts.identity:propose` | `admin` |
 | Resident session tools (quiz answers, guided steps, preferences, `submit_user_response`) | `resident_session:act` | no API key: these are for the built-in voice companion only |
 
-So the `mcp_readonly` key can read anything the read tools expose but cannot trigger a rule, acknowledge a signal, or act for the resident. To let an agent key call a state-changing tool, add that tool's token to the key's role in `config/auth.yaml`. A denied call returns HTTP 403 with a JSON-RPC error and never runs the tool; a batch containing one denied call is rejected whole.
+So the `mcp_readonly` role can read anything the read tools expose but cannot trigger a rule, acknowledge a signal, or act for the resident. To let an agent key call a state-changing tool, add that tool's D4 token to the key's role under `roles:` in `config/auth.yaml`. A denied call returns HTTP 403 with a JSON-RPC error and never runs the tool; a batch containing one denied call is rejected whole.
 
 ## Endpoint
 
@@ -247,7 +249,7 @@ The MCP server runs on the same backend instance, so no additional deployment is
 
 ## Adding new tools
 
-1. Add a `@_register(token=...)` decorated async function in `backend/mcp/server.py`. Type hints on parameters auto-generate JSON schemas. The token is required: `TOOLS_READ` for a read tool, or a new `<resource>:<action>` token (defined in `config/auth.yaml`) for a tool that changes state.
+1. Add a `@_register(token=...)` decorated async function in `backend/mcp/server.py`. Type hints on parameters auto-generate JSON schemas. The token is required: use the HTTP router twin's D4 `<resource>:<action>` token for a read tool with a REST twin, `TOOLS_READ` (`mcp.tools:read`) for a read tool with no REST twin, or a dedicated D4 token (listed under `roles:` in `config/auth.yaml`) for a tool that changes state.
 2. If the tool should be available in voice conversations, add it to `mcp.gemini_tools` in `config/settings.yaml`.
 
 See the [development guide](/development/extending-pipeline) for more details.
