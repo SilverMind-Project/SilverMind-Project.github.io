@@ -353,10 +353,10 @@ duplicates the review service; the exemption is asserted in the router tests.
 
 | Resource | Representative endpoints |
 | --- | --- |
-| Knowledge documents | `POST /knowledge`, `GET /knowledge`, `GET /knowledge/{doc_id}`, `PATCH /knowledge/{doc_id}`, approval, archive, restore, delete, re-embed |
-| Knowledge images | `POST /knowledge/{doc_id}/images`, `PATCH /knowledge/{doc_id}/images/{img_id}`, `DELETE /knowledge/{doc_id}/images/{img_id}` |
+| Knowledge documents | `POST /knowledge/documents`, `GET /knowledge/documents`, `GET /knowledge/documents/{doc_id}`, `PATCH /knowledge/documents/{doc_id}`, approval, archive, restore, delete, re-embed (keeps an approved document approved) |
+| Knowledge images | `POST /knowledge/documents/{doc_id}/images`, `PATCH /knowledge/documents/{doc_id}/images/{img_id}`, `DELETE /knowledge/documents/{doc_id}/images/{img_id}` |
 | Info cards | CRUD, approve, archive, restore, suggest, and slot update endpoints under `/info-cards` |
-| Interactions | `GET /knowledge-interactions/queries`, `/quiz-sessions`, and `/info-card-deliveries` |
+| Interactions | `GET /knowledge-interactions/queries`, `/quiz-sessions`, and `/info-card-deliveries` return paginated `{items, total}`; `date_from`/`date_to` are household calendar days |
 
 ## Webhooks
 

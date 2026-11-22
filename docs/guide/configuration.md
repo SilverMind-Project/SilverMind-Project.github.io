@@ -101,7 +101,7 @@ llm:
       timeout: 120
       guided_decoding: true     # vLLM: sends guided_json in payload
 
-    - id: gemma4_26b
+    - id: gemma-4-26B-A4B-it
       name: "Gemma 4 26B (General)"
       api_type: openai
       base_url: "http://192.168.1.31:8100"   # llama.cpp llama-server
@@ -423,9 +423,9 @@ knowledge:
   chunk_overlap_tokens: 60
   retrieval_top_k: 8
   min_similarity: 0.55
-  answer_model: "gemma4_26b"
-  paraphrase_model: "gemma4_26b"
-  quiz_generation_model: "gemma4_26b"
+  answer_model: "gemma-4-26B-A4B-it"
+  paraphrase_model: "gemma-4-26B-A4B-it"
+  quiz_generation_model: "gemma-4-26B-A4B-it"
   max_upload_bytes: 15728640
   max_pixels: 40000000
   allowed_mime_types: ["image/jpeg", "image/png", "image/webp", "image/heic"]

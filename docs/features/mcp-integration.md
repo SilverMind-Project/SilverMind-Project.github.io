@@ -1,6 +1,6 @@
 # MCP integration
 
-A built-in [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, exposes <!-- count:mcp_tools -->65 tools for AI agent integration: agents can discover system state, query sensor data, inspect enrollment, face calibration progress, wearable assignments, and e-ink status, check person locations, review activity timelines and daily reports, explore semantic memory, read the unified signals feed, acknowledge behavioral signals with feedback, drive and analyze guided routine sessions, propose identity corrections, trigger rule executions, author new rules, and inspect plugin metadata. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
+A built-in [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server, built on the official MCP Python SDK, exposes <!-- count:mcp_tools -->68 tools for AI agent integration: agents can discover system state, query sensor data, inspect enrollment, face calibration progress, wearable assignments, and e-ink status, check person locations, review activity timelines and daily reports, explore semantic memory, read the unified signals feed, acknowledge behavioral signals with feedback, drive and analyze guided routine sessions, propose identity corrections, trigger rule executions, author new rules, and inspect plugin metadata. The same tools are shared with the Gemini Live voice companion for function calling during conversations.
 
 Every agent, whether Claude Desktop, a custom orchestrator, or the internal voice companion, uses this one authenticated tool surface, so there is one integration to audit. Tools and the UI read the same service layer and stay in step.
 
@@ -107,6 +107,9 @@ A `GeminiToolAdapter` reads the same tool definitions and converts them to Gemin
 | `get_current_quiz_question` | Current question in an active quiz session              | `session_id` |
 | `submit_quiz_answer`        | Record an answer to a quiz question                     | `session_id`, `answer` |
 | `complete_quiz_session`     | Close a quiz session                                    | `session_id` |
+| `list_senior_knowledge_queries` | Caregiver review of questions the resident asked the knowledge base | `senior_id`, `answered_via`, `limit`, `offset` (all optional) |
+| `list_quiz_sessions_history` | Caregiver review of past quiz sessions                | `quiz_id`, `senior_id`, `status`, `limit`, `offset` (all optional) |
+| `get_quiz_tag_analytics`    | Per-tag document count, quiz count, and average quiz score | (none) |
 | `list_rules`                | List all rules with summary info                        | (none) |
 | `list_plugin_metadata`      | Metadata for all registered steps, filters, and channels | `kind` (optional: `"step"`, `"filter"`, `"channel"`) |
 | `get_rule_bundle`           | Export a rule as a portable bundle                      | `rule_id` |

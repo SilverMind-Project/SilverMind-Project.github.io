@@ -611,9 +611,9 @@ knowledge:
   chunk_overlap_tokens: 60
   retrieval_top_k: 8
   min_similarity: 0.55
-  answer_model: "gemma4_26b"
-  paraphrase_model: "gemma4_26b"
-  quiz_generation_model: "gemma4_26b"
+  answer_model: "gemma-4-26B-A4B-it"
+  paraphrase_model: "gemma-4-26B-A4B-it"
+  quiz_generation_model: "gemma-4-26B-A4B-it"
   max_upload_bytes: 15728640
   max_pixels: 40000000
   allowed_mime_types: ["image/jpeg", "image/png", "image/webp", "image/heic"]
@@ -626,9 +626,9 @@ knowledge:
 | `knowledge.chunk_overlap_tokens` | 60 | Overlap between consecutive chunks |
 | `knowledge.retrieval_top_k` | 8 | Number of chunks retrieved per query |
 | `knowledge.min_similarity` | 0.55 | Minimum cosine similarity for RAG answer |
-| `knowledge.answer_model` | `gemma4_26b` | LLM used for answer synthesis |
-| `knowledge.paraphrase_model` | `gemma4_26b` | LLM used for info card paraphrase |
-| `knowledge.quiz_generation_model` | `gemma4_26b` | LLM used for quiz generation |
+| `knowledge.answer_model` | `gemma-4-26B-A4B-it` | LLM used for answer synthesis |
+| `knowledge.paraphrase_model` | `gemma-4-26B-A4B-it` | LLM used for info card paraphrase |
+| `knowledge.quiz_generation_model` | `gemma-4-26B-A4B-it` | LLM used for quiz generation |
 | `knowledge.max_upload_bytes` | 15728640 | Max image upload size (15 MB) |
 | `knowledge.max_pixels` | 40000000 | Max image pixel dimensions |
 | `knowledge.allowed_mime_types` | [...] | Allowed image upload MIME types |

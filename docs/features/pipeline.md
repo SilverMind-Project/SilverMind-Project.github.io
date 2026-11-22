@@ -530,7 +530,7 @@ config:
 ```yaml
 step_type: llm_call
 config:
-  model_id: gemma4_26b
+  model_id: gemma-4-26B-A4B-it
   prompt: "Based on the analysis, should the caregiver be alerted?"
   include_context: [vision_response, person_detections]
   response_format: json_schema
@@ -555,7 +555,7 @@ config:
 ```yaml
 step_type: llm_call
 config:
-  model_id: gemma4_26b
+  model_id: gemma-4-26B-A4B-it
   special_instructions: "Translate using informal Tamil as spoken in Chennai (Tanglish):"
   prompt: "Translate the following to Tamil:\n\n{{logic_response.user_notification}}"
   response_format: text
@@ -812,7 +812,7 @@ A rule with `trigger_type: occupancy_duration` fires when the bathroom presence 
 # 1. Translate the check-in message to Tamil
 step_type: llm_call
 config:
-  model_id: gemma4_26b
+  model_id: gemma-4-26B-A4B-it
   special_instructions: "Translate using informal Tamil as spoken in Chennai:"
   prompt: "Are you okay? Do you need help?"
   output_key: translation
