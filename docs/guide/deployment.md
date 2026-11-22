@@ -55,9 +55,10 @@ Requires the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud
 | `rtsp-ingress` | `cts-rtsp-ingress` | 8090 | Go camera ingest and motion gate |
 | `tracking-orchestrator` | `cts-orchestrator` | 8500 | Python tracking, identity, and signal pipeline |
 | `triton` | `cts-triton` | 8700-8702 | GPU model inference server |
-| `rf-ingress` | `cts-rf-ingress` | 8095 | Opt-in RF localization ingress (`--profile wearables`); polls CC site config and publishes `wearable.fixes` and `wearable.capabilities` |
+| `mqtt` | `cts-mqtt` | 1883 | Opt-in LAN-only Eclipse Mosquitto broker (`--profile wearables`); authenticated with `MQTT_USERNAME`/`MQTT_PASSWORD`, disk persistence disabled |
+| `rf-ingress` | `cts-rf-ingress` | 8095 | Opt-in RF localization ingress (`--profile wearables`); subscribes to `mqtt`, polls CC site config, and publishes `wearable.fixes` and `wearable.capabilities` |
 
-Start `rf-ingress` only when wearables or simulator playback are configured (`docker compose --profile wearables up -d`). It requires `REDIS_URL`, `CC_API_URL`, and `CC_INGRESS_API_KEY` (the shared ingress key with the `wearables:site_config` permission).
+Start `mqtt` and `rf-ingress` only when wearables or simulator playback are configured (`docker compose --profile wearables up -d`). They require `REDIS_URL`, `CC_API_URL`, `CC_INGRESS_API_KEY` (the shared ingress key with the `wearables:site_config` permission), `MQTT_USERNAME`, and `MQTT_PASSWORD` (the same credentials configured on each room receiver). Set `CTS_RF_INGRESS_URL=http://cts-rf-ingress:8095` in Cognitive Companion's `.env` so the Wearables page and Identity Setup readiness step display live receiver last-heard times, heard tags, and lowest beacon battery.
 
 ### Environment variables
 

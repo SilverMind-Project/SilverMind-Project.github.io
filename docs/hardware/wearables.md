@@ -19,20 +19,37 @@ Because every fix reports its own 2x2 floor covariance (`cov_xx_m2`, `cov_xy_m2`
 
 `continuous-tracking/rf-ingress/` (port `8095`, opt-in Docker Compose profile `wearables`) converts RF adapter reports into validated `TagFix` messages on `wearable.fixes` and 60-second `AdapterCapability` heartbeats on `wearable.capabilities`.
 
-- **Adapter boundary and conformance kit:** every hardware source implements `RangeAdapter`, `PositionAdapter`, or `RoomAdapter` behind `AdapterRegistry`. The core ships with a deterministic seeded `simulator` adapter (covering UWB, BLE Channel Sounding, BLE RSSI with body-shadow steps, burst-batched delivery, native-frame positions, room reports, and JSONL replay), the `device_ranging_mqtt` adapter (`payload_profile: device_ranging_v1`, subscribing to `rf/devices/+/ranges` for micro-batched wearable range epochs), and an adapter conformance suite under `rf-ingress/tests/conformance/` that every hardware adapter must pass unchanged.
-- **Per-epoch multilateration with covariance:** `EpochBuilder` groups ranges per tag over a 0.25 s window or adapter `epoch_seq` and drops open epochs whenever Cognitive Companion's site-config `version` changes. `MultilaterationSolver` weights each range by its reported `variance_m2`, solves 3D when four or more anchors have vertical spread (otherwise 2D at an assumed 1.0 m wrist height with height uncertainty propagated into the covariance), rejects single-anchor NLOS outliers on four or more nodes, and ignores wrist-local azimuth so solves remain invariant to wrist rotation. Epochs with fewer than three nodes emit a `room` fix from the nearest RF node's configured room.
+- **Adapter boundary and conformance kit:** every hardware source implements `RangeAdapter`, `PositionAdapter`, or `RoomAdapter` behind `AdapterRegistry`. The core ships with a deterministic seeded `simulator` adapter (covering UWB, BLE Channel Sounding, BLE RSSI with body-shadow steps, burst-batched delivery, native-frame positions, room reports, and JSONL replay), the `ble_scanner_mqtt` adapter (`payload_profile: espresense_node_v1`, subscribing to `espresense/devices/+/+` for fixed BLE room receivers with per-epoch 1.0 s median RSSI aggregation, calibrated log-distance range/variance, and RSSI-variability motion inference), the `device_ranging_mqtt` adapter (`payload_profile: device_ranging_v1`, subscribing to `rf/devices/+/ranges` for micro-batched wearable range epochs), and an adapter conformance suite under `rf-ingress/tests/conformance/` that every hardware adapter must pass unchanged.
+- **Per-epoch multilateration with covariance:** `EpochBuilder` groups ranges per tag over a 0.25 s window or adapter `epoch_seq` (the BLE adapter emits explicit 1.0 s `epoch_seq` buckets) and drops open epochs whenever Cognitive Companion's site-config `version` changes. `MultilaterationSolver` weights each range by its reported `variance_m2`, solves 3D when four or more anchors have vertical spread (otherwise 2D at an assumed 1.0 m wrist height with height uncertainty propagated into the covariance), rejects single-anchor NLOS outliers on four or more nodes, and ignores wrist-local azimuth so solves remain invariant to wrist rotation. Epochs with fewer than three nodes emit a `room` fix from the nearest RF node's configured room.
 - **Burst clock alignment and registration gating:** `BurstClockOffsetTracker` estimates per-tag clock offset from minimum transport delay (`arrival - sent_at`) so micro-batched wireless bursts do not look like multi-second clock skew. Fixes are published only for registered, active devices with a binding covering `measured_at`, and `wearable.fixes` trims raw fixes to 72 hours with `XADD ... MINID`.
-- **Health, metrics, and replay:** `GET /health` reports adapter status, site-config version and age, publisher state, and per-node last-seen ages; `GET /metrics` exposes Prometheus counters, solve duration, fix sigma, and clock offset gauges. `python -m rf_ingress.replay` records raw adapter reports (capped at 60 minutes) and replays them through the simulator.
+- **Health, metrics, and replay:** `GET /health` reports adapter status, site-config version and age, publisher state, per-node last-seen ages (`node_last_seen_age_s`), per-tag last-seen ages (`tag_last_seen_age_s`), and reported tag battery fractions (`tag_battery_fraction`); `GET /metrics` exposes Prometheus counters, solve duration, fix sigma, and clock offset gauges. `python -m rf_ingress.replay` records raw adapter reports (capped at 60 minutes) and replays them through the simulator.
 
 ## Recommended hardware path
 
 ### Tier 1: room-level BLE beacons and fixed ESP32 receivers (start here)
 
-Start with low-cost, long-battery BLE tags and wall-plugged room receivers before adding higher-precision radios:
+Start with coin-cell BLE beacons that require no daily charging and wall-plugged ESP32 room receivers connected to the local Eclipse Mosquitto broker (`docker compose --profile wearables up -d`):
 
-- **Tags:** small BLE beacon wristbands, clips, or pendants (such as Minew, HolyIOT, or Blue Charm iBeacon / Eddystone beacons) transmitting a static non-rotating UUID/major/minor or local beacon ID. Typical battery life is 1 to 2 years on a coin cell, with no daily charging burden for a resident.
-- **Receivers:** wall-powered ESP32 or ESP32-C3 room nodes running ESPHome `bluetooth_proxy` or MQTT RSSI scanning on the home LAN (roughly one receiver per covered room, or two in large open rooms).
-- **What it gives you:** room-level presence and camera-track corroboration across hallways, doorways, and living spaces where ceiling cameras see backs or profiles.
+#### Selection rules (required)
+
+- **Beacons:** static non-rotating identifier (iBeacon UUID, major, and minor), advertising interval configurable to 1.0 s or faster (start at 500 ms, 0 dBm), IP67 water resistance for daily wear and showers, replaceable coin cell (or low-cost replacement), and preferably an onboard accelerometer for motion detection.
+- **Receivers:** USB-powered ESP32 boards (ESP32, ESP32-C3, ESP32-C6, or ESP32-S3) running open-source ESPresense firmware publishing per-node reports over LAN MQTT with authentication enabled. Home Assistant, the ESPresense companion, and Bermuda are not required.
+
+#### Example parts
+
+| Role | Example models | Power | Notes |
+| --- | --- | --- | --- |
+| Primary senior wristband | Feasycom FSC-BP107D, MOKO W6, Lansitec i5 | Replaceable CR3032 or CR2032 coin cell | IP67 silicone band; MOKO W6 adds an accelerometer; target 6 months or more projected life at 500 ms interval |
+| Alternate clip or pendant | Blue Charm BC04P, DX-CP27 single-use band | CR2477 or sealed CR2032 | Useful as a second bound tag on a shoe, pendant, walker, or garment for a wearer who removes wristbands |
+| Fixed room receivers | Seeed Studio XIAO ESP32-C3 / C6 / S3 or generic ESP32 dev boards | Wall USB power (5 V) | Plan one receiver per room, two in large open living areas, plus one spare |
+
+#### Receiver placement, beacon programming, and walk test
+
+1. **Flash and configure receivers.** Flash ESPresense from the browser installer, assign each receiver a clear node ID (matching its `anchor_id` in Cognitive Companion), point it at the local Mosquitto broker (`port 1883`) using `MQTT_USERNAME` and `MQTT_PASSWORD`, and record the firmware version in Cognitive Companion's RF Node form.
+2. **Mount receivers.** Place one receiver per room at 1.0 to 1.5 m height on USB power, away from large metal appliances and televisions; mount two receivers at opposite sides of a large open-plan living area. Measure each receiver's coordinates with a tape measure, place it on the floor plan, and verify with the tape-distance survey check.
+3. **Program beacons.** Using the vendor app, set a static iBeacon UUID, major, and minor, configure a 500 ms advertising interval at 0 dBm (or the calibrated interval from bench testing), label the band physically, and enter its reported identifier (`iBeacon:<uuid>-<major>-<minor>`) as the device's `hardware_key` in Cognitive Companion.
+4. **Run the walk test.** Have one person wear a bound tag and spend 60 seconds in each covered room. Confirm that every room emits fixes for the tag, at least 90% of in-room fixes report that room, `rf_ingress_unregistered_tag_total` counts nearby non-household Bluetooth devices without emitting fixes for them, and every receiver shows a recent **Last heard** timestamp.
+5. **Monitor readiness and replace batteries.** On `Admin > Identity Setup`, the optional **Wearables** readiness step reports how many registered RF nodes were heard in the last 5 minutes, how many active tags were heard, and the lowest reported beacon battery percentage. Replace coin cells before they drop below 20%, and check wristband comfort and skin weekly.
 
 ### Tier 1 + Tier 2: dual-mode smartwatch (for example Pixel Watch 5)
 

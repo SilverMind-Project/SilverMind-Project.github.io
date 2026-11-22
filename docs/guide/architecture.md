@@ -11,15 +11,17 @@ flowchart TB
         HA["Home Assistant entities"]
         Telegram["Telegram, webhooks, manual triggers"]
         RTSP["RTSP cameras"]
+        RfNodes["BLE receivers and wearable tags (optional)"]
     end
 
     subgraph CTS["Continuous Tracking System"]
         Ingress["rtsp-ingress"]
+        Mqtt["Mosquitto MQTT broker (optional)"]
         RfIngress["rf-ingress (optional)"]
         Orchestrator["tracking-orchestrator"]
         Streams["Redis Streams"]
         Ingress --> Orchestrator --> Streams
-        RfIngress --> Streams
+        Mqtt --> RfIngress --> Streams
     end
 
     subgraph CC["Cognitive Companion"]
@@ -52,6 +54,7 @@ flowchart TB
 
     Edge --> Aggregator
     RTSP --> CTS
+    RfNodes --> Mqtt
     Executor --> Services
     Dispatcher --> Companion
     API --> UI
@@ -130,7 +133,7 @@ The optional Continuous Tracking System provides multi-camera person hypotheses,
 CTS data ownership stays isolated:
 
 - CTS subscribers live under `backend/services/cts/`.
-- Optional wearable RF ingestion runs in a separate `rf-ingress` service (`continuous-tracking/rf-ingress/`, port `8095`) that polls Cognitive Companion `GET /api/v1/wearables/site-config` and publishes raw protobuf `TagFix` and `AdapterCapability` messages on `wearable.fixes` and `wearable.capabilities`.
+- Optional wearable RF ingestion runs via an opt-in LAN-only Eclipse Mosquitto broker (`port 1883`, persistence off) and the `rf-ingress` service (`continuous-tracking/rf-ingress/`, port `8095`), which polls Cognitive Companion `GET /api/v1/wearables/site-config`, converts fixed-receiver BLE RSSI or wearable range reports into hardware-neutral protobuf `TagFix` and `AdapterCapability` messages on `wearable.fixes` and `wearable.capabilities`, and exposes receiver/tag freshness on `GET /health` for Cognitive Companion's Wearables and Identity Setup views.
 - CTS enablement uses the shared `cts_enabled` dependency.
 - Time conversion and injected service protocols are shared utilities.
 - Identity corrections go through CTS identity endpoints.
