@@ -411,14 +411,18 @@ Queries the [semantic-memory-service](/guide/architecture#semantic-memory-servic
 
 **Config fields:**
 
-- `room_id`: explicit room ID to query. Overrides `use_trigger_room`.
+::: v-pre
+
+- `room_id`: explicit room ID to query. Overrides `use_trigger_room`. Supports `{{template}}` syntax.
 - `use_trigger_room`: when `true`, uses the trigger's room. Default `true`.
-- `objects_limit`: max object presence records to return (default `10`).
-- `hazards_limit`: max hazard observations (default `5`).
-- `observations_limit`: max observation search hits (default `20`).
-- `within_minutes`: lookback window in minutes (default `60`).
-- `min_confidence`: minimum confidence for returned records (default `0.0`).
-- `output_key`: pipeline_data key for the result dict (default `memory_context`).
+- `since_minutes`: lookback window in minutes (default `60`).
+- `objects_any`: only observations containing any of these object labels. Supports `{{template}}` syntax.
+- `hazard_flags_any`: only observations carrying any of these hazard flags. Supports `{{template}}` syntax.
+- `query_text`: free-text semantic search. Supports `{{template}}` syntax.
+- `limit`: maximum observations to return (default `5`).
+- `output_key`: pipeline_data key for the result dict (default `memory_context`). The editor's variable autocomplete follows a renamed key.
+
+:::
 
 **Output keys:**
 
@@ -471,6 +475,38 @@ The CTS event bucketizer is the upstream feed for the CTS path. When the bucketi
 :::
 
 ### Reasoning
+
+#### `knowledge_query`
+
+Asks the caregiver-approved documents in the [Knowledge Repository](/features/knowledge-repository) a question and returns a grounded answer, plus the retrieved passages, for later steps. It uses the same retrieval and answer synthesis as the voice companion's `query_knowledge_base` tool. It differs from `semantic_memory_query`, which reads camera scene observations.
+
+**Config fields:**
+
+::: v-pre
+
+- `query_text` (required): the question. Supports `{{template}}` syntax, for example `What is {{steps.who.outputs.name}}'s afternoon medicine?`.
+- `tags`: only search documents carrying any of these tags. Supports `{{template}}` syntax.
+- `top_k`: passages to retrieve (1 to 20). Blank uses `knowledge.retrieval_top_k`, the same as the voice companion.
+- `min_similarity`: minimum match strength (0 to 1). Blank uses `knowledge.min_similarity`.
+- `person_id`: the resident the question is about, for the query history; defaults to the person in the trigger or upstream steps.
+- `log_interaction`: record the question in the Senior Knowledge Queries history (default `false`, since a rule asking is not the senior asking).
+
+:::
+
+**Output keys:**
+
+| Key | Type | Description |
+| --- | ---- | ----------- |
+| `answer_text` | str | The grounded answer; empty when there is none |
+| `has_answer` | bool | True only when the documents answered the question. A match that does not contain the answer is `false` |
+| `answered_via` | str | `rag` or `no_answer` |
+| `chunks` | list | The retrieved passages, strongest match first |
+| `top_similarity` | float | Strength of the best match |
+| `source_document_ids`, `source_chunk_ids` | list | Where the answer came from |
+| `query_text` | str | The question as asked, templates rendered |
+| `query_id` | int or null | History row id when `log_interaction` is on |
+
+The step is gate-safe. A typical pattern is `knowledge_query`, then `condition(steps.kq.outputs.has_answer)`, then `notification` or `llm_call` using <code v-pre>{{steps.kq.outputs.answer_text}}</code>.
 
 #### `llm_call`
 

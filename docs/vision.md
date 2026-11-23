@@ -35,7 +35,7 @@ As of v0.7.2 the system runs end to end across several services:
 
 - Multi-camera tracking with a floor-plane world tracker and Bayesian identity resolution. Cross-camera handoff keeps a person's identity through turns and camera gaps.
 - <!-- count:wire_signal_kinds -->Ten behavioral signals, each measured against the person's own history: nine for dementia care (pacing, sundowning, long bathroom visits, nighttime movement, prolonged stillness, unexplained absence, suspected falls, gait slowing, and elevated restlessness) and a same-clothes hygiene signal. Fall detection, restlessness, and same-clothes are opt-in per deployment.
-- A rules pipeline with <!-- count:step_types -->28 step types and <!-- count:channel_types -->7 notification channels, used for caregiver alerts and reminders to the senior.
+- A rules pipeline with <!-- count:step_types -->29 step types and <!-- count:channel_types -->7 notification channels, used for caregiver alerts and reminders to the senior.
 - A personal knowledge repository with caregiver-curated info cards, memory quizzes, and a voice companion the senior can talk to.
 - An MCP server with <!-- count:mcp_tools -->68 tools, used by external AI agents and the built-in voice agent through one authenticated interface.
 - A caregiver workspace and live views of the running pipeline.

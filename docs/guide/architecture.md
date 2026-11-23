@@ -120,7 +120,7 @@ Cognitive Companion uses three auto-discovered plugin registries.
 
 | Registry | Current built-ins | Purpose |
 | --- | --- | --- |
-| Step handlers | <!-- count:step_types -->28 | Pipeline nodes for perception, reasoning, state, knowledge, flow control, and actions |
+| Step handlers | <!-- count:step_types -->29 | Pipeline nodes for perception, reasoning, state, knowledge, flow control, and actions |
 | Notification channels | <!-- count:channel_types -->7 | Resident and caregiver delivery paths |
 | Context filters | <!-- count:filter_types -->13 | Rule-level constraints such as room, time, presence, activity, scene state, and dementia signal |
 

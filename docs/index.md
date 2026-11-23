@@ -70,7 +70,7 @@ titleTemplate: Agentic AI for aging in place
       <article class="hx-tile hx-tile--wide">
         <div>
           <h3>Autonomous care workflows</h3>
-          <p>Rules run as pipelines of <!-- count:step_types -->28 step types that reason with local vision and language models, branch on conditions, and act through <!-- count:channel_types -->7 notification channels.</p>
+          <p>Rules run as pipelines of <!-- count:step_types -->29 step types that reason with local vision and language models, branch on conditions, and act through <!-- count:channel_types -->7 notification channels.</p>
         </div>
         <HomeLoopVideo name="pipeline" label="A caregiver builds a rule on the canvas: adding camera, scene analysis, condition, and notification steps, then connecting them" :width="1440" :height="820" />
       </article>

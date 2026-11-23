@@ -83,7 +83,7 @@ See [Identity Setup](/features/continuous-tracking/identity-integrity/identity-s
 
 **Status:** Proposed
 
-**Problem:** Creating pipelines from scratch is complex for new users. Each of the <!-- count:step_types -->28 step types has its own configuration, and choosing the right combination requires understanding the system.
+**Problem:** Creating pipelines from scratch is complex for new users. Each of the <!-- count:step_types -->29 step types has its own configuration, and choosing the right combination requires understanding the system.
 
 **Design:** Ship JSON fixtures with preset pipeline definitions:
 

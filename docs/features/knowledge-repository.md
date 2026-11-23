@@ -430,7 +430,8 @@ The knowledge repository adds two new pipeline step types and extends one existi
 | Step type | Category | Description | Key config |
 | --------- | -------- | ----------- | ---------- |
 | `info_card` | action | Deliver a curated info card | `info_card_id`, `channels` (pwa/eink), `pwa_dismiss_seconds`, `voice_instruction` |
-| `quiz_start` | flow | Start an interactive quiz session | `quiz_id`, `max_questions`, `randomize_order`, `session_timeout_minutes`, `voice_instruction` |
+| `quiz_start` | flow | Start an interactive quiz session | `quiz_id`, `channels`, `interaction_mode`, `max_questions`, `randomize_order`, `session_timeout_minutes`, `voice_instruction` |
+| `knowledge_query` | reasoning | Ask the approved documents a question; returns `answer_text`, `has_answer`, and the retrieved `chunks` for later steps | `query_text`, `tags`, optional `top_k` / `min_similarity` |
 
 ### Extended step
 
