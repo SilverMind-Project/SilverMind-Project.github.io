@@ -356,7 +356,11 @@ duplicates the review service; the exemption is asserted in the router tests.
 | Knowledge documents | `POST /knowledge/documents`, `GET /knowledge/documents`, `GET /knowledge/documents/{doc_id}`, `PATCH /knowledge/documents/{doc_id}`, approval, archive, restore, delete, re-embed (keeps an approved document approved) |
 | Knowledge images | `POST /knowledge/documents/{doc_id}/images`, `PATCH /knowledge/documents/{doc_id}/images/{img_id}`, `DELETE /knowledge/documents/{doc_id}/images/{img_id}` |
 | Info cards | CRUD, approve, archive, restore, suggest, and slot update endpoints under `/info-cards` |
+| Quizzes | CRUD, approve, archive, restore, suggest, question CRUD and image, complete-order reorder, and whole-list replace (`PUT /quizzes/{quiz_id}/questions`, one transaction) under `/quizzes` |
 | Interactions | `GET /knowledge-interactions/queries`, `/quiz-sessions`, and `/info-card-deliveries` return paginated `{items, total}`; `date_from`/`date_to` are household calendar days |
+| Tag analytics | `GET /knowledge/analytics/tags`: per-tag document and quiz counts and the share of graded quiz answers that were correct |
+
+The document, info card, and quiz lists take a repeatable `tag` parameter (`?tag=family&tag=medication`); an item matches when it carries any of the given tags.
 
 ## Webhooks
 

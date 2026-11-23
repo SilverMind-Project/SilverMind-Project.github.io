@@ -225,15 +225,31 @@ class QuizQuestionSuggestion:
 
 ### LLM-assisted generation
 
-The caregiver can generate a complete quiz draft from a source document with a single action. The LLM creates questions, answers, and distractors based on the document content. Questions can be regenerated individually without affecting the rest of the quiz.
+The caregiver can generate a complete quiz draft from a source document with a single action, from the Quizzes page or with **Create quiz** on the document's page. The LLM creates questions, answers, and distractors based on the document content. Every drafted choice gets an id (`a`, `b`, ...) even when the model leaves it out, so a draft always saves.
+
+### Editing a quiz
+
+The quiz editor saves the whole question list at once: added, edited, removed, and reordered questions are stored together, or nothing changes. Under the hood that is one request:
 
 ```http
-POST /api/v1/knowledge/quizzes/{id}/regenerate-question
+PUT /api/v1/quizzes/{quiz_id}/questions
 {
-  "question_ord": 2,
-  "question_type": "multiple_choice"
+  "questions": [
+    {"id": 12, "question_type": "multiple_choice", "question_text": "Who is Priya?",
+     "choices": [{"id": "a", "text": "Your granddaughter", "is_correct": true},
+                 {"id": "b", "text": "Your neighbour"}]},
+    {"question_type": "open_ended", "question_text": "What time is lunch?", "expected_answer": "12:30"}
+  ]
 }
 ```
+
+- A question with an `id` is updated (its picture is kept), one without is created, and a question left out is deleted. The list order is the order the senior is asked.
+- A question that already has recorded answers cannot be removed: the whole save is refused (409) and nothing changes. Edit its text, or archive the quiz.
+- Removing questions needs the `quizzes:delete` permission as well as `quizzes:write`.
+- Every multiple-choice choice needs an id that is unique within its question (the editor assigns the next free letter).
+- A new quiz is created together with its questions in one `POST /api/v1/quizzes`.
+
+Each saved question in the quiz list can also carry a picture: upload one, or pick an image from the quiz's source document.
 
 ### Quiz session lifecycle
 
@@ -285,17 +301,13 @@ The `dedupe_hours` setting (default 12) skips delivery when this quiz was comple
 
 ### Per-question regeneration
 
-Individual quiz questions can be regenerated without affecting other questions in the same quiz. The LLM receives the source document, the current question type, and the existing question text, and produces a replacement.
+Individual quiz questions can be regenerated without affecting other questions in the same quiz. The LLM receives the source document, the current question type, and the existing question text, and drafts a replacement.
 
 ```http
-POST /api/v1/knowledge/quizzes/{id}/regenerate-question
-{
-  "question_ord": 3,
-  "question_type": "multiple_choice"
-}
+POST /api/v1/quizzes/{quiz_id}/questions/{qid}/regenerate?model_id=<optional>
 ```
 
-The response replaces the question at that ordinal position. Existing quiz response records are preserved for audit purposes since they snapshot the question text at answer time.
+The response is an unsaved draft: the editor shows it in place of the question, and it is stored only when the caregiver saves the quiz. Existing quiz response records are preserved for audit purposes since they snapshot the question text at answer time.
 
 ## Senior knowledge queries (RAG)
 
