@@ -229,11 +229,12 @@ The caregiver can generate a complete quiz draft from a source document with a s
 
 ### Editing a quiz
 
-The quiz editor saves the whole question list at once: added, edited, removed, and reordered questions are stored together, or nothing changes. Under the hood that is one request:
+The quiz editor saves the quiz's details and its whole question list at once: a new title or tags and the added, edited, removed, and reordered questions are stored together, or nothing changes. Under the hood that is one request:
 
 ```http
-PUT /api/v1/quizzes/{quiz_id}/questions
+PATCH /api/v1/quizzes/{quiz_id}
 {
+  "title": "Family",
   "questions": [
     {"id": 12, "question_type": "multiple_choice", "question_text": "Who is Priya?",
      "choices": [{"id": "a", "text": "Your granddaughter", "is_correct": true},
@@ -248,6 +249,7 @@ PUT /api/v1/quizzes/{quiz_id}/questions
 - Removing questions needs the `quizzes:delete` permission as well as `quizzes:write`.
 - Every multiple-choice choice needs an id that is unique within its question (the editor assigns the next free letter).
 - A new quiz is created together with its questions in one `POST /api/v1/quizzes`.
+- `PUT /api/v1/quizzes/{quiz_id}/questions` takes the same `questions` list alone, for tools that change only the questions.
 
 Each saved question in the quiz list can also carry a picture: upload one, or pick an image from the quiz's source document.
 
