@@ -174,7 +174,10 @@ llm:
     provider: gemini_live
     api_key: ${GEMINI_API_KEY}
     model: "gemini-3.1-flash-live-preview"
+    api_version: "v1beta"
 ```
+
+Set `api_version` explicitly. The Gemini Live endpoint answers the `google-genai` 3.x default API version with HTTP 404, so leaving it to the SDK silently takes the companion's voice offline.
 
 Each legacy provider also supports **chain** (primary with fallback) and **pool** (round-robin load balancing) modes. See the `LLM provider chains and pools` feature in the README for syntax.
 
@@ -423,9 +426,9 @@ knowledge:
   chunk_overlap_tokens: 60
   retrieval_top_k: 8
   min_similarity: 0.55
-  answer_model: "gemma-4-26B-A4B-it"
-  paraphrase_model: "gemma-4-26B-A4B-it"
-  quiz_generation_model: "gemma-4-26B-A4B-it"
+  answer_model: "qwen-3.8-27b"
+  paraphrase_model: "qwen-3.8-27b"
+  quiz_generation_model: "qwen-3.8-27b"
   max_upload_bytes: 15728640
   max_pixels: 40000000
   allowed_mime_types: ["image/jpeg", "image/png", "image/webp", "image/heic"]
