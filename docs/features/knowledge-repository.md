@@ -176,7 +176,13 @@ config:
   voice_instruction: "Read this warmly and slowly. Pause between sentences."
 ```
 
-The `voice_instruction` field is a per-step override. When empty, the system falls back to the info card's own `voice_instruction` column, then to the YAML default from `config/knowledge_voice.yaml`.
+The `voice_instruction` field is a per-step override. When empty, the system falls back to the info card's own `voice_instruction` column, then to the YAML default from `config/knowledge_voice.yaml`. Whichever applies is added to the companion's usual persona, never put in its place, and it is dropped again when the senior closes the card. The `voice` channel reads the card aloud.
+
+::: v-pre
+
+The card's title, body, and voice instruction can use `{{template}}` placeholders such as `{{senior_name}}` or `{{trigger.room_name}}`; they are filled in at delivery time.
+
+:::
 
 All deliveries are logged in the `info_card_deliveries` audit table with timestamps for view and dismiss events.
 
@@ -241,7 +247,7 @@ A quiz session tracks a single delivery to the senior:
 | `abandoned` | Senior stopped responding without completion |
 | `timed_out` | Session duration exceeded the configured timeout |
 
-The quiz session is created by the `quiz_start` pipeline step. Questions are delivered one at a time via PWA WebSocket message and Gemini Live voice. After each answer, the system records the response and advances to the next question.
+The quiz session is created by the `quiz_start` pipeline step. Questions are delivered one at a time on the tablet and by Gemini Live voice, and the two stay in step: an answer tapped on screen or spoken aloud is recorded once, both views move to the next question, and an answer to a question that has already been answered (the other channel got there first) returns the recorded result rather than a second answer. A session that is not finished within `session_timeout_minutes` becomes `timed_out` and the quiz dialog closes. Either way, the pipeline that started the quiz continues once the session ends.
 
 ### Delivery
 
@@ -253,15 +259,27 @@ config:
   max_questions: 5
   randomize_order: true
   session_timeout_minutes: 15
-  per_senior_dedupe_hours: 12
+  dedupe_hours: 12
+  interaction_mode: gentle
   voice_instruction: "Conduct this quiz warmly. Encourage the senior after each answer."
 ```
 
-The senior interacts by tapping choice buttons on the PWA or speaking their answer. Gemini Live calls the `submit_quiz_answer` MCP tool to record voice responses. After the last question or when the senior says they are done, Gemini Live calls `complete_quiz_session` to finalize.
+The senior interacts by tapping choice buttons on the PWA or speaking their answer. Gemini Live calls the `submit_quiz_answer` MCP tool to record voice responses. When the senior says they are done, Gemini Live calls `complete_quiz_session`; after the last answer the session completes on its own.
+
+### Gentle mode (errorless learning)
+
+People living with dementia can learn their own mistakes when they are allowed to guess and fail, and overt testing ("Incorrect! Score: 33%") can cause distress (Clare et al., 2000; Woods et al., 2018). Quizzes therefore default to `interaction_mode: gentle`:
+
+- The tablet never shows red answers, "Not quite", or a score, and the voice companion never says "wrong" or "incorrect".
+- Before answering, the senior can tap "Give me a hint" to see the question's explanation as a clue.
+- A different answer is met with "Good thought! Here is a little reminder:" and the explanation, and the quiz moves on.
+- The session ends with thanks, not a score.
+
+Every answer, whether it matched, and how long it took are still recorded, so caregivers can follow trends in Knowledge Interactions. `interaction_mode: standard` gives graded feedback and a final score.
 
 ::: tip Quiz deduplication
 
-The `per_senior_dedupe_hours` setting (default 12) prevents the same quiz from being delivered to the same senior multiple times within a window. If a completed session is found within that window, the pipeline step skips silently. Reduce this value for daily quizzes, increase it for weekly ones.
+The `dedupe_hours` setting (default 12) skips delivery when this quiz was completed within the window; the step then reports `status: skipped_dedupe` and the pipeline continues. Reduce this value for daily quizzes, increase it for weekly ones.
 
 :::
 
@@ -388,17 +406,18 @@ info_card_default: >
   supportive and encouraging.
 
 quiz_default: >
-  You are now conducting a quiz with the senior. Read each question
-  aloud clearly. For multiple-choice questions, read all choices and
-  wait for their answer. For open-ended questions, listen carefully
-  and record their response. Provide brief, encouraging feedback
-  after each answer ("That's right!", "Good try!", "Thank you for
-  sharing that."). Do NOT reveal correct answers during the quiz.
-  Keep the tone warm and supportive. After the quiz, give a simple
-  summary of how they did without specific scores.
+  You are now chatting through a short set of memory questions with the
+  senior. Ask one question at a time, slowly and clearly. ...
+
+# Appended after quiz_default or any override, by interaction_mode.
+quiz_gentle_directive: >
+  This is a gentle, errorless conversation, not a test. Never say wrong,
+  incorrect, or not quite, and never give a score. ...
+quiz_standard_directive: >
+  After each answer, say briefly and kindly whether it was right, ...
 ```
 
-When a new delivery starts (info card, quiz, or interactive prompt), the system composes the final instruction and reconnects the Gemini Live session with the updated system instruction. This ensures the voice assistant's behavior matches the current delivery type.
+The final instruction is always the base system instruction followed by the delivery's instruction (and, for a quiz, the mode's directive). The base is never replaced, so the companion keeps its persona, household context, and tool rules. When a new delivery starts, the voice session is reopened with the composed instruction, and the delivery's prompt is spoken in the new session. When the delivery ends (a quiz completes or times out, a card is closed), its instruction is dropped and the companion returns to the base persona. This happens between sentences, never mid-sentence, and only if that delivery's instruction is still the active one.
 
 Template variables like `{{senior_name}}` are available in voice instruction templates and resolved from the household member records before sending to Gemini.
 
@@ -475,7 +494,7 @@ Pipeline:
     max_questions: 5
     randomize_order: true
     session_timeout_minutes: 20
-    per_senior_dedupe_hours: 168  # once per week per senior
+    dedupe_hours: 168  # at most once per week
     voice_instruction: "Conduct this quiz like a friendly conversation. Encourage guessing."
 ```
 
@@ -539,7 +558,7 @@ Called by Gemini Live after the senior answers a quiz question by voice. Takes e
 
 For open-ended responses, the service grades the answer via the LLM using a generous grading prompt that tolerates simple or imperfect language while checking for the key idea.
 
-The response includes `advance` (boolean) indicating whether there are more questions. If `advance` is `false`, Gemini should call `complete_quiz_session`.
+The response includes `is_correct`, `explanation` (shared as a gentle reminder in gentle mode), `completed`, and `next_question` (its `question_ord`, text, and choices), so Gemini can ask the next question without another call. After the last answer the session completes on its own and `next_question` is null. An answer for a question that is not current returns `error: not_current_question` with the current question.
 
 ### complete_quiz_session
 
@@ -551,7 +570,7 @@ Called at the end of a quiz to finalize the session. Broadcasts a summary to the
 }
 ```
 
-Returns the final score for Gemini to share with the senior in a supportive way (e.g. "Well done, you got 4 out of 5 right.").
+Returns the session status and the number of answers and matches. In gentle mode the companion thanks the senior and does not share a score.
 
 ## Configuration
 

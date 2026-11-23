@@ -711,18 +711,25 @@ Generate end-of-day activity reports for one or all household members. Aggregate
 
 #### `info_card`
 
-Delivers a curated info card to the senior via PWA popup, e-ink display, or both. Loads an approved `InfoCard` by ID from the knowledge repository, resolves its image slots through the image pipeline, and dispatches via the knowledge delivery service. A voice instruction override allows per-delivery Gemini Live behavioral guardrails.
+Delivers a curated info card to the senior on the PWA, the e-ink display, by voice, or any mix. Loads an approved `InfoCard` by ID from the knowledge repository, resolves its image slots through the image pipeline, and dispatches via the knowledge delivery service. `{{template}}` placeholders in the card's title, body, and voice instruction are filled at delivery time from the pipeline data, the trigger, and `senior_name`.
 
 **Config fields:**
 
+::: v-pre
+
 - `info_card_id` (required): ID of an approved `InfoCard` to deliver
-- `channels`: list of delivery channels: `pwa`, `eink`, or both (default `["pwa"]`)
+- `channels`: any of `pwa`, `eink`, `voice` (default `["pwa"]`); `voice` reads the card aloud through Gemini Live
 - `pwa_dismiss_seconds`: auto-dismiss timeout for the PWA popup (default 60)
 - `eink_expiry_minutes`: how long the e-ink image stays active before refresh (default 30)
-- `voice_instruction`: override the default Gemini Live voice instruction for this delivery
+- `person_id`: the resident the card is for (fills `{{senior_name}}`); defaults to the person in the trigger or upstream steps
+- `voice_instruction`: added to the companion's persona while the card is read aloud (the persona is kept, never replaced); supports `{{template}}` syntax
 - `trigger_cooloff`: whether successful delivery consumes the rule cool-off (default `true`)
 
-**Output keys:** `info_card_delivery` with `info_card_id`, `layout_id`, `delivered_channels`, `delivery_id`
+:::
+
+When the senior closes the card, the card's voice instruction is dropped and the companion returns to its usual persona.
+
+**Output keys:** `info_card_id`, `delivery_id`, `channels`
 
 ### Flow
 
@@ -765,19 +772,28 @@ At least one of `voice_prompt_template` or `popup_message_template` must be conf
 
 #### `quiz_start`
 
-Starts an interactive quiz session via the companion PWA. Loads an approved `Quiz` by ID from the knowledge repository, creates a `QuizSession`, and opens the quiz dialog on the senior's PWA. Supports question randomization, per-senior deduplication, configurable session timeout, and voice instruction overrides.
+Starts an interactive quiz session on the companion PWA and by voice. Loads an approved `Quiz` by ID from the knowledge repository, creates a `QuizSession`, shows question 1 on the tablet, and has Gemini Live ask it aloud (turning the tablet microphone on first). The tablet and the voice agent stay in step: an answer tapped on screen or spoken aloud advances both. The pipeline waits until the quiz is completed or times out, then continues.
+
+Quizzes default to **gentle** mode, based on errorless learning and reminiscence therapy for people living with dementia. The senior never sees or hears "wrong", "incorrect", or a score. A different answer is met with warm thanks and the question's explanation as a friendly reminder, and a hint is offered before answering. Every answer, and how long it took, is still recorded for caregiver review. **Standard** mode gives graded feedback and a score.
 
 **Config fields:**
 
+::: v-pre
+
 - `quiz_id` (required): ID of an approved `Quiz` to deliver
+- `channels`: `pwa`, `voice`, or both (default both); a tablet-only quiz never opens a voice session
+- `interaction_mode`: `gentle` (default) or `standard`
+- `person_id`: the resident taking the quiz (fills `{{senior_name}}`); defaults to the person in the trigger or upstream steps
 - `max_questions`: limit the number of questions delivered (default 5)
 - `randomize_order`: randomize question order (default `false`)
-- `session_timeout_minutes`: max session duration before auto-complete (default 10)
-- `per_senior_dedupe_hours`: skip delivery if the same senior completed this quiz within N hours (default 12)
-- `voice_instruction`: override the default Gemini Live voice instruction for this quiz session
+- `session_timeout_minutes`: how long an unfinished session stays open before it times out (default 10)
+- `dedupe_hours`: skip delivery if this quiz was completed within N hours (default 12; `0` disables)
+- `voice_instruction`: added to the companion's persona for this quiz (the persona is kept, never replaced); supports `{{template}}` syntax. The mode's feedback rules always follow it, so an override cannot turn gentle mode into a test
 - `trigger_cooloff`: whether successful delivery consumes the rule cool-off (default `true`)
 
-**Output keys:** `quiz_session` with `quiz_id`, `session_id`, `question_count`, `status`, `questions`
+:::
+
+**Output keys:** `quiz_id`, `quiz_session_id` (null when skipped), `max_questions`, `status` (`started` or `skipped_dedupe`), `skipped`, `prior_session_id` (the recent completed session that caused a skip), and `reason` (`dedupe`) when skipped
 
 ::: details Example: daily medication knowledge quiz
 

@@ -105,7 +105,7 @@ A `GeminiToolAdapter` reads the same tool definitions and converts them to Gemin
 | `get_guided_gate_cost_summary` | Guided-task vision gate execution costs              | `person_id`, `routine_id`, `since`, `until` (optional) |
 | `query_knowledge_base`      | Semantic search over the knowledge repository           | `query` |
 | `get_current_quiz_question` | Current question in an active quiz session              | `session_id` |
-| `submit_quiz_answer`        | Record an answer to a quiz question                     | `session_id`, `answer` |
+| `submit_quiz_answer`        | Record an answer to a quiz question                     | `session_id`, `question_ord`, `choice_id` or `open_ended_text` |
 | `complete_quiz_session`     | Close a quiz session                                    | `session_id` |
 | `list_senior_knowledge_queries` | Caregiver review of questions the resident asked the knowledge base | `senior_id`, `answered_via`, `limit`, `offset` (all optional) |
 | `list_quiz_sessions_history` | Caregiver review of past quiz sessions                | `quiz_id`, `senior_id`, `status`, `limit`, `offset` (all optional) |
