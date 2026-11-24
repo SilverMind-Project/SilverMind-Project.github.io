@@ -101,12 +101,18 @@ When a realtime voice session opens (she walks up and taps the mic), the compani
 
 ### Companion surfaces
 
-A companion surface is a tablet, speaker, or display that the resident interacts with. Surfaces are first class so presence gating knows where each one is.
+A companion surface is a tablet, speaker, display, or TV that the resident interacts with. Surfaces are first class so presence gating knows where each one is, and so a routine, quiz, or card for her is shown and spoken on the screen in her room, not on every screen in the house.
 
 - A fixed surface has a stable room.
 - A movable tablet's room is caregiver-set and treated as authoritative, because a human moves it deliberately. A continuous-tracking cross-check flags a stale setting (`room_mismatch`) and never silently overwrites the caregiver's value. Auto-inference only fills the room when no human ever set it.
 
-Surfaces are managed through `GET/POST/PATCH /api/v1/companion-surfaces`, with a device-key `POST /api/v1/companion-surfaces/{id}/heartbeat` that the room kiosk calls.
+Surfaces are managed through `GET/POST/PATCH /api/v1/companion-surfaces`, with a device-key `POST /api/v1/companion-surfaces/{id}/heartbeat` that the room kiosk calls. The heartbeat also reports whether the device's microphone, camera, and screen are on, so a caregiver can see a microphone left open.
+
+### Waking the screen in her room
+
+When a step, quiz, or card is for her, the server also tells her room's surface to wake. In the Android companion app (tablet or Google TV) that turns the screen on (on a TV with HDMI-CEC enabled, the TV itself), raises a muted volume to an audible floor (never lowering it), plays a soft chime, and opens the microphone, with no tap from her. The command goes only to that one surface, never to every room. Every microphone or camera opening is leased: it lasts the step's time plus a margin, each step renews it, and the end of the routine, quiz, or card releases it. Each routine, quiz, or card holds its own lease, so a reminder card closing in the middle of a routine never cuts the routine's microphone. If the release is lost, the device closes the microphone itself when the lease runs out. The screen always shows "Listening" or "Camera active" while either is on. The optional front-camera check runs on the device and reports only whether someone is facing the screen; no image ever leaves it. In a browser, the screen can only open its microphone once someone has tapped it. The Android app is authored but not yet built or released.
+
+On a TV, the remote's arrow keys move between the buttons of whatever is on screen, and the select key presses the highlighted one. Back is ignored so a stray press never dismisses something she has not read.
 
 ## Agent tools
 

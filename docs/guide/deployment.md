@@ -130,6 +130,20 @@ The frontend uses a multi-stage Docker build:
 
 The nginx config automatically routes API calls to the backend container (`cc-backend:8000`), so the frontend works without any additional proxy configuration.
 
+### HTTPS on the home network
+
+Companion tablets need HTTPS: browsers only allow the microphone on a secure page, and the Android companion app loads its page over HTTPS. The household's Kubernetes ingress (a MetalLB address on the home network) terminates it with a real, publicly trusted certificate for a name that points at that private address, with nothing installed on the tablets and nothing exposed to the internet.
+
+The app and the API get separate names, for example `companion.example.com` for the app and `api.companion.example.com` for the API.
+
+1. In Cloudflare DNS, add an `A` record for each name pointing at the ingress address. Set them to **DNS only** (grey cloud), not proxied.
+2. Create a Cloudflare API token with **Zone, DNS, Edit** permission on that zone only, and store it as the `cloudflare-api-token` Secret in the `cert-manager` namespace.
+3. Apply a cert-manager `ClusterIssuer` that solves **DNS-01** through Cloudflare, and an Ingress that sends the app name to the Compose `cc-frontend` (host port 8081) and the API name to `cc-backend` (host port 8000), with one certificate for both.
+4. Set `CC_API_ORIGIN=https://<API name>` in `cognitive-companion/.env` before building the frontend, and add `https://<app name>` to `cors.origins` in `config/settings.yaml`.
+5. Open `https://<app name>/companion` on a tablet.
+
+Let's Encrypt checks a temporary DNS record that cert-manager writes through the token, so the server never has to be reachable from outside; HTTP-01 cannot work for a private address. cert-manager keeps the certificate in a Secret and renews it automatically well before it expires. When the companion itself moves into the cluster, only the Ingress backends change. With `CC_API_ORIGIN` empty, the app calls the API on its own origin instead, through `cc-frontend`'s nginx. The name and its private address are visible in public DNS and certificate logs; nothing else is. If a tablet cannot resolve the name, check that its router or DNS filter does not block public names that point at private addresses.
+
 ---
 
 ## Kubernetes

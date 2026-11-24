@@ -18,7 +18,7 @@ The WebSocket connection also carries push notifications (alerts, reminders, med
 
 ### WebSocket lifecycle
 
-The frontend connects to `/ws/audio` immediately on page load. This keeps the channel open for push notifications (alerts, reminders) without touching Gemini Live. A Gemini session is opened only when the first audio chunk, text message, or orchestrator prompt arrives. After each session ends naturally (e.g. due to provider-side inactivity), the backend waits for the next burst of activity before reconnecting. No keepalive messages are sent.
+The frontend connects to `/ws/audio` immediately on page load, authenticated with the screen's API key (offered as the WebSocket subprotocol, so it never appears in a URL; the key needs the `companion.audio:act` permission). A screen configured as a companion surface names itself when it connects and then receives the deliveries for its room: a routine step, quiz, or card for the resident goes to the screen in the room she is in, and reaches every screen only when her room has none connected. This keeps the channel open for push notifications (alerts, reminders) without touching Gemini Live. A Gemini session is opened only when the first audio chunk, text message, or orchestrator prompt arrives. After each session ends naturally (e.g. due to provider-side inactivity), the backend waits for the next burst of activity before reconnecting. No keepalive messages are sent.
 
 ```text
 Page load       → WebSocket connects   → push notifications delivered
