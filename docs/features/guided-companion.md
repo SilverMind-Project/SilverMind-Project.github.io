@@ -56,7 +56,7 @@ guided_task:
   step_timeout_s: 300         # time within one step attempt
   resume_grace_s: 600         # how long a paused session waits for her return
   transcript_retention_days: 30
-  escalation_channels: ["telegram", "pwa_popup_text"]
+  escalation_channels: ["telegram"]   # caregiver channels only: telegram, webhook
   summon_channels: ["ha_speaker_tts", "pwa_popup_text"]
   rephrase_via: "agent"
 ```
@@ -132,9 +132,23 @@ The summon announcement is the one exception: it plays before a conversation exi
 
 ## Escalation and the caregiver safety net
 
-The companion never leaves the resident without help. Within a step the agent rephrases and retries up to the attempt cap. When the cap is reached, or when she asks for help, the caregiver is notified over the configured escalation channels with context: the routine name, the current instruction, and the reason. Emergencies add a Home Assistant speaker announcement.
+The companion never leaves the resident without help. Within a step the agent rephrases and retries up to the attempt cap. When the cap is reached, or when she asks for help, the caregiver is notified over the configured escalation channels with context: the routine name, the current instruction, the reason, and her recent turns. It also carries a takeover link so the caregiver can open the session directly. When `app.public_base_url` is configured, the link is an absolute URL a caregiver can open from a phone; otherwise it stays a relative path, which only works from an in-app surface.
 
-The escalation message is sent through the existing notification dispatcher and reaches the same channels as other alerts (Telegram, on-screen popup, and so on). It also carries a takeover link so the caregiver can open the session directly. When `app.public_base_url` is configured, the link is an absolute URL a caregiver can open from a phone; otherwise it stays a relative path, which only works from an in-app surface.
+That message is a caregiver diagnostic, so it goes only to caregiver channels: Telegram and webhooks. Escalations never appear on the resident's tablet, the e-ink display, or a room speaker, including emergencies; read aloud in her home, a technical alert with a link in it would startle and disorient her. Any other channel listed in `escalation_channels` or a routine's override is dropped and logged, and if nothing is left the message still goes to Telegram rather than to the notification defaults. The caregiver console receives the escalation live over its own channel.
+
+### The safety watch
+
+A safety watch runs on a short tick for every session that is under way. It looks for four conditions: she left the room the step takes place in, a hazard such as the stove is visible, a possible-fall or no-motion signal arrived, or she reported being stuck twice. Hazard checks use the same source-tagged camera cascade as vision confirmation, so rooms covered only by reCamera devices are checked too. Emergencies (a hazard or a possible fall) skip the retry ladder and escalate immediately.
+
+The watch decides nothing about time: running past a step's timeout is the retry ladder's job, and nothing else abandons a step that is under way. A long step (letting tea steep) gets its full timeout. If the system restarts mid-step, the step's timeout is put back rather than the session being ended. While the camera sees her making progress, the companion holds off the retry prompts, but only for the step's full retry budget (its timeout times the number of attempts); past that, a caregiver is told the step is taking far longer than planned. A camera that wrongly keeps reporting progress therefore ends in a caregiver alert, never a session left open.
+
+Leaving the room and a visible hazard are states rather than one-off events, so they alert when they start. Leaving the room alerts again only after she has come back and left again; the return is recorded on the timeline. A hazard is an emergency, so if a caregiver hands the session back while the stove is still on, it alerts again. Fall signals and "stuck" reports count only from when the step began (or the caregiver handed it back), and each alerts once. When several conditions fire at once, each is recorded on the timeline and the caregiver receives one escalation, for the most severe.
+
+### Live view and takeover
+
+Every transition (start, advance, retry, escalation, help request, completion, abandon) is pushed live to the caregiver's session console. The resident's tablet receives a separate, resident-safe update: the routine name, the step number, and the step's wording, without any failure reasons, transcript, or links.
+
+When a caregiver takes over and moves her on to a new step, releasing the session speaks that step to her straight away instead of leaving her waiting for a timeout. When a routine ends, the voice agent returns to its everyday persona.
 
 ## Privacy and retention
 
