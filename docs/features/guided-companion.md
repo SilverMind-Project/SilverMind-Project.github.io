@@ -144,6 +144,16 @@ The watch decides nothing about time: running past a step's timeout is the retry
 
 Leaving the room and a visible hazard are states rather than one-off events, so they alert when they start. Leaving the room alerts again only after she has come back and left again; the return is recorded on the timeline. A hazard is an emergency, so if a caregiver hands the session back while the stove is still on, it alerts again. Fall signals and "stuck" reports count only from when the step began (or the caregiver handed it back), and each alerts once. When several conditions fire at once, each is recorded on the timeline and the caregiver receives one escalation, for the most severe.
 
+### On the resident's screen
+
+Spoken words fade within seconds, and many older people hear less than they used to, so while a step is under way the companion tablet shows it too: the routine's name, "Step 2 of 4", the step's wording in large type, and three large buttons. "I'm done" works like telling the companion she has finished, "Say it again" speaks the step once more, and "I need help" calls a caregiver. Tapping and talking lead to the same place: after "I'm done" the companion speaks the next step, exactly as if she had said it aloud.
+
+The screen never shows anything technical. When a caregiver has been called it says, calmly, that help is on the way, and while a caregiver is guiding her the "I'm done" button is hidden, because the caregiver moves her through the steps. A tap and a spoken "done" at the same moment complete one step, not two, and a tap from a screen that has not yet caught up with the routine is ignored rather than completing a step she has not seen. Pressing "I need help" again within five minutes of the last message only updates the caregiver console, so repeated taps never flood the caregiver's phone; if she is still waiting after that, asking again sends a new message. While a caregiver is already guiding her, it never sends one. When she finishes, the screen says "Well done!" for a few seconds and clears. A tablet that restarts or reconnects mid-routine picks the current step back up.
+
+### Skip conditions
+
+A step can be skipped when she tells the companion she already did it, when the chosen activity (for example, taking medication) was recorded in the last few minutes, or when she is already in the step's zone. Caregivers pick these from a list in the routine builder; the server refuses any other kind of condition, so a skip condition can never be saved in a form that silently never fires.
+
 ### Live view and takeover
 
 Every transition (start, advance, retry, escalation, help request, completion, abandon) is pushed live to the caregiver's session console. The resident's tablet receives a separate, resident-safe update: the routine name, the step number, and the step's wording, without any failure reasons, transcript, or links.
