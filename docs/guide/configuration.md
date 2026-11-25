@@ -542,6 +542,6 @@ redis:
 | --- | --- | --- | --- |
 | `redis.wearable_fixes_stream` | `REDIS_WEARABLE_FIXES_STREAM` | `wearable.fixes` | Inbound `TagFix` protobuf stream published by RF ingress adapters |
 | `redis.wearable_capabilities_stream` | `REDIS_WEARABLE_CAPABILITIES_STREAM` | `wearable.capabilities` | Inbound `AdapterCapability` protobuf stream carrying adapter heartbeats and online RF nodes |
-| `redis.position_tracks_stream` | `REDIS_POSITION_TRACKS_STREAM` | `position.tracks` | Reserved stream for future anonymous floor-plane sensors (`AnonymousPositionTrack`) |
+| `redis.position_tracks_stream` | `REDIS_POSITION_TRACKS_STREAM` | `position.tracks` | Inbound `AnonymousPositionTrack` protobuf stream published by `rf-ingress` for registered device-free position sensors (consumed when `position_sensor.mode` is `shadow` or `enabled`) |
 
-The tracking orchestrator syncs registered wearable devices, open bindings, and RF node coordinates from Cognitive Companion's `GET /api/v1/wearables/site-config` endpoint on its normal CC config sync poll. See [Optional wearables and RF receivers](/hardware/wearables).
+The tracking orchestrator syncs registered wearable devices, open bindings, RF node coordinates, and registered position sensors from Cognitive Companion's `GET /api/v1/wearables/site-config` endpoint on its normal CC config sync poll. See [Optional wearables and RF receivers](/hardware/wearables).

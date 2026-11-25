@@ -136,6 +136,24 @@ make a track more certain than that floor. Floor history keeps the raw camera me
 fusion is enabled, so association never scores the watch against a track position that already
 absorbed the watch's own fixes.
 
+## Device-free anonymous position sensors
+
+Mains-powered mmWave radars and 2D/3D LiDARs provide an anonymous floor-plane track stream
+(`AnonymousPositionTrack` on `position.tracks`, trimmed to 1 hour) alongside cameras and wearables.
+They ship behind `position_sensor.mode: off` (`shadow` measures counterfactual outcomes against
+open PHs without mutating tracker state; `enabled` runs sensor-driven rounds every `0.5 s`).
+
+- **Covariance fusion and floor protection:** Device-free tracks fuse inversely with calibrated
+  cameras in cross-modal updates and never merge with camera detections during pre-association
+  dedup (cross-sensor radar/LiDAR pairs merge via 2-DoF Mahalanobis gating). `apply_position_floor`
+  keeps PH covariance at or above `(k_cal * calibration_residual_m)^2` so repeated radar ticks do
+  not collapse below the sensor's calibration accuracy.
+- **Privacy-zone tracking without identity shortcuts:** Device-free observations only spawn or
+  revive PHs inside camera-free room polygons (such as bathrooms or bedrooms), while in camera
+  rooms they only update existing tracks. In identity resolution, PHs with no visual history omit
+  the camera crop-quality check (`min_quality_to_commit`) so wearable evidence can commit an identity
+  in a camera-free room while authority and wearable evidence thresholds stay unchanged.
+
 ## Rollout, observability, and retention
 
 - **Modes (`wearable.mode`):** `off` (default; zero runtime overhead, no stream subscription),
