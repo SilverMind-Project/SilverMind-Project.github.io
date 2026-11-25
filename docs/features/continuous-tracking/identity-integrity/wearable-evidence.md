@@ -15,6 +15,7 @@ flowchart LR
   sub --> assoc["WearableAssociationTracker\n(covariance-first, joint assignment)"]
   hist["PHFloorHistory\n(calibrated rounds only)"] --> assoc
   assoc --> ch["WearableChannel\n(power-weighted, full support)"]
+  assoc -.->|"trajectory-attested fixes\n(spatial_fusion, default off)"| ph["PH floor state"]
   ch --> res["IdentityResolver\n(Bayesian posterior + face conflict)"]
   assoc --> persist["WearableAssociationPersistStage\n(wearable_associations table)"]
 ```
@@ -27,7 +28,8 @@ flowchart LR
    counters (`cts_messages_dead_lettered_total{stream="wearable_fixes"}`), and buffers accepted
    fixes ordered by `measured_at` so micro-batched bursts stay aligned to physical capture time.
 2. **Calibrated PH floor history (`PHFloorHistory`):** Records `(captured_at, x_m, y_m, cov_m2,
-   speed_m_s)` only on tracker rounds updated by calibrated observations. Uncalibrated virtual
+   speed_m_s)` only on tracker rounds updated by calibrated observations: the camera posterior,
+   or the raw camera measurement while wearable spatial fusion is enabled. Uncalibrated virtual
    floor coordinates and coasting predictions never enter history. History survives close-and-revive
    windows (`ph_close_grace_s + revive_max_age_s`, 45 s) and resets on PH split or merge.
 3. **Pure association and graded attestation (`WearableAssociationTracker`):** Runs once per
@@ -46,7 +48,7 @@ covariance (`sigma_major_m = sqrt(lambda_max(Sigma_f))`):
 | Class | Qualification | Scoring model | Shared room (2+ open PHs) |
 | --- | --- | --- | --- |
 | `trajectory` | `FIX_KIND_POSITION` with `sigma_major_m <= wearable.trajectory_max_sigma_m` (`0.75 m`) and calibrated PH history | Innovation covariance `S = Sigma_f + Sigma_j + (v_j * sigma_t)^2 I + sigma_bias^2 I` (`sigma_t = 0.5 s`, `sigma_bias = 0.15 m`, chi-square gate `9.21`, penalty `-4.0`), evaluated at interpolated `fix.measured_at` | Can disambiguate when trajectories separate by `margin >= 4.0` |
-| `room` | `FIX_KIND_ROOM`, wide-covariance `FIX_KIND_POSITION` reduced over room polygons by Gauss-Hermite quadrature (dropping rooms `< 0.05` mass), or uncalibrated PH | Room LLR with `room_match_eps = 0.1`, requiring summed room mass `>= 0.7` of window fixes | Always refused (`uncalibrated_shared_room`); requires sole open PH for the entire 10 s window |
+| `room` | `FIX_KIND_ROOM`, any `FIX_KIND_POSITION` reduced over room polygons by Gauss-Hermite quadrature (dropping rooms `< 0.05` mass, or its `room_id` when no polygons are configured), or uncalibrated PH | Room LLR with `room_match_eps = 0.1`, requiring summed room mass `>= 0.7` of window fixes | Always refused (`uncalibrated_shared_room`); requires sole open PH for the entire 10 s window |
 
 ## Safety guards
 
@@ -60,13 +62,28 @@ covariance (`sigma_major_m = sqrt(lambda_max(Sigma_f))`):
   covariance ellipse) for `wearable.parked_after_s` (`600 s`) is marked `parked` and yields zero
   evidence until `MOVING` or a room change. A tag already present in a room before a PH appears
   earns no room-class evidence for that PH until it reports `MOVING` after the PH appeared.
+- **Room ids, not names:** A PH's room is resolved from the room polygons, then from its
+  camera's room id. Fixes carry Cognitive Companion room ids, so a PH on an uncalibrated camera
+  (outside every polygon) still meets BLE room fixes and UWB position fixes in the same
+  namespace.
 - **Multiple tags per person:** Fixes are grouped by bound `member_id` before joint assignment.
-  Each member is scored by its best single tag (scores are never summed across tags). When two
-  non-parked tags of one member disagree on room for `wearable.tag_disagreement_window_s` (`10 s`),
-  the member yields zero evidence (`tag_disagreement`). For a dual-mode watch carrying both
-  continuous BLE room fixes and a 12-second micro-batched UWB burst, the UWB trajectory stream
-  disambiguates shared rooms while active, and the continuous BLE stream resumes refreshing the
-  independent-evidence clock whenever the wearer is alone in a room.
+  Each member is scored by its best single tag (scores are never summed across tags).
+- **One physical device, one segment:** A dual-mode watch is two registered tags (BLE and UWB)
+  that share a `physical_device_id` in Cognitive Companion. Its association segment survives the
+  switch between them, keeps the tag that opened it as its provenance tag, and keeps its
+  attestation grade. A switch to a different physical device of the same person (a pendant left
+  on a table) closes the segment, so the pendant never inherits the watch's grade.
+- **Disagreement between devices, never within one:** When two physical devices of one member
+  disagree on room for `wearable.tag_disagreement_window_s` (`10 s`), the member yields zero
+  evidence (`tag_disagreement`). A watch's BLE nearest-receiver room and UWB nearest-anchor room
+  never count as a disagreement, and a device counts only when its room holds at least 60% of its
+  window mass (`wearable.tag_disagreement_min_room_share`).
+- **Segment hold across burst cooldowns:** A segment whose track is not accepted in a round is
+  held open, emitting no evidence, for up to `wearable.segment_hold_s` (`75 s`, longer than the
+  watch's 60 s burst cooldown). If the same person and device are accepted on the same track
+  again, the segment resumes with its grade. This matters in shared rooms, where BLE room
+  evidence is never eligible between bursts. The hold ends at once if the person is accepted on
+  another track.
 
 ## Graded attestation
 
@@ -75,7 +92,7 @@ Persisted segments in `continuous_tracking.wearable_associations` carry an expli
 
 | Grade | Requirements |
 | --- | --- |
-| `trajectory` | Continuous trajectory-class acceptance spanning at least `10.0 s` and `8` trajectory fixes, `window_llr >= 15.0`, both margins `>= 4.0`, zero face conflicts |
+| `trajectory` | A trajectory streak spanning at least `10.0 s` with `8` matched trajectory fixes, `window_llr >= 15.0`, both margins `>= 4.0`, zero face conflicts. The streak restarts after a 10 s gap between trajectory fixes, so earlier room-only time and an earlier burst never count |
 | `room` | Continuous room-class acceptance spanning at least `60.0 s`, sole open PH throughout, tag reported `MOVING` at least once in span, tag entered room within `20.0 s` of the PH appearing in it, zero face conflicts |
 | `none` | Active or closed association that has not met either bar, or whose attestation was broken by a face conflict |
 
@@ -97,9 +114,27 @@ as a log-likelihood power (`p ** weight`) before normalization, and returns `sup
   (`A != B`), the resolver forces `Unknown` (`conflict="wearable_face"`), increments
   `cts_wearable_face_conflict_total`, and breaks attestation on the segment. Three or more
   conflicts for one tag within 10 minutes mark `swap_suspected = true` on the segment and emit a
-  warning log referencing `tag_id` only (never person names). An uncalibrated face
+  warning log referencing `tag_id` only (never person names). Conflicts count per physical
+  device, across a watch's BLE and UWB tags. An uncalibrated face
   (`calibrated_confidence` is null, such as a resident not yet covered by calibration) never
   triggers this conflict.
+
+## Spatial fusion (optional)
+
+Once a track carries a `trajectory` grade, its watch's decimetre UWB positions can also refine
+where the track is, not only who it is. `wearable.spatial_fusion.mode` ships `off`:
+
+- `shadow` measures every gated update (`cts_wearable_spatial_fusion_total{mode, outcome}` and
+  `cts_wearable_spatial_fusion_shift_m`) without moving any track or changing anything else.
+- `enabled` applies the update. A single oblique camera's along-ray uncertainty (often 0.5 to
+  1.2 m) collapses toward the wearable's, and a trajectory-attested track the camera briefly
+  loses (behind a sofa or a door) stays open for up to `coasting_bridge_max_s` (`10 s`) after
+  its last camera frame.
+
+Each fused fix carries its own covariance plus a `0.12 m` systematic floor, and fused fixes never
+make a track more certain than that floor. Floor history keeps the raw camera measurements while
+fusion is enabled, so association never scores the watch against a track position that already
+absorbed the watch's own fixes.
 
 ## Rollout, observability, and retention
 
@@ -156,14 +191,15 @@ that period can be undone by association segment -- automatically or by a caregi
    a member's prototypes is listed for manual review and never removed automatically.
 3. **Inferred history backfill:** Any live inferred backfill range sourced from that segment is
    compensated back to `Unknown` through the standard identity-revision projection path.
-4. **Teaching hold:** A hold is placed on the tag (`wearable_teaching_holds`), pausing further
-   gallery seeding, face attestation, and wearable backfill for that tag until a caregiver-admin
-   confirms the tag is back on the right person and clicks **Resume teaching**.
+4. **Teaching hold:** A hold is placed on the tag and on every other tag of the same physical
+   device (`wearable_teaching_holds`), pausing further gallery seeding, face attestation, and
+   wearable backfill for that device until a caregiver-admin confirms it is back on the right
+   person and clicks **Resume teaching**, which clears every tag of the device.
 
 By default (`wearable.revocation.auto_on_swap: true`), when the swapped-wearable guard marks a
 segment `swap_suspected`, CTS automatically revokes that segment plus any other unrevoked segments
-for that tag overlapping the swap-conflict window (10 minutes) and places a teaching hold on the
-tag. Caregiver-admins can also inspect recent teaching periods, revoke any segment with one
+of the same physical device's tags overlapping the swap-conflict window (10 minutes) and places a
+teaching hold on those tags. Caregiver-admins can also inspect recent teaching periods, revoke any segment with one
 confirmed click, jump directly to its demoted samples in the ReID Review Queue, and resume
 teaching from the device dialog on the Wearables admin page. The Identity Setup page includes an
 optional **Wearable teaching** step showing active holds, learner configuration, and image-only
